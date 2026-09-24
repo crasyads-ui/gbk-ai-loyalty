@@ -7,8 +7,8 @@ const countries=["Global","India","United Arab Emirates","United States","United
 
 export default function Home(){
  const [query,setQuery]=useState(""); const [language,setLanguage]=useState("English"); const [country,setCountry]=useState("Global"); const [installPrompt,setInstallPrompt]=useState<any>(null); const [installed,setInstalled]=useState(false);
- useEffect(()=>{const h=(e:any)=>{e.preventDefault();setInstallPrompt(e)}; window.addEventListener("beforeinstallprompt",h); setInstalled(window.matchMedia("(display-mode: standalone)").matches); return()=>window.removeEventListener("beforeinstallprompt",h)},[]);
- const install=async()=>{if(!installPrompt)return; await installPrompt.prompt(); setInstallPrompt(null)};
+ useEffect(()=>{const h=(e:any)=>{e.preventDefault();setInstallPrompt(e)}; window.addEventListener("beforeinstallprompt",h); setInstalled(window.matchMedia("(display-mode: standalone)").matches); if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{}); return()=>window.removeEventListener("beforeinstallprompt",h)},[]);
+ const install=async()=>{if(installPrompt){await installPrompt.prompt(); setInstallPrompt(null)}else{alert("On iPhone/iPad: use Share → Add to Home Screen. On Android: use the browser menu → Install app or Add to Home screen.")}};
  const scroll=()=>document.getElementById("offers")?.scrollIntoView({behavior:"smooth"});
  return <main className="shell">
   <header className="topbar"><div className="brand"><span className="brandMark">G</span><div><strong>GBK AI</strong><small>LOYALTY</small></div></div><div className="topActions"><select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select><select value={country} onChange={e=>setCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select><button className="walletBtn">Connect Wallet</button></div></header>
