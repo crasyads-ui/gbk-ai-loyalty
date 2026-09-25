@@ -14,6 +14,81 @@ export type LoyaltySession = {
   user: { id: string; email?: string };
 };
 
+
+const BSC_CHAIN_ID = "0x38";
+const BSC_RPC = "https://bsc-dataseed.bnbchain.org";
+const BSC_EXPLORER = "https://bscscan.com";
+const WALLETCONNECT_PROJECT_ID = "19d21bb0657b8a691c0ea8f4976ce26e";
+
+async function switchToBsc(provider: any) {
+  const current = await provider.request({ method: "eth_chainId" });
+  if (String(current).toLowerCase() === BSC_CHAIN_ID) return;
+  try {
+    await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: BSC_CHAIN_ID }] });
+  } catch (e: any) {
+    if (e?.code === 4902 || /unrecognized|not added|unknown chain/i.test(String(e?.message || ""))) {
+      await provider.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId: BSC_CHAIN_ID,
+          chainName: "BNB Smart Chain",
+          nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+          rpcUrls: [BSC_RPC],
+          blockExplorerUrls: [BSC_EXPLORER],
+        }],
+      });
+    } else throw e;
+  }
+}
+
+export async function connectEvmWallet(): Promise<string> {
+  if (typeof window === "undefined") throw new Error("Wallet connection is available in the browser only.");
+  const w = window as any;
+  const candidates: any[] = [];
+  const add = (p: any) => { if (p && !candidates.includes(p)) candidates.push(p); };
+  if (Array.isArray(w.ethereum?.providers)) w.ethereum.providers.forEach(add);
+  add(w.ethereum);
+
+  let lastError: any = null;
+  for (const provider of candidates) {
+    try {
+      let accounts = await provider.request({ method: "eth_accounts" });
+      if (!accounts?.length) accounts = await provider.request({ method: "eth_requestAccounts" });
+      if (!accounts?.length) continue;
+      await switchToBsc(provider);
+      return String(accounts[0]);
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  try {
+    const mod = await import("https://esm.sh/@walletconnect/ethereum-provider");
+    const EthereumProvider = mod.default || mod.EthereumProvider;
+    if (!EthereumProvider) throw new Error("Wallet selector unavailable.");
+    const provider = await EthereumProvider.init({
+      projectId: WALLETCONNECT_PROJECT_ID,
+      chains: [56],
+      optionalChains: [56],
+      showQrModal: true,
+      qrModalOptions: { enableMobileFullScreen: true },
+      metadata: {
+        name: "GBK AI Loyalty",
+        description: "GBK AI Loyalty on BNB Smart Chain",
+        url: "https://loyalty.gbkai.com",
+        icons: ["https://loyalty.gbkai.com/favicon.svg"],
+      },
+    });
+    if (!(provider as any).session) await provider.connect();
+    const accounts = await provider.request({ method: "eth_accounts" });
+    if (!accounts?.length) throw new Error("Wallet connection was not completed.");
+    await switchToBsc(provider);
+    return String(accounts[0]);
+  } catch (e: any) {
+    throw e || lastError || new Error("Wallet connection failed.");
+  }
+}
+
 export async function signInAnonymously(): Promise<LoyaltySession> {
   const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: "POST",
