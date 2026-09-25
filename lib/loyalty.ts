@@ -154,13 +154,34 @@ export function getStoredSession(): LoyaltySession | null {
 
 export function signOut() { localStorage.removeItem("gbk_loyalty_session"); }
 
-export async function loyaltyApi(session: LoyaltySession, action: string, payload: Record<string, unknown> = {}) {
-  const r = await fetch(`${SUPABASE_URL}/functions/v1/loyalty-api`, {
+async function refreshStoredSession(session: LoyaltySession): Promise<LoyaltySession> {
+  if (!session.refresh_token) throw new Error("Session expired. Please reconnect your wallet.");
+  const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
     method: "POST",
-    headers: authHeaders(session.access_token),
-    body: JSON.stringify({ action, ...payload }),
+    headers: authHeaders(),
+    body: JSON.stringify({ refresh_token: session.refresh_token }),
   });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error || "GBK Loyalty request failed");
+  if (!r.ok || !data.access_token) throw new Error(data.error_description || data.msg || "Session expired. Please reconnect your wallet.");
+  localStorage.setItem("gbk_loyalty_session", JSON.stringify(data));
   return data;
+}
+
+export async function loyaltyApi(session: LoyaltySession, action: string, payload: Record<string, unknown> = {}) {
+  let activeSession = session;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/loyalty-api`, {
+      method: "POST",
+      headers: authHeaders(activeSession.access_token),
+      body: JSON.stringify({ action, ...payload }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) return data;
+    if (r.status === 401 && attempt === 0) {
+      activeSession = await refreshStoredSession(activeSession);
+      continue;
+    }
+    throw new Error(data.error || "GBK Loyalty request failed");
+  }
+  throw new Error("GBK Loyalty request failed");
 }
