@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getStoredSession, loyaltyApi, signIn, signOut, signUp, type LoyaltySession } from "../lib/loyalty";
+import { getStoredSession, loyaltyApi, resendConfirmation, signIn, signOut, signUp, type LoyaltySession } from "../lib/loyalty";
 
 const businessCategories = ["All Products & Services","Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries & Supermarkets","Fashion & Apparel","Electronics","Pharmacies & Health Stores","Salons & Beauty","AC Repair","Plumbing & Electrical","Home Services","Automotive & EV","Fuel & Charging","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education & Courses","Spoken English","Healthcare & Clinics","Real Estate","Agriculture & Farm Services","Seeds & Fertilizer","Farm Equipment","Crop Advisory","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops","Wholesale & Distribution","Manufacturing","Construction","Cleaning Services","Pet Services"];
 
@@ -265,6 +265,7 @@ export default function Home() {
             <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)}/>
             <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/>
             <button className="primary" onClick={doAuth} disabled={apiBusy}>{apiBusy ? "Please wait…" : authMode==="login" ? "Sign in" : "Create account"}</button>
+            {authMode==="login" && email && <button className="secondary" onClick={async()=>{setApiBusy(true);setAuthNotice("");try{await resendConfirmation(email);setAuthNotice("Confirmation email sent again. Check Inbox, Spam and Promotions.");}catch(e:any){setAuthNotice(e.message||"Unable to resend confirmation email");}finally{setApiBusy(false);}}} disabled={apiBusy}>Resend confirmation email</button>}
             <button className="secondary" onClick={()=>setAuthMode(authMode==="login"?"signup":"login")}>{authMode==="login" ? "Create a new account" : "I already have an account"}</button>
           </> : role==="FounderUser" ? <>
             <p>Add a user to your Founder network. Country Founders are restricted to their assigned country; Global Founders can select any country.</p>
