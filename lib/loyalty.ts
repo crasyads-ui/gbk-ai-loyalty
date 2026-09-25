@@ -1,5 +1,6 @@
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://yjwgnapymqetxvksqacd.supabase.co";
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_Y3n5bVO3xveBnyt4LKbCPg_f5ilMSuz";
+const SITE_URL = typeof window !== "undefined" ? window.location.origin : "https://loyalty.gbkai.com";
 
 const authHeaders = (accessToken?: string) => ({
   apikey: SUPABASE_KEY,
@@ -25,15 +26,37 @@ export async function signIn(email: string, password: string): Promise<LoyaltySe
 
 export async function signUp(email: string, password: string, fullName: string): Promise<LoyaltySession | null> {
   const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-    method: "POST", headers: authHeaders(), body: JSON.stringify({ email, password, data: { full_name: fullName } }),
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      email,
+      password,
+      data: { full_name: fullName },
+      gotrue_meta_security: {},
+      options: { email_redirect_to: `${SITE_URL}/` },
+    }),
   });
   const data = await r.json();
-  if (!r.ok) throw new Error(data.msg || data.error_description || "Sign up failed");
+  if (!r.ok) throw new Error(data.msg || data.error_description || data.error || "Sign up failed");
   if (data.access_token) {
     localStorage.setItem("gbk_loyalty_session", JSON.stringify(data));
     return data;
   }
   return null;
+}
+
+export async function resendConfirmation(email: string): Promise<void> {
+  const r = await fetch(`${SUPABASE_URL}/auth/v1/resend`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      type: "signup",
+      email,
+      options: { email_redirect_to: `${SITE_URL}/` },
+    }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.msg || data.error_description || data.error || "Unable to resend confirmation email");
 }
 
 export function getStoredSession(): LoyaltySession | null {
