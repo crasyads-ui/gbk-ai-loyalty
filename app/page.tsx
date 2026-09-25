@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getStoredSession, loyaltyApi, resendConfirmation, signIn, signOut, signUp, type LoyaltySession } from "../lib/loyalty";
+import { getStoredSession, loyaltyApi, signInAnonymously, type LoyaltySession } from "../lib/loyalty";
 
 const businessCategories = ["All Products & Services","Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries & Supermarkets","Fashion & Apparel","Electronics","Pharmacies & Health Stores","Salons & Beauty","AC Repair","Plumbing & Electrical","Home Services","Automotive & EV","Fuel & Charging","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education & Courses","Spoken English","Healthcare & Clinics","Real Estate","Agriculture & Farm Services","Seeds & Fertilizer","Farm Equipment","Crop Advisory","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops","Wholesale & Distribution","Manufacturing","Construction","Cleaning Services","Pet Services"];
 
@@ -53,6 +53,7 @@ export default function Home() {
   const [merchantContact,setMerchantContact]=useState("");
   const [merchantCity,setMerchantCity]=useState("");
   const [merchantCategory,setMerchantCategory]=useState(businessCategories[0]);
+  const [walletAddress,setWalletAddress]=useState("");
   const isIndia = country === "India";
 
   useEffect(() => {
@@ -77,17 +78,28 @@ export default function Home() {
 
   const scroll = () => document.getElementById("roles")?.scrollIntoView({behavior:"smooth"});
   const ensureProfile = async (s:LoyaltySession, roleName:"customer"|"merchant"|"founder") => {
-    return loyaltyApi(s,"profile_upsert",{role:roleName,full_name:fullName,country,wallet_address:merchantWallet || undefined});
+    return loyaltyApi(s,"profile_upsert",{role:roleName,full_name:fullName || "GBK Wallet User",country,wallet_address:walletAddress || merchantWallet || undefined});
   };
-  const doAuth = async () => {
+  const connectWallet = async (targetRole:"customer"|"merchant"|"founder"="customer") => {
     setApiBusy(true); setAuthNotice("");
     try {
-      const s = authMode === "login" ? await signIn(email,password) : await signUp(email,password,fullName);
-      if (!s) { setAuthNotice("Account created. Check your email to confirm the account, then sign in."); return; }
-      setSession(s); await ensureProfile(s, "customer"); setRole("Customer"); setAuthNotice("Signed in successfully.");
-    } catch(e:any) { setAuthNotice(e.message || "Authentication failed"); }
-    finally { setApiBusy(false); }
+      const eth = (window as any).ethereum;
+      if (!eth?.request) throw new Error("No compatible wallet detected. Open this app inside Trust Wallet, Bitget Wallet, Binance Wallet or another EVM wallet browser.");
+      const accounts = await eth.request({method:"eth_requestAccounts"});
+      const address = accounts?.[0];
+      if (!address) throw new Error("Wallet connection was cancelled.");
+      setWalletAddress(address);
+      let s = getStoredSession();
+      if (!s) s = await signInAnonymously();
+      await loyaltyApi(s,"profile_upsert",{role:targetRole,full_name:fullName || "GBK Wallet User",country,wallet_address:address});
+      setSession(s);
+      setRole(targetRole === "merchant" ? "Merchant" : targetRole === "founder" ? "Founder" : "Customer");
+      setAuthNotice("Wallet connected successfully.");
+    } catch(e:any) {
+      setAuthNotice(e.message || "Wallet connection failed.");
+    } finally { setApiBusy(false); }
   };
+  const doAuth = async () => connectWallet("customer");
   const doSearch = async () => {
     const q=query.trim(); if(q.length<2){setAuthNotice("Please enter what you need.");return;}
     if(!session){setRole("Auth");setAuthNotice("Sign in first to search registered GBK Loyalty businesses.");return;}
@@ -156,7 +168,7 @@ export default function Home() {
         <div className="topActions">
           <select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select>
           <select value={country} onChange={e=>setCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select>
-          <button className="walletBtn" onClick={()=>setRole(session ? "Customer" : "Auth")}>{session ? "Account" : "Sign in"}</button>
+          <button className="walletBtn" onClick={()=>session ? setRole("Customer") : connectWallet("customer")}>{session ? "Wallet Connected" : "Connect Wallet"}</button>
         </div>
       </header>
 
@@ -260,13 +272,13 @@ export default function Home() {
           <div className="roleIcon">{roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍")}</div>
           <h2>{role} registration</h2>
           {role==="Auth" ? <>
-            <p>Use your GBK Loyalty account. Your account is used to protect merchant, order and reward records.</p>
-            {authMode==="signup" && <input placeholder="Full name" value={fullName} onChange={e=>setFullName(e.target.value)}/>}
-            <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)}/>
-            <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/>
-            <button className="primary" onClick={doAuth} disabled={apiBusy}>{apiBusy ? "Please wait…" : authMode==="login" ? "Sign in" : "Create account"}</button>
-            {authMode==="login" && email && <button className="secondary" onClick={async()=>{setApiBusy(true);setAuthNotice("");try{await resendConfirmation(email);setAuthNotice("Confirmation email sent again. Check Inbox, Spam and Promotions.");}catch(e:any){setAuthNotice(e.message||"Unable to resend confirmation email");}finally{setApiBusy(false);}}} disabled={apiBusy}>Resend confirmation email</button>}
-            <button className="secondary" onClick={()=>setAuthMode(authMode==="login"?"signup":"login")}>{authMode==="login" ? "Create a new account" : "I already have an account"}</button>
+            <div className="walletConnectBox">
+              <div className="roleIcon">👛</div>
+              <h3>Connect your wallet</h3>
+              <p>No email or password is required for GBK AI Loyalty. Your EVM wallet is your primary account identity and reward destination.</p>
+              <button className="primary" onClick={()=>connectWallet("customer")} disabled={apiBusy}>{apiBusy ? "Connecting…" : "Connect Wallet"}</button>
+              <small>Supported in wallet browsers and compatible EVM wallets. Sign-in is handled by the wallet-linked account.</small>
+            </div>
           </> : role==="FounderUser" ? <>
             <p>Add a user to your Founder network. Country Founders are restricted to their assigned country; Global Founders can select any country.</p>
             <input placeholder="User full name"/><input placeholder="Mobile or email"/>
@@ -328,7 +340,7 @@ export default function Home() {
             <input placeholder="Full name"/>
             <input placeholder="Mobile or email"/>
           </>}
-          <button className="primary" onClick={async ()=>{ if(role==="Merchant"){ if(!session){setRole("Auth");return;} setApiBusy(true); try { await ensureProfile(session,"merchant"); const r=await loyaltyApi(session,"merchant_register",{business_name:merchantBusinessName,category:merchantCategory,country,city:merchantCity,phone:merchantContact,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_provider:paymentGateway,payment_account_ref:paymentAccountRef,payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant application submitted. The business must accept the invitation/terms and fund GBK before activation."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>Continue →</button>
+          <button className="primary" onClick={async ()=>{ if(role==="Merchant"){ if(!session){connectWallet("merchant");return;} setApiBusy(true); try { await ensureProfile(session,"merchant"); const r=await loyaltyApi(session,"merchant_register",{business_name:merchantBusinessName,category:merchantCategory,country,city:merchantCity,phone:merchantContact,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_provider:paymentGateway,payment_account_ref:paymentAccountRef,payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant application submitted. The business must accept the invitation/terms and fund GBK before activation."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>Continue →</button>
           <small>No token transfer happens from this screen.</small>
         </div>
       </div>}
