@@ -47,6 +47,7 @@ export default function Home() {
   const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
   const [merchantBusinessName,setMerchantBusinessName]=useState("");
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
+  const [merchantContact,setMerchantContact]=useState("");
   const [merchantCity,setMerchantCity]=useState("");
   const [merchantCategory,setMerchantCategory]=useState(businessCategories[0]);
   const isIndia = country === "India";
@@ -57,6 +58,8 @@ export default function Home() {
     w.addEventListener("beforeinstallprompt",handler);
     setInstalled(w.matchMedia("(display-mode: standalone)").matches);
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
+    const stored = getStoredSession();
+    if (stored) setSession(stored);
     return () => w.removeEventListener("beforeinstallprompt",handler);
   }, []);
 
@@ -190,12 +193,12 @@ export default function Home() {
       <section className="merchantRules">
         <div><span className="eyebrow">MERCHANT TERMS</span><h2>Simple rules before activation</h2></div>
         <div className="ruleGrid">
-          <div><b>01 · Maintain GBK</b><p>Merchant keeps enough GBK reward balance in the connected wallet/reward vault for the next eligible order.</p></div>
+          <div><b>01 · 100% order balance</b><p>Before an eligible order proceeds, the merchant must have 100% of the GBK value required for that order’s selected loyalty percentage. No partial funding.</p></div>
           <div><b>02 · Choose loyalty</b><p>Merchant selects 5%, 10%, 15%, 20% or a custom loyalty percentage.</p></div>
           <div><b>03 · Automatic split</b><p>The selected merchant offer is allocated 60% to the customer, 20% to the Founder/referrer and 20% to the GBK platform.</p></div>
           <div><b>04 · Lead commission</b><p>Merchant can accept a separate lead commission before receiving eligible leads.</p></div>
           <div><b>05 · Verified transaction</b><p>No reward is released merely because an order was sent or a payment button was clicked. Payment/order completion must be verified.</p></div>
-          <div><b>06 · Low balance</b><p>If the required GBK balance is unavailable, the merchant is asked to increase GBK balance for the next order before reward-eligible routing continues.</p></div>
+          <div><b>06 · Insufficient balance</b><p>If the full required GBK balance is unavailable, the reward-eligible order is paused until the merchant funds enough GBK.</p></div>
         </div>
       </section>
 
@@ -255,7 +258,7 @@ export default function Home() {
             <p>Start your merchant setup. You will confirm your loyalty and lead terms before activation.</p>
             <input placeholder="Business name" value={merchantBusinessName} onChange={e=>setMerchantBusinessName(e.target.value)}/>
             <input placeholder="Owner name" value={merchantOwnerName} onChange={e=>setMerchantOwnerName(e.target.value)}/>
-            <input placeholder="Mobile or email" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)}/>
+            <input placeholder="Mobile or email" value={merchantContact} onChange={e=>setMerchantContact(e.target.value)}/>
             <select className="modalSelect" value={merchantCategory} onChange={e=>setMerchantCategory(e.target.value)}>{businessCategories.map(x=><option key={x}>{x}</option>)}</select>
             <input placeholder="City" value={merchantCity} onChange={e=>setMerchantCity(e.target.value)}/>
             <select className="modalSelect" value={merchantOffer} onChange={e=>setMerchantOffer(e.target.value)}>
@@ -291,7 +294,7 @@ export default function Home() {
             <input placeholder="Full name"/>
             <input placeholder="Mobile or email"/>
           </>}
-          <button className="primary" onClick={async ()=>{ if(role==="Merchant"){ if(!session){setRole("Auth");return;} setApiBusy(true); try { await ensureProfile(session,"merchant"); const r=await loyaltyApi(session,"merchant_register",{business_name:merchantBusinessName,category:merchantCategory,country,city:merchantCity,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant application submitted. The business must accept the invitation/terms and fund GBK before activation."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>Continue →</button>
+          <button className="primary" onClick={async ()=>{ if(role==="Merchant"){ if(!session){setRole("Auth");return;} setApiBusy(true); try { await ensureProfile(session,"merchant"); const r=await loyaltyApi(session,"merchant_register",{business_name:merchantBusinessName,category:merchantCategory,country,city:merchantCity,phone:merchantContact,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant application submitted. The business must accept the invitation/terms and fund GBK before activation."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>Continue →</button>
           <small>No token transfer happens from this screen.</small>
         </div>
       </div>}
