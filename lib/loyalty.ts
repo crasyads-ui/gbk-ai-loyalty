@@ -15,7 +15,7 @@ export type LoyaltySession = {
 };
 
 export async function signInAnonymously(): Promise<LoyaltySession> {
-  const r = await fetch(\`${SUPABASE_URL}/auth/v1/signup\`, {
+  const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({}),
