@@ -52,7 +52,7 @@ export async function resendConfirmation(email: string): Promise<void> {
     body: JSON.stringify({
       type: "signup",
       email,
-      options: { email_redirect_to: `${SITE_URL}/` },
+      redirect_to: `${SITE_URL}/`,
     }),
   });
   const data = await r.json().catch(() => ({}));
