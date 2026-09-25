@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const businessCategories = ["Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries","Fashion & Apparel","Electronics","Pharmacies","Salons & Beauty","AC Repair","Home Services","Automotive","Fuel & EV","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education","Spoken English","Healthcare","Real Estate","Agriculture","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops"];
+const businessCategories = ["All Products & Services","Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries & Supermarkets","Fashion & Apparel","Electronics","Pharmacies & Health Stores","Salons & Beauty","AC Repair","Plumbing & Electrical","Home Services","Automotive & EV","Fuel & Charging","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education & Courses","Spoken English","Healthcare & Clinics","Real Estate","Agriculture & Farm Services","Seeds & Fertilizer","Farm Equipment","Crop Advisory","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops","Wholesale & Distribution","Manufacturing","Construction","Cleaning Services","Pet Services"];
 
 const offers = [
   ["🏨","Hotels & Resorts","Up to 10% GBK","Stay and earn"],
@@ -98,12 +98,12 @@ export default function Home() {
         <div className="eyebrow">🌐 GLOBAL CUSTOMER LOYALTY</div>
         <h1>Ask • Shop • Earn • Hold • Swap • Transfer</h1>
         <p>GBK AI brings customers to participating businesses and provides a simple, merchant-funded GBK Loyalty benefit after a verified qualifying transaction.</p>
-        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="What do you need? e.g. hotel, restaurant, AC repair"/><button onClick={scroll}>Find</button></div>
+        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Ask GBK AI for anything: product, service, agriculture, hotel, repair, travel..."/><button onClick={scroll}>Ask AI</button></div>
         <div className="suggestions">
           <button onClick={()=>setQuery("restaurants with GBK rewards")}>🍽️ Restaurants</button>
           <button onClick={()=>setQuery("hotels with GBK offers")}>🏨 Hotels</button>
           <button onClick={()=>setQuery("tours and travel")}>✈️ Travel</button>
-          <button onClick={()=>setQuery("AC repair near me")}>🔧 Services</button>
+          <button onClick={()=>setQuery("AC repair near me")}>🔧 Services</button><button onClick={()=>setQuery("agriculture products or farm service near me")}>🌾 Agriculture</button>
         </div>
       </section>
 
@@ -127,10 +127,10 @@ export default function Home() {
         </div>
         <div className="panel">
           <span className="eyebrow">LEAD MODEL</span>
-          <h2>GBK provides leads + loyalty</h2>
-          <p>GBK AI connects the customer with the merchant. The merchant controls the actual product/service, price and business policy.</p>
-          <div className="status">🟢 Merchant active <span>Eligible for GBK AI leads</span></div>
-          <div className="status paused">⏸ Reward balance low <span>Pause new reward-eligible leads</span></div>
+          <h2>GBK AI provides leads + orders</h2>
+          <p>GBK AI searches eligible registered businesses for the customer request and can automatically create and route the order/request to the selected merchant. The merchant controls the actual product/service, price and fulfilment.</p>
+          <div className="status">🟢 Merchant active <span>Eligible for GBK AI leads + orders</span></div>
+          <div className="status paused">⏸ Reward balance low <span>Top up GBK to receive new reward-eligible orders</span></div>
         </div>
       </section>
 
@@ -147,12 +147,12 @@ export default function Home() {
       <section className="merchantRules">
         <div><span className="eyebrow">MERCHANT TERMS</span><h2>Simple rules before activation</h2></div>
         <div className="ruleGrid">
-          <div><b>01 · Maintain GBK</b><p>Merchant deposits/approves the reward balance in advance.</p></div>
+          <div><b>01 · Maintain GBK</b><p>Merchant keeps enough GBK reward balance in the connected wallet/reward vault for the next eligible order.</p></div>
           <div><b>02 · Choose loyalty</b><p>Merchant selects 5%, 10%, 15%, 20% or a custom loyalty percentage.</p></div>
           <div><b>03 · Automatic split</b><p>The selected merchant offer is allocated 60% to the customer, 20% to the Founder/referrer and 20% to the GBK platform.</p></div>
           <div><b>04 · Lead commission</b><p>Merchant can accept a separate lead commission before receiving eligible leads.</p></div>
-          <div><b>05 · Verified transaction</b><p>No reward is released merely because a lead was sent or a payment button was clicked.</p></div>
-          <div><b>06 · Returns</b><p>If a completed transaction is refunded, the corresponding reward can be reversed according to the published terms.</p></div>
+          <div><b>05 · Verified transaction</b><p>No reward is released merely because an order was sent or a payment button was clicked. Payment/order completion must be verified.</p></div>
+          <div><b>06 · Low balance</b><p>If the required GBK balance is unavailable, the merchant is asked to increase GBK balance for the next order before reward-eligible routing continues.</p></div>
         </div>
       </section>
 
@@ -170,16 +170,16 @@ export default function Home() {
       </section>
 
       <section className="how">
-        <span className="eyebrow">HOW IT WORKS</span><h2>Simple, automatic and traceable.</h2>
+        <span className="eyebrow">HOW IT WORKS</span><h2>Ask AI → Find business → Send order → Verify → Reward.</h2>
         <div className="steps">
-          <div><b>01</b><h3>Find</h3><p>GBK AI connects the customer with an eligible business.</p></div>
-          <div><b>02</b><h3>Complete</h3><p>Customer pays in local currency and the merchant completes the qualifying sale/service.</p></div>
-          <div><b>03</b><h3>Reward</h3><p>After verification, the merchant-funded GBK allocation is distributed automatically.</p></div>
+          <div><b>01</b><h3>Ask</h3><p>Customer asks GBK AI for any product or service, including agriculture and local needs.</p></div>
+          <div><b>02</b><h3>Route</h3><p>GBK AI searches registered eligible businesses and sends the request/order to the selected merchant.</p></div>
+          <div><b>03</b><h3>Complete & Reward</h3><p>Merchant completes the order, payment is verified, then the merchant-funded GBK allocation is distributed automatically.</p></div>
         </div>
       </section>
 
       <section className="merchant">
-        <div><span className="eyebrow">FOR BUSINESSES</span><h2>Activate loyalty. Receive eligible leads.</h2><p>Register your business, accept the commercial terms, choose 5%–20% or a custom percentage, connect your wallet and maintain the required GBK reward balance.</p></div>
+        <div><span className="eyebrow">FOR BUSINESSES</span><h2>Activate loyalty. Receive eligible leads.</h2><p>Register any legitimate product or service business, accept the commercial terms, choose 5%–20% or a custom percentage, connect your wallet and maintain enough GBK reward balance for eligible orders.</p></div>
         <button onClick={()=>setRole("Merchant")}>Register as Merchant →</button>
       </section>
 
