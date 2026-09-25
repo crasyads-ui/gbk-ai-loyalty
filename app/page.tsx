@@ -55,6 +55,10 @@ export default function Home() {
   const [merchantCity,setMerchantCity]=useState("");
   const [merchantCategory,setMerchantCategory]=useState(businessCategories[0]);
   const [walletAddress,setWalletAddress]=useState("");
+  const [founderType,setFounderType]=useState<"country"|"global">("country");
+  const [founderTier,setFounderTier]=useState("COUNTRY_300");
+  const [founderTxHash,setFounderTxHash]=useState("");
+  const [founderStatus,setFounderStatus]=useState<any>(null);
   const isIndia = country === "India";
 
   useEffect(() => {
@@ -98,6 +102,23 @@ export default function Home() {
     } finally { setApiBusy(false); }
   };
   const doAuth = async () => connectWallet("customer");
+  const openFounder = async () => {
+    setRole("Founder");
+    if (!session) return;
+    try { const r = await loyaltyApi(session,"founder_status",{}); setFounderStatus(r.founder || null); } catch {}
+  };
+  const verifyFounder = async () => {
+    if (!walletAddress) { await connectWallet("founder"); return; }
+    if (!session) { await connectWallet("founder"); return; }
+    setApiBusy(true); setAuthNotice("");
+    try {
+      await ensureProfile(session,"founder");
+      const r = await loyaltyApi(session,"founder_verify",{wallet_address:walletAddress,founder_type:founderType,founder_tier:founderTier,tx_hash:founderTxHash.trim()});
+      setFounderStatus(r.founder || null);
+      setAuthNotice(r.verification?.benefits_active ? "Founder verified. 50% minimum GBK reserve is currently maintained." : "Founder transaction verified. Maintain the required 50% GBK reserve to keep Founder benefits active.");
+    } catch(e:any) { setAuthNotice(e.message || "Founder verification failed."); }
+    finally { setApiBusy(false); }
+  };
   const doSearch = async () => {
     const q=query.trim(); if(q.length<2){setAuthNotice("Please enter what you need.");return;}
     if(!session){setRole("Auth");setAuthNotice("Sign in first to search registered GBK Loyalty businesses.");return;}
@@ -220,7 +241,7 @@ export default function Home() {
         <div className="founderGrid">
           <div className="founderPanel"><div className="roleIcon">👥</div><h3>Add User</h3><p>Invite customers, community members and prospective users into GBK Loyalty.</p><button className="primary" onClick={()=>setRole("FounderUser")}>＋ Add User</button></div>
           <div className="founderPanel"><div className="roleIcon">🏪</div><h3>Add Business</h3><p>Register hotels, restaurants, shops, services and other legitimate businesses.</p><button className="primary" onClick={()=>setRole("FounderBusiness")}>＋ Add Business</button></div>
-          <div className="founderPanel"><div className="roleIcon">📋</div><h3>My Network</h3><p>View businesses added, users invited, active merchants, leads and loyalty activity.</p><button className="secondary" onClick={()=>setRole("Founder")}>Open Founder Dashboard →</button></div>
+          <div className="founderPanel"><div className="roleIcon">📋</div><h3>My Network</h3><p>View businesses added, users invited, active merchants, leads and loyalty activity.</p><button className="secondary" onClick={openFounder}>Open Founder Dashboard →</button></div>
         </div>
         <div className="categoryStrip"><b>Business categories:</b>{businessCategories.map(x=><span key={x}>{x}</span>)}</div>
       </section>
@@ -344,8 +365,7 @@ export default function Home() {
             <input placeholder="Full name"/>
             <input placeholder="Mobile or email"/>
           </>}
-          <button className="primary" onClick={async ()=>{ if(role==="Merchant"){ if(!merchantWallet){await connectWallet("merchant");return;} if(!session){await connectWallet("merchant");return;} setApiBusy(true); try { await ensureProfile(session,"merchant"); const r=await loyaltyApi(session,"merchant_register",{business_name:merchantBusinessName,category:merchantCategory,country,city:merchantCity,phone:merchantPhone || null,email:merchantEmail || null,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_provider:paymentGateway,payment_account_ref:paymentAccountRef,payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant application submitted. The business must accept the invitation/terms and fund GBK before activation."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>Continue →</button>
-          <small>No token transfer happens from this screen.</small>
+          {role==="Founder" ? <button className="primary" onClick={verifyFounder} disabled={apiBusy}>{apiBusy ? "Verifying…" : "Verify Founder Member →"}</button> : <button className="primary" onClick={async ()=>{ if(role==="Merchant"){ if(!merchantWallet){await connectWallet("merchant");return;} if(!session){await connectWallet("merchant");return;} setApiBusy(true); try { await ensureProfile(session,"merchant"); const r=await loyaltyApi(session,"merchant_register",{business_name:merchantBusinessName,category:merchantCategory,country,city,phone:merchantPhone || null,email:merchantEmail || null,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_provider:paymentGateway,payment_account_ref:paymentAccountRef,payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant application submitted. The business must accept the invitation/terms and fund GBK before activation."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>Continue →</button>}<small>No token transfer happens from this screen.</small>
         </div>
       </div>}
 
