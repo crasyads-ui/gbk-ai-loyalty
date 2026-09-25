@@ -175,6 +175,44 @@ export default function Home() {
     }
   };
 
+  const registerMerchant = async () => {
+    if (role !== "Merchant") return;
+    setApiBusy(true);
+    setAuthNotice("");
+    try {
+      if (!merchantWallet) {
+        await connectWallet("merchant");
+        return;
+      }
+      let activeSession = session || getStoredSession();
+      if (!activeSession) activeSession = await signInAnonymously();
+      setSession(activeSession);
+      await ensureProfile(activeSession, "merchant");
+      await loyaltyApi(activeSession, "merchant_register", {
+        business_name: merchantBusinessName.trim(),
+        owner_name: merchantOwnerName.trim(),
+        category: merchantCategory,
+        country,
+        city: merchantCity.trim(),
+        phone: merchantPhone || null,
+        email: merchantEmail || null,
+        loyalty_offer_percent: selectedOffer,
+        lead_commission_percent: 0,
+        payment_provider: paymentGateway,
+        payment_account_ref: paymentGateway === "DIRECT" ? null : (paymentAccountRef || null),
+        payment_currency: paymentCurrency,
+        payment_method: paymentMethod,
+        payment_details: { details: paymentDetails, owner: merchantOwnerName },
+      });
+      setAuthNotice("Merchant registration submitted successfully.");
+      setRole(null);
+    } catch (e: any) {
+      setAuthNotice(e?.message || "Merchant registration failed");
+    } finally {
+      setApiBusy(false);
+    }
+  };
+
   const selectedOffer = merchantOffer === "custom" ? Number(customOffer || 0) : Number(merchantOffer.replace("%",""));
   const customerShare = selectedOffer * 0.6;
   const founderShare = selectedOffer * 0.2;
@@ -369,7 +407,7 @@ export default function Home() {
             <input placeholder="Mobile or email"/>
           </>}
           {role==="Merchant" && authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
-          {role==="Founder" ? <button className="primary" onClick={verifyFounder} disabled={apiBusy}>{apiBusy ? "Verifying…" : "Verify Founder Member →"}</button> : <button className="primary" disabled={apiBusy} onClick={async ()=>{ if(role==="Merchant"){ setApiBusy(true); setAuthNotice(""); try { if(!merchantWallet){ await connectWallet("merchant"); return; } let activeSession = session || getStoredSession(); if(!activeSession) activeSession = await signInAnonymously(); setSession(activeSession); await ensureProfile(activeSession,"merchant"); const r=await loyaltyApi(activeSession,"merchant_register",{business_name:merchantBusinessName.trim(),owner_name:merchantOwnerName.trim(),category:merchantCategory,country,city:merchantCity.trim(),phone:merchantPhone || null,email:merchantEmail || null,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_provider:paymentGateway,payment_account_ref:paymentGateway==="DIRECT" ? null : (paymentAccountRef || null),payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant registration submitted successfully."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>{apiBusy ? "Registering…" : "Continue →"}</button><small>No token transfer happens from this screen.</small>
+          {role==="Founder" ? <button className="primary" onClick={verifyFounder} disabled={apiBusy}>{apiBusy ? "Verifying…" : "Verify Founder Member →"}</button> : <button className="primary" disabled={apiBusy} onClick={registerMerchant}>{role==="Merchant" ? (apiBusy ? "Registering…" : "Continue →") : "Continue →"}</button>}<small>No token transfer happens from this screen.</small>
         </div>
       </div>}
 
