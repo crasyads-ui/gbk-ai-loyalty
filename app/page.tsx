@@ -53,14 +53,14 @@ export default function Home() {
 
   const shareBusiness = async (businessName:string, businessUrl?:string) => {
     const url = businessUrl || window.location.href;
-    const text = `Check out ${businessName} on GBK AI Loyalty. Share, shop and earn eligible GBK rewards.`;
+    const text = `Check out ${businessName} on GBK AI Loyalty. Discover participating businesses and earn eligible GBK rewards from qualifying purchases.`;
     try {
       if (navigator.share && (!navigator.canShare || navigator.canShare({title: businessName, text, url}))) {
         await navigator.share({title: businessName, text, url});
-        setShareNotice(`Share completed. ${businessName} is now recorded for eligibility review.`);
+        setShareNotice(`${businessName} was shared successfully.`);
       } else {
         await navigator.clipboard?.writeText(`${text} ${url}`);
-        setShareNotice(`Business link copied. Share it on WhatsApp, Facebook, Instagram or other social channels.`);
+        setShareNotice(`Business link copied. Share it on WhatsApp, Facebook, Instagram or other social channels. Customer sharing does not create a referral reward.`);
       }
     } catch {
       setShareNotice("Share cancelled or unavailable on this device.");
@@ -149,7 +149,7 @@ export default function Home() {
       <section id="offers">
         <div className="sectionHead"><div><span className="eyebrow">🎁 DISCOVER</span><h2>GBK Rewards Near You</h2></div><button className="textBtn">View all</button></div>
         <div className="grid">{offers.map(([icon,title,reward,note])=>
-          <article className="card" key={title}><div className="icon">{icon}</div><h3>{title}</h3><strong>{reward}</strong><p>{note} with participating businesses.</p><button className="shareBusinessBtn" onClick={()=>shareBusiness(title)}>📤 Share & Earn</button><span className="arrow">›</span></article>
+          <article className="card" key={title}><div className="icon">{icon}</div><h3>{title}</h3><strong>{reward}</strong><p>{note} with participating businesses.</p><button className="shareBusinessBtn" onClick={()=>shareBusiness(title)}>📤 Share Business</button><span className="arrow">›</span></article>
         )}</div>
       </section>
 
