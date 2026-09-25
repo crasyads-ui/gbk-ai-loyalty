@@ -12,7 +12,7 @@ const offers = [
 ];
 
 const languages = ["English","हिन्दी","తెలుగు","বাংলা","தமிழ்","मराठी","Español","العربية","Français","Português"];
-const countries = ["Global","India","United Arab Emirates","United States","United Kingdom","Singapore","Australia","Canada","Saudi Arabia","Malaysia"];
+const countries = ["Global","India","United Arab Emirates","United States","United Kingdom","Singapore","Australia","Canada","Saudi Arabia","Malaysia","Germany","France","Italy","Spain","Portugal","Netherlands","Belgium","Switzerland","Austria","Sweden","Norway","Denmark","Finland","Ireland","New Zealand","Japan","South Korea","China","Hong Kong","Thailand","Indonesia","Philippines","Vietnam","Bangladesh","Sri Lanka","Nepal","Pakistan","South Africa","Nigeria","Kenya","Egypt","Turkey","Brazil","Mexico","Argentina","Colombia","Chile","Peru"];
 
 const roles = [
   {icon:"👤",title:"Customer",text:"Ask GBK AI for products or services, pay the merchant normally and receive eligible GBK Loyalty rewards.",items:["Earn GBK","Hold • Swap • Transfer"]},
@@ -29,7 +29,7 @@ export default function Home() {
   const [customOffer,setCustomOffer] = useState("25");
   const [shareNotice,setShareNotice] = useState("");
   const [installPrompt,setInstallPrompt] = useState<any>(null);
-  const [installed,setInstalled] = useState(false);
+  const [installed,setInstalled] = useState(false);\n  const [paymentMethod,setPaymentMethod] = useState("LOCAL_CURRENCY");\n  const [paymentCurrency,setPaymentCurrency] = useState("INR");\n  const [paymentDetails,setPaymentDetails] = useState("");\n  const isIndia = country === "India";
 
   useEffect(() => {
     const w = window as any;
@@ -193,13 +193,24 @@ export default function Home() {
               <span>Customer {customerShare.toFixed(1)}% · Founder {founderShare.toFixed(1)}% · Platform {platformShare.toFixed(1)}%</span>
             </div>
             <select className="modalSelect" defaultValue="0%"><option>0% lead commission</option><option>5% lead commission</option><option>10% lead commission</option><option>15% lead commission</option><option>20% lead commission</option></select>
+            <div className="paymentBox">
+              <b>Merchant payment</b>
+              <small>Customer pays you directly in your local currency. GBK does not receive the customer payment.</small>
+              <select className="modalSelect" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}>
+                <option value="LOCAL_CURRENCY">Local currency payment</option>
+                {!isIndia && <option value="USDT">USDT — optional</option>}
+              </select>
+              <input className="modalInput" value={paymentCurrency} onChange={e=>setPaymentCurrency(e.target.value.toUpperCase())} placeholder="Currency code e.g. INR, AED, USD" maxLength={3}/>
+              <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder={paymentMethod==="USDT" ? "USDT wallet/payment details" : "UPI, bank, payment account or provider details"}/>
+              {isIndia && <small>India: INR/local payment only. USDT is disabled for this merchant flow.</small>}
+            </div>
             <label className="check"><input type="checkbox"/> I accept that GBK provides leads and loyalty benefits; the merchant controls the product/service and its business policy.</label>
           </> : <>
             <p>Start with simple registration. Wallet connection, verification and role-specific setup come next.</p>
             <input placeholder="Full name"/>
             <input placeholder="Mobile or email"/>
           </>}
-          <button className="primary" onClick={()=>alert("Registration form ready. Backend activation will be connected after wallet and verification setup.")}>Continue →</button>
+          <button className="primary" onClick={()=>alert(`Merchant payment setup saved for testing: ${paymentMethod === "USDT" ? "USDT" : paymentCurrency}. Customer payment goes directly to the merchant. Verified payment will trigger the GBK reward flow.`)}>Continue →</button>
           <small>No token transfer happens from this screen.</small>
         </div>
       </div>}
