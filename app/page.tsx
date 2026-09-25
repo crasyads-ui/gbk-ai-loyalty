@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+const businessCategories = ["Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries","Fashion & Apparel","Electronics","Pharmacies","Salons & Beauty","AC Repair","Home Services","Automotive","Fuel & EV","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education","Spoken English","Healthcare","Real Estate","Agriculture","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops"];
+
 const offers = [
   ["🏨","Hotels & Resorts","Up to 10% GBK","Stay and earn"],
   ["✈️","Tours & Travel","Up to 10% GBK","Travel and earn"],
@@ -17,7 +19,7 @@ const countries = ["Global","India","United Arab Emirates","United States","Unit
 const roles = [
   {icon:"👤",title:"Customer",text:"Ask GBK AI for products or services, pay the merchant normally and receive eligible GBK Loyalty rewards.",items:["Earn GBK","Hold • Swap • Transfer"]},
   {icon:"🏪",title:"Merchant",text:"Register your business, accept the lead terms, choose a loyalty offer and maintain GBK reward balance in advance.",items:["5%–20% or Custom","Automatic rewards"]},
-  {icon:"🌍",title:"Founder",text:"Country or Global Founder Members can onboard businesses and receive the Founder allocation from verified loyalty sales.",items:["Add businesses","Track earnings"]},
+  {icon:"🌍",title:"Founder",text:"Country or Global Founder Members can onboard businesses and receive the Founder allocation from verified loyalty sales.",items:["Add users","Add businesses","Track earnings"]},
 ];
 
 export default function Home() {
@@ -132,6 +134,16 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="founderWorkspace">
+        <div className="sectionHead"><div><span className="eyebrow">FOUNDER NETWORK</span><h2>Country Founders can build the local GBK network</h2><p>Country Founders can add customers/users and businesses in their assigned country. Global Founders can add users and businesses globally.</p></div></div>
+        <div className="founderGrid">
+          <div className="founderPanel"><div className="roleIcon">👥</div><h3>Add User</h3><p>Invite customers, community members and prospective users into GBK Loyalty.</p><button className="primary" onClick={()=>setRole("FounderUser")}>＋ Add User</button></div>
+          <div className="founderPanel"><div className="roleIcon">🏪</div><h3>Add Business</h3><p>Register hotels, restaurants, shops, services and other legitimate businesses.</p><button className="primary" onClick={()=>setRole("FounderBusiness")}>＋ Add Business</button></div>
+          <div className="founderPanel"><div className="roleIcon">📋</div><h3>My Network</h3><p>View businesses added, users invited, active merchants, leads and loyalty activity.</p><button className="secondary" onClick={()=>setRole("Founder")}>Open Founder Dashboard →</button></div>
+        </div>
+        <div className="categoryStrip"><b>Business categories:</b>{businessCategories.map(x=><span key={x}>{x}</span>)}</div>
+      </section>
+
       <section className="merchantRules">
         <div><span className="eyebrow">MERCHANT TERMS</span><h2>Simple rules before activation</h2></div>
         <div className="ruleGrid">
@@ -174,9 +186,22 @@ export default function Home() {
       {role && <div className="modalBackdrop" onClick={()=>setRole(null)}>
         <div className="modal" onClick={e=>e.stopPropagation()}>
           <button className="close" onClick={()=>setRole(null)}>×</button>
-          <div className="roleIcon">{roles.find(r=>r.title===role)?.icon}</div>
+          <div className="roleIcon">{roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍")}</div>
           <h2>{role} registration</h2>
-          {role==="Merchant" ? <>
+          {role==="FounderUser" ? <>
+            <p>Add a user to your Founder network. Country Founders are restricted to their assigned country; Global Founders can select any country.</p>
+            <input placeholder="User full name"/><input placeholder="Mobile or email"/>
+            <select className="modalSelect"><option>Customer</option><option>Merchant prospect</option></select>
+            <select className="modalSelect"><option>{country === "Global" ? "Select country" : country}</option>{countries.filter(x=>x!=="Global").map(x=><option key={x}>{x}</option>)}</select>
+            <label className="check"><input type="checkbox"/> I confirm this person has agreed to be contacted/invited.</label>
+          </> : role==="FounderBusiness" ? <>
+            <p>Add a business to the Founder network. The business remains responsible for its own products, prices, payments and loyalty funding.</p>
+            <input placeholder="Business name"/><select className="modalSelect">{businessCategories.map(x=><option key={x}>{x}</option>)}</select>
+            <input placeholder="Owner / contact name"/><input placeholder="Mobile or email"/><input placeholder="City"/>
+            <select className="modalSelect"><option>{country === "Global" ? "Select country" : country}</option>{countries.filter(x=>x!=="Global").map(x=><option key={x}>{x}</option>)}</select>
+            <input placeholder="Address"/><input placeholder="Website (optional)"/>
+            <label className="check"><input type="checkbox"/> Business owner has agreed to the listing and GBK Loyalty terms.</label>
+          </> : role==="Merchant" ? <>
             <p>Start your merchant setup. You will confirm your loyalty and lead terms before activation.</p>
             <input placeholder="Business name"/>
             <input placeholder="Owner name"/>
@@ -214,7 +239,7 @@ export default function Home() {
             <input placeholder="Full name"/>
             <input placeholder="Mobile or email"/>
           </>}
-          <button className="primary" onClick={()=>alert(`Merchant payment setup saved for testing: ${paymentMethod === "USDT" ? "USDT" : paymentCurrency}. Customer payment goes directly to the merchant. Verified payment will trigger the GBK reward flow.`)}>Continue →</button>
+          <button className="primary" onClick={()=>alert(role==="FounderUser" ? "User invitation saved for testing. Founder attribution will be recorded after authentication is connected." : role==="FounderBusiness" ? "Business listing saved for testing. Founder attribution will be recorded after authentication is connected." : `Merchant payment setup saved for testing: ${paymentMethod === "USDT" ? "USDT" : paymentCurrency}. Customer payment goes directly to the merchant. Verified payment will trigger the GBK reward flow.`)}>Continue →</button>
           <small>No token transfer happens from this screen.</small>
         </div>
       </div>}
