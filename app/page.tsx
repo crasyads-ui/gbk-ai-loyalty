@@ -38,6 +38,7 @@ export default function Home() {
   const [paymentMethod,setPaymentMethod] = useState("LOCAL_CURRENCY");
   const [paymentCurrency,setPaymentCurrency] = useState("INR");
   const [paymentDetails,setPaymentDetails] = useState("");
+  const [merchantWallet,setMerchantWallet] = useState("");
   const [session,setSession] = useState<LoyaltySession|null>(null);
   const [authMode,setAuthMode] = useState<"login"|"signup">("login");
   const [email,setEmail] = useState("");
@@ -76,7 +77,7 @@ export default function Home() {
 
   const scroll = () => document.getElementById("roles")?.scrollIntoView({behavior:"smooth"});
   const ensureProfile = async (s:LoyaltySession, roleName:"customer"|"merchant"|"founder") => {
-    return loyaltyApi(s,"profile_upsert",{role:roleName,full_name:fullName,country});
+    return loyaltyApi(s,"profile_upsert",{role:roleName,full_name:fullName,country,wallet_address:merchantWallet || undefined});
   };
   const doAuth = async () => {
     setApiBusy(true); setAuthNotice("");
@@ -100,9 +101,31 @@ export default function Home() {
     if(!amount || !Number.isFinite(Number(amount)) || Number(amount)<=0) return;
     setApiBusy(true);
     try {
-      await loyaltyApi(session,"create_order",{merchant_id:m.id,amount_minor:Math.round(Number(amount)*100),currency:country==="India"?"INR":"USD",request_text:query,category:m.category,country,order_source:"GBK_AI"});
-      setAuthNotice("Order request created. Payment must be completed and verified before GBK reward settlement.");
-    } catch(e:any){setAuthNotice(e.message||"Order creation failed");} finally {setApiBusy(false);}
+      const currency = country==="India" ? "INR" : "USD";
+      const created = await loyaltyApi(session,"create_order",{merchant_id:m.id,amount_minor:Math.round(Number(amount)*100),currency,request_text:query,category:m.category,country,order_source:"GBK_AI"});
+      const paid = await loyaltyApi(session,"payment_create",{order_id:created.order.id});
+      if (paid?.payment?.provider === "RAZORPAY") {
+        await new Promise<void>((resolve,reject)=>{
+          const w:any=window;
+          const open=()=>{
+            const rzp=new w.Razorpay({
+              key:paid.payment.key_id,
+              amount:paid.payment.amount,
+              currency:paid.payment.currency,
+              name:paid.payment.merchant_name,
+              description:"GBK AI Loyalty",
+              order_id:paid.payment.order_id,
+              handler:()=>{setAuthNotice("Payment submitted. Waiting for verified gateway payment before GBK reward settlement.");resolve();},
+              modal:{ondismiss:()=>resolve()}
+            });
+            rzp.on("payment.failed",(r:any)=>{setAuthNotice(r?.error?.description||"Payment failed.");resolve();});
+            rzp.open();
+          };
+          if(w.Razorpay){open();return;}
+          const s=document.createElement("script"); s.src="https://checkout.razorpay.com/v1/checkout.js"; s.onload=open; s.onerror=()=>reject(new Error("Payment checkout could not load")); document.body.appendChild(s);
+        });
+      }
+    } catch(e:any){setAuthNotice(e.message||"Payment setup failed");} finally {setApiBusy(false);}
   };
 
   const shareBusiness = async (businessName:string, businessUrl?:string) => {
@@ -282,12 +305,19 @@ export default function Home() {
             <div className="paymentBox">
               <b>Merchant payment</b>
               <small>Customer pays you directly in your local currency. GBK does not receive the customer payment.</small>
+              <select className="modalSelect" value={paymentGateway} onChange={e=>setPaymentGateway(e.target.value)}>
+                <option value="RAZORPAY">Razorpay</option>
+                <option value="CASHFREE">Cashfree Easy Split</option>
+                <option value="PAYU">PayU Split Settlement</option>
+              </select>
+              <small>Customer pays the merchant through the merchant's approved payment account. Marketplace routing requires the provider's linked-merchant approval and credentials.</small>
               <select className="modalSelect" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}>
                 <option value="LOCAL_CURRENCY">Local currency payment</option>
                 {!isIndia && <option value="USDT">USDT — optional</option>}
               </select>
               <input className="modalInput" value={paymentCurrency} onChange={e=>setPaymentCurrency(e.target.value.toUpperCase())} placeholder="Currency code e.g. INR, AED, USD" maxLength={3}/>
               <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder={paymentMethod==="USDT" ? "USDT wallet/payment details" : "UPI, bank, payment account or provider details"}/>
+              <input className="modalInput" value={merchantWallet} onChange={e=>setMerchantWallet(e.target.value.trim())} placeholder="Merchant GBK wallet address (0x...)"/>
               {isIndia && <small>India: INR/local payment only. USDT is disabled for this merchant flow.</small>}
             </div>
             <label className="check"><input type="checkbox"/> I accept that GBK provides leads and loyalty benefits; the merchant controls the product/service and its business policy.</label>
