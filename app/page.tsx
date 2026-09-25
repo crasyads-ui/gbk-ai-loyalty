@@ -50,7 +50,8 @@ export default function Home() {
   const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
   const [merchantBusinessName,setMerchantBusinessName]=useState("");
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
-  const [merchantContact,setMerchantContact]=useState("");
+  const [merchantPhone,setMerchantPhone]=useState("");
+  const [merchantEmail,setMerchantEmail]=useState("");
   const [merchantCity,setMerchantCity]=useState("");
   const [merchantCategory,setMerchantCategory]=useState(businessCategories[0]);
   const [walletAddress,setWalletAddress]=useState("");
@@ -89,6 +90,7 @@ export default function Home() {
       const address = accounts?.[0];
       if (!address) throw new Error("Wallet connection was cancelled.");
       setWalletAddress(address);
+      setMerchantWallet(address);
       let s = getStoredSession();
       if (!s) s = await signInAnonymously();
       await loyaltyApi(s,"profile_upsert",{role:targetRole,full_name:fullName || "GBK Wallet User",country,wallet_address:address});
@@ -296,7 +298,8 @@ export default function Home() {
             <p>Start your merchant setup. You will confirm your loyalty and lead terms before activation.</p>
             <input placeholder="Business name" value={merchantBusinessName} onChange={e=>setMerchantBusinessName(e.target.value)}/>
             <input placeholder="Owner name" value={merchantOwnerName} onChange={e=>setMerchantOwnerName(e.target.value)}/>
-            <input placeholder="Mobile or email" value={merchantContact} onChange={e=>setMerchantContact(e.target.value)}/>
+            <input placeholder="Phone (optional)" value={merchantPhone} onChange={e=>setMerchantPhone(e.target.value)}/>
+            <input type="email" placeholder="Email (optional)" value={merchantEmail} onChange={e=>setMerchantEmail(e.target.value)}/>
             <select className="modalSelect" value={merchantCategory} onChange={e=>setMerchantCategory(e.target.value)}>{businessCategories.map(x=><option key={x}>{x}</option>)}</select>
             <input placeholder="City" value={merchantCity} onChange={e=>setMerchantCity(e.target.value)}/>
             <select className="modalSelect" value={merchantOffer} onChange={e=>setMerchantOffer(e.target.value)}>
@@ -331,7 +334,12 @@ export default function Home() {
               </select>
               <input className="modalInput" value={paymentCurrency} onChange={e=>setPaymentCurrency(e.target.value.toUpperCase())} placeholder="Currency code e.g. INR, AED, USD" maxLength={3}/>
               <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder={paymentMethod==="USDT" ? "USDT wallet/payment details" : "UPI, bank, payment account or provider details"}/>
-              <input className="modalInput" value={merchantWallet} onChange={e=>setMerchantWallet(e.target.value.trim())} placeholder="Merchant GBK wallet address (0x...)"/>
+              <div className="walletRequiredBox">
+                <b>Merchant GBK wallet — required</b>
+                <small>The connected wallet is the merchant identity and reward-balance wallet.</small>
+                <input className="modalInput" value={merchantWallet} readOnly placeholder="Connect Wallet to continue"/>
+                <button type="button" className="secondary" onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{merchantWallet ? "Wallet Connected" : "Connect Wallet"}</button>
+              </div>
               {isIndia && <small>India: INR/local payment only. USDT is disabled for this merchant flow.</small>}
             </div>
             <label className="check"><input type="checkbox"/> I accept that GBK provides leads and loyalty benefits; the merchant controls the product/service and its business policy.</label>
@@ -340,7 +348,7 @@ export default function Home() {
             <input placeholder="Full name"/>
             <input placeholder="Mobile or email"/>
           </>}
-          <button className="primary" onClick={async ()=>{ if(role==="Merchant"){ if(!session){connectWallet("merchant");return;} setApiBusy(true); try { await ensureProfile(session,"merchant"); const r=await loyaltyApi(session,"merchant_register",{business_name:merchantBusinessName,category:merchantCategory,country,city:merchantCity,phone:merchantContact,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_provider:paymentGateway,payment_account_ref:paymentAccountRef,payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant application submitted. The business must accept the invitation/terms and fund GBK before activation."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>Continue →</button>
+          <button className="primary" onClick={async ()=>{ if(role==="Merchant"){ if(!merchantWallet){await connectWallet("merchant");return;} if(!session){await connectWallet("merchant");return;} setApiBusy(true); try { await ensureProfile(session,"merchant"); const r=await loyaltyApi(session,"merchant_register",{business_name:merchantBusinessName,category:merchantCategory,country,city:merchantCity,phone:merchantPhone || null,email:merchantEmail || null,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_provider:paymentGateway,payment_account_ref:paymentAccountRef,payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant application submitted. The business must accept the invitation/terms and fund GBK before activation."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>Continue →</button>
           <small>No token transfer happens from this screen.</small>
         </div>
       </div>}
