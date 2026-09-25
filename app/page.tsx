@@ -33,6 +33,8 @@ export default function Home() {
   const [shareNotice,setShareNotice] = useState("");
   const [installPrompt,setInstallPrompt] = useState<any>(null);
   const [installed,setInstalled] = useState(false);
+  const [paymentGateway,setPaymentGateway] = useState("RAZORPAY");
+  const [paymentAccountRef,setPaymentAccountRef] = useState("");
   const [paymentMethod,setPaymentMethod] = useState("LOCAL_CURRENCY");
   const [paymentCurrency,setPaymentCurrency] = useState("INR");
   const [paymentDetails,setPaymentDetails] = useState("");
