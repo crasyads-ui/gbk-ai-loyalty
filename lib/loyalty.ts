@@ -33,7 +33,7 @@ export async function signUp(email: string, password: string, fullName: string):
       password,
       data: { full_name: fullName },
       gotrue_meta_security: {},
-      options: { email_redirect_to: `${SITE_URL}/` },
+      redirect_to: `${SITE_URL}/`,
     }),
   });
   const data = await r.json();
