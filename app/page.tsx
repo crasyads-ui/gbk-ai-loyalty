@@ -29,7 +29,11 @@ export default function Home() {
   const [customOffer,setCustomOffer] = useState("25");
   const [shareNotice,setShareNotice] = useState("");
   const [installPrompt,setInstallPrompt] = useState<any>(null);
-  const [installed,setInstalled] = useState(false);\n  const [paymentMethod,setPaymentMethod] = useState("LOCAL_CURRENCY");\n  const [paymentCurrency,setPaymentCurrency] = useState("INR");\n  const [paymentDetails,setPaymentDetails] = useState("");\n  const isIndia = country === "India";
+  const [installed,setInstalled] = useState(false);
+  const [paymentMethod,setPaymentMethod] = useState("LOCAL_CURRENCY");
+  const [paymentCurrency,setPaymentCurrency] = useState("INR");
+  const [paymentDetails,setPaymentDetails] = useState("");
+  const isIndia = country === "India";
 
   useEffect(() => {
     const w = window as any;
