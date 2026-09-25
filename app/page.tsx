@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getStoredSession, loyaltyApi, signInAnonymously, type LoyaltySession } from "../lib/loyalty";
+import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, type LoyaltySession } from "../lib/loyalty";
 
 const businessCategories = ["All Products & Services","Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries & Supermarkets","Fashion & Apparel","Electronics","Pharmacies & Health Stores","Salons & Beauty","AC Repair","Plumbing & Electrical","Home Services","Automotive & EV","Fuel & Charging","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education & Courses","Spoken English","Healthcare & Clinics","Real Estate","Agriculture & Farm Services","Seeds & Fertilizer","Farm Equipment","Crop Advisory","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops","Wholesale & Distribution","Manufacturing","Construction","Cleaning Services","Pet Services"];
 
@@ -84,11 +84,7 @@ export default function Home() {
   const connectWallet = async (targetRole:"customer"|"merchant"|"founder"="customer") => {
     setApiBusy(true); setAuthNotice("");
     try {
-      const eth = (window as any).ethereum;
-      if (!eth?.request) throw new Error("No compatible wallet detected. Open this app inside Trust Wallet, Bitget Wallet, Binance Wallet or another EVM wallet browser.");
-      const accounts = await eth.request({method:"eth_requestAccounts"});
-      const address = accounts?.[0];
-      if (!address) throw new Error("Wallet connection was cancelled.");
+      const address = await connectEvmWallet();
       setWalletAddress(address);
       setMerchantWallet(address);
       let s = getStoredSession();
