@@ -311,6 +311,7 @@ export default function Home() {
                 <option value="PAYU">PayU Split Settlement</option>
               </select>
               <small>Customer pays the merchant through the merchant's approved payment account. Marketplace routing requires the provider's linked-merchant approval and credentials.</small>
+              <input className="modalInput" value={paymentAccountRef} onChange={e=>setPaymentAccountRef(e.target.value.trim())} placeholder="Merchant payment account / linked merchant ID"/>
               <select className="modalSelect" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}>
                 <option value="LOCAL_CURRENCY">Local currency payment</option>
                 {!isIndia && <option value="USDT">USDT — optional</option>}
