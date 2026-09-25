@@ -14,6 +14,19 @@ export type LoyaltySession = {
   user: { id: string; email?: string };
 };
 
+export async function signInAnonymously(): Promise<LoyaltySession> {
+  const r = await fetch(\`${SUPABASE_URL}/auth/v1/signup\`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({}),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.msg || data.error_description || data.error || "Wallet account creation failed");
+  if (!data.access_token) throw new Error("Anonymous wallet sign-in is not enabled in Supabase.");
+  localStorage.setItem("gbk_loyalty_session", JSON.stringify(data));
+  return data;
+}
+
 export async function signIn(email: string, password: string): Promise<LoyaltySession> {
   const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: "POST", headers: authHeaders(), body: JSON.stringify({ email, password }),
