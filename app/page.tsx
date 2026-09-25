@@ -27,6 +27,7 @@ export default function Home() {
   const [role,setRole] = useState<string|null>(null);
   const [merchantOffer,setMerchantOffer] = useState("10%");
   const [customOffer,setCustomOffer] = useState("25");
+  const [shareNotice,setShareNotice] = useState("");
   const [installPrompt,setInstallPrompt] = useState<any>(null);
   const [installed,setInstalled] = useState(false);
 
@@ -49,6 +50,22 @@ export default function Home() {
   };
 
   const scroll = () => document.getElementById("roles")?.scrollIntoView({behavior:"smooth"});
+
+  const shareBusiness = async (businessName:string, businessUrl?:string) => {
+    const url = businessUrl || window.location.href;
+    const text = `Check out ${businessName} on GBK AI Loyalty. Share, shop and earn eligible GBK rewards.`;
+    try {
+      if (navigator.share && (!navigator.canShare || navigator.canShare({title: businessName, text, url}))) {
+        await navigator.share({title: businessName, text, url});
+        setShareNotice(`Share completed. ${businessName} is now recorded for eligibility review.`);
+      } else {
+        await navigator.clipboard?.writeText(`${text} ${url}`);
+        setShareNotice(`Business link copied. Share it on WhatsApp, Facebook, Instagram or other social channels.`);
+      }
+    } catch {
+      setShareNotice("Share cancelled or unavailable on this device.");
+    }
+  };
 
   const selectedOffer = merchantOffer === "custom" ? Number(customOffer || 0) : Number(merchantOffer.replace("%",""));
   const customerShare = selectedOffer * 0.6;
@@ -132,7 +149,7 @@ export default function Home() {
       <section id="offers">
         <div className="sectionHead"><div><span className="eyebrow">🎁 DISCOVER</span><h2>GBK Rewards Near You</h2></div><button className="textBtn">View all</button></div>
         <div className="grid">{offers.map(([icon,title,reward,note])=>
-          <article className="card" key={title}><div className="icon">{icon}</div><h3>{title}</h3><strong>{reward}</strong><p>{note} with participating businesses.</p><span className="arrow">›</span></article>
+          <article className="card" key={title}><div className="icon">{icon}</div><h3>{title}</h3><strong>{reward}</strong><p>{note} with participating businesses.</p><button className="shareBusinessBtn" onClick={()=>shareBusiness(title)}>📤 Share & Earn</button><span className="arrow">›</span></article>
         )}</div>
       </section>
 
