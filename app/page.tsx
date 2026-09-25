@@ -33,9 +33,9 @@ export default function Home() {
   const [shareNotice,setShareNotice] = useState("");
   const [installPrompt,setInstallPrompt] = useState<any>(null);
   const [installed,setInstalled] = useState(false);
-  const [paymentGateway,setPaymentGateway] = useState("RAZORPAY");
+  const [paymentGateway,setPaymentGateway] = useState("DIRECT");
   const [paymentAccountRef,setPaymentAccountRef] = useState("");
-  const [paymentMethod,setPaymentMethod] = useState("LOCAL_CURRENCY");
+  const [paymentMethod,setPaymentMethod] = useState("CASH");
   const [paymentCurrency,setPaymentCurrency] = useState("INR");
   const [paymentDetails,setPaymentDetails] = useState("");
   const [merchantWallet,setMerchantWallet] = useState("");
@@ -339,18 +339,21 @@ export default function Home() {
               <b>Merchant payment</b>
               <small>Customer pays you directly in your local currency. GBK does not receive the customer payment.</small>
               <select className="modalSelect" value={paymentGateway} onChange={e=>setPaymentGateway(e.target.value)}>
-                <option value="RAZORPAY">Razorpay</option>
-                <option value="CASHFREE">Cashfree Easy Split</option>
-                <option value="PAYU">PayU Split Settlement</option>
+                <option value="DIRECT">Direct payment</option>
+                <option value="RAZORPAY">Razorpay (optional)</option>
+                <option value="CASHFREE">Cashfree Easy Split (optional)</option>
+                <option value="PAYU">PayU Split Settlement (optional)</option>
               </select>
-              <small>Customer pays the merchant through the merchant's approved payment account. Marketplace routing requires the provider's linked-merchant approval and credentials.</small>
-              <input className="modalInput" value={paymentAccountRef} onChange={e=>setPaymentAccountRef(e.target.value.trim())} placeholder="Merchant payment account / linked merchant ID"/>
+              <small>Choose how the customer normally pays you. Payment-provider accounts are optional during registration.</small>
+              {paymentGateway !== "DIRECT" && <input className="modalInput" value={paymentAccountRef} onChange={e=>setPaymentAccountRef(e.target.value.trim())} placeholder="Approved linked merchant ID (optional)"/>}
               <select className="modalSelect" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}>
-                <option value="LOCAL_CURRENCY">Local currency payment</option>
-                {!isIndia && <option value="USDT">USDT — optional</option>}
+                <option value="CASH">Cash</option>
+                <option value="USDT">USDT</option>
+                <option value="LOCAL_CURRENCY">Local currency / bank / UPI</option>
               </select>
               <input className="modalInput" value={paymentCurrency} onChange={e=>setPaymentCurrency(e.target.value.toUpperCase())} placeholder="Currency code e.g. INR, AED, USD" maxLength={3}/>
-              <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder={paymentMethod==="USDT" ? "USDT wallet/payment details" : "UPI, bank, payment account or provider details"}/>
+              {paymentMethod !== "CASH" && <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder={paymentMethod==="USDT" ? "USDT wallet/payment details (optional)" : "UPI, bank or payment details (optional)"}/>}
+              {paymentMethod === "CASH" && <small>Cash payments are recorded and verified by the merchant before any GBK reward is released.</small>}
               <div className="walletRequiredBox">
                 <b>Merchant GBK wallet — required</b>
                 <small>The connected wallet is the merchant identity and reward-balance wallet.</small>
@@ -365,7 +368,8 @@ export default function Home() {
             <input placeholder="Full name"/>
             <input placeholder="Mobile or email"/>
           </>}
-          {role==="Founder" ? <button className="primary" onClick={verifyFounder} disabled={apiBusy}>{apiBusy ? "Verifying…" : "Verify Founder Member →"}</button> : <button className="primary" onClick={async ()=>{ if(role==="Merchant"){ if(!merchantWallet){await connectWallet("merchant");return;} if(!session){await connectWallet("merchant");return;} setApiBusy(true); try { await ensureProfile(session,"merchant"); const r=await loyaltyApi(session,"merchant_register",{business_name:merchantBusinessName,category:merchantCategory,country,city:merchantCity,phone:merchantPhone || null,email:merchantEmail || null,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_provider:paymentGateway,payment_account_ref:paymentAccountRef,payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant application submitted. The business must accept the invitation/terms and fund GBK before activation."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>Continue →</button>}<small>No token transfer happens from this screen.</small>
+          {role==="Merchant" && authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
+          {role==="Founder" ? <button className="primary" onClick={verifyFounder} disabled={apiBusy}>{apiBusy ? "Verifying…" : "Verify Founder Member →"}</button> : <button className="primary" disabled={apiBusy} onClick={async ()=>{ if(role==="Merchant"){ setApiBusy(true); setAuthNotice(""); try { if(!merchantWallet){ await connectWallet("merchant"); return; } let activeSession = session || getStoredSession(); if(!activeSession) activeSession = await signInAnonymously(); setSession(activeSession); await ensureProfile(activeSession,"merchant"); const r=await loyaltyApi(activeSession,"merchant_register",{business_name:merchantBusinessName.trim(),owner_name:merchantOwnerName.trim(),category:merchantCategory,country,city:merchantCity.trim(),phone:merchantPhone || null,email:merchantEmail || null,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_provider:paymentGateway,payment_account_ref:paymentGateway==="DIRECT" ? null : (paymentAccountRef || null),payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant registration submitted successfully."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>{apiBusy ? "Registering…" : "Continue →"}</button><small>No token transfer happens from this screen.</small>
         </div>
       </div>}
 
