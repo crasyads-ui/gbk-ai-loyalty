@@ -45,6 +45,10 @@ export default function Home() {
   const [apiBusy,setApiBusy] = useState(false);
   const [searchResults,setSearchResults] = useState<any[]>([]);
   const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
+  const [merchantBusinessName,setMerchantBusinessName]=useState("");
+  const [merchantOwnerName,setMerchantOwnerName]=useState("");
+  const [merchantCity,setMerchantCity]=useState("");
+  const [merchantCategory,setMerchantCategory]=useState(businessCategories[0]);
   const isIndia = country === "India";
 
   useEffect(() => {
@@ -234,7 +238,7 @@ export default function Home() {
             <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/>
             <button className="primary" onClick={doAuth} disabled={apiBusy}>{apiBusy ? "Please wait…" : authMode==="login" ? "Sign in" : "Create account"}</button>
             <button className="secondary" onClick={()=>setAuthMode(authMode==="login"?"signup":"login")}>{authMode==="login" ? "Create a new account" : "I already have an account"}</button>
-          </> :           {role==="FounderUser" ? <>
+          </> : role==="FounderUser" ? <>
             <p>Add a user to your Founder network. Country Founders are restricted to their assigned country; Global Founders can select any country.</p>
             <input placeholder="User full name"/><input placeholder="Mobile or email"/>
             <select className="modalSelect"><option>Customer</option><option>Merchant prospect</option></select>
@@ -249,9 +253,11 @@ export default function Home() {
             <label className="check"><input type="checkbox"/> Business owner has agreed to the listing and GBK Loyalty terms.</label>
           </> : role==="Merchant" ? <>
             <p>Start your merchant setup. You will confirm your loyalty and lead terms before activation.</p>
-            <input placeholder="Business name"/>
-            <input placeholder="Owner name"/>
-            <input placeholder="Mobile or email"/>
+            <input placeholder="Business name" value={merchantBusinessName} onChange={e=>setMerchantBusinessName(e.target.value)}/>
+            <input placeholder="Owner name" value={merchantOwnerName} onChange={e=>setMerchantOwnerName(e.target.value)}/>
+            <input placeholder="Mobile or email" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)}/>
+            <select className="modalSelect" value={merchantCategory} onChange={e=>setMerchantCategory(e.target.value)}>{businessCategories.map(x=><option key={x}>{x}</option>)}</select>
+            <input placeholder="City" value={merchantCity} onChange={e=>setMerchantCity(e.target.value)}/>
             <select className="modalSelect" value={merchantOffer} onChange={e=>setMerchantOffer(e.target.value)}>
               <option value="5%">5% loyalty</option>
               <option value="10%">10% loyalty</option>
@@ -285,7 +291,7 @@ export default function Home() {
             <input placeholder="Full name"/>
             <input placeholder="Mobile or email"/>
           </>}
-          <button className="primary" onClick={async ()=>{ if(role==="Merchant" && session){ try { await ensureProfile(session,"merchant"); } catch(e:any){setAuthNotice(e.message||"Profile setup failed"); return;} } alert(role==="FounderUser" ? "User invitation saved for testing. Founder attribution will be recorded after authentication is connected." : role==="FounderBusiness" ? "Business listing saved for testing. Founder attribution will be recorded after authentication is connected." : `Merchant payment setup saved for testing: ${paymentMethod === "USDT" ? "USDT" : paymentCurrency}. Customer payment goes directly to the merchant. Verified payment will trigger the GBK reward flow.`)}>Continue →</button>
+          <button className="primary" onClick={async ()=>{ if(role==="Merchant"){ if(!session){setRole("Auth");return;} setApiBusy(true); try { await ensureProfile(session,"merchant"); const r=await loyaltyApi(session,"merchant_register",{business_name:merchantBusinessName,category:merchantCategory,country,city:merchantCity,loyalty_offer_percent:selectedOffer,lead_commission_percent:0,payment_currency:paymentCurrency,payment_method:paymentMethod,payment_details:{details:paymentDetails,owner:merchantOwnerName}}); setAuthNotice("Merchant application submitted. The business must accept the invitation/terms and fund GBK before activation."); setRole(null); } catch(e:any){setAuthNotice(e.message||"Merchant registration failed");} finally {setApiBusy(false);} } else if(role==="FounderUser"){alert("User invitation workflow will be connected to Founder authentication next.");} else if(role==="FounderBusiness"){alert("Business referral workflow will be connected to Founder authentication next.");} }}>Continue →</button>
           <small>No token transfer happens from this screen.</small>
         </div>
       </div>}
