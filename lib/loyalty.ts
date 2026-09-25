@@ -63,7 +63,8 @@ export async function connectEvmWallet(): Promise<string> {
   }
 
   try {
-    const mod = await import("https://esm.sh/@walletconnect/ethereum-provider");
+    const dynamicImport = new Function("u", "return import(u)") as (u: string) => Promise<any>;
+    const mod = await dynamicImport("https://esm.sh/@walletconnect/ethereum-provider");
     const EthereumProvider = mod.default || mod.EthereumProvider;
     if (!EthereumProvider) throw new Error("Wallet selector unavailable.");
     const provider = await EthereumProvider.init({
