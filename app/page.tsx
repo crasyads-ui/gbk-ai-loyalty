@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getStoredSession, loyaltyApi, signIn, signOut, signUp, type LoyaltySession } from "../lib/loyalty";
 
 const businessCategories = ["All Products & Services","Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries & Supermarkets","Fashion & Apparel","Electronics","Pharmacies & Health Stores","Salons & Beauty","AC Repair","Plumbing & Electrical","Home Services","Automotive & EV","Fuel & Charging","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education & Courses","Spoken English","Healthcare & Clinics","Real Estate","Agriculture & Farm Services","Seeds & Fertilizer","Farm Equipment","Crop Advisory","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops","Wholesale & Distribution","Manufacturing","Construction","Cleaning Services","Pet Services"];
 
@@ -35,6 +36,15 @@ export default function Home() {
   const [paymentMethod,setPaymentMethod] = useState("LOCAL_CURRENCY");
   const [paymentCurrency,setPaymentCurrency] = useState("INR");
   const [paymentDetails,setPaymentDetails] = useState("");
+  const [session,setSession] = useState<LoyaltySession|null>(null);
+  const [authMode,setAuthMode] = useState<"login"|"signup">("login");
+  const [email,setEmail] = useState("");
+  const [password,setPassword] = useState("");
+  const [fullName,setFullName] = useState("");
+  const [authNotice,setAuthNotice] = useState("");
+  const [apiBusy,setApiBusy] = useState(false);
+  const [searchResults,setSearchResults] = useState<any[]>([]);
+  const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
   const isIndia = country === "India";
 
   useEffect(() => {
@@ -56,6 +66,35 @@ export default function Home() {
   };
 
   const scroll = () => document.getElementById("roles")?.scrollIntoView({behavior:"smooth"});
+  const ensureProfile = async (s:LoyaltySession, roleName:"customer"|"merchant"|"founder") => {
+    return loyaltyApi(s,"profile_upsert",{role:roleName,full_name:fullName,country});
+  };
+  const doAuth = async () => {
+    setApiBusy(true); setAuthNotice("");
+    try {
+      const s = authMode === "login" ? await signIn(email,password) : await signUp(email,password,fullName);
+      if (!s) { setAuthNotice("Account created. Check your email to confirm the account, then sign in."); return; }
+      setSession(s); await ensureProfile(s, "customer"); setRole("Customer"); setAuthNotice("Signed in successfully.");
+    } catch(e:any) { setAuthNotice(e.message || "Authentication failed"); }
+    finally { setApiBusy(false); }
+  };
+  const doSearch = async () => {
+    const q=query.trim(); if(q.length<2){setAuthNotice("Please enter what you need.");return;}
+    if(!session){setRole("Auth");setAuthNotice("Sign in first to search registered GBK Loyalty businesses.");return;}
+    setApiBusy(true); setAuthNotice("");
+    try { const r=await loyaltyApi(session,"search",{query:q,country}); setSearchResults(r.results||[]); document.getElementById("searchResults")?.scrollIntoView({behavior:"smooth"}); }
+    catch(e:any){setAuthNotice(e.message||"Search failed");} finally {setApiBusy(false);}
+  };
+  const createOrderFor = async (m:any) => {
+    if(!session){setRole("Auth");return;}
+    const amount=window.prompt("Enter purchase/order amount in local currency:");
+    if(!amount || !Number.isFinite(Number(amount)) || Number(amount)<=0) return;
+    setApiBusy(true);
+    try {
+      await loyaltyApi(session,"create_order",{merchant_id:m.id,amount_minor:Math.round(Number(amount)*100),currency:country==="India"?"INR":"USD",request_text:query,category:m.category,country,order_source:"GBK_AI"});
+      setAuthNotice("Order request created. Payment must be completed and verified before GBK reward settlement.");
+    } catch(e:any){setAuthNotice(e.message||"Order creation failed");} finally {setApiBusy(false);}
+  };
 
   const shareBusiness = async (businessName:string, businessUrl?:string) => {
     const url = businessUrl || window.location.href;
@@ -85,7 +124,7 @@ export default function Home() {
         <div className="topActions">
           <select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select>
           <select value={country} onChange={e=>setCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select>
-          <button className="walletBtn" onClick={()=>setRole("Customer")}>Connect Wallet</button>
+          <button className="walletBtn" onClick={()=>setRole(session ? "Customer" : "Auth")}>{session ? "Account" : "Sign in"}</button>
         </div>
       </header>
 
@@ -98,7 +137,7 @@ export default function Home() {
         <div className="eyebrow">🌐 GLOBAL CUSTOMER LOYALTY</div>
         <h1>Ask • Shop • Earn • Hold • Swap • Transfer</h1>
         <p>GBK AI brings customers to participating businesses and provides a simple, merchant-funded GBK Loyalty benefit after a verified qualifying transaction.</p>
-        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Ask GBK AI for anything: product, service, agriculture, hotel, repair, travel..."/><button onClick={scroll}>Ask AI</button></div>
+        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Ask GBK AI for anything: product, service, agriculture, hotel, repair, travel..."/><button onClick={doSearch} disabled={apiBusy}>{apiBusy ? "Searching…" : "Ask AI"}</button></div>
         <div className="suggestions">
           <button onClick={()=>setQuery("restaurants with GBK rewards")}>🍽️ Restaurants</button>
           <button onClick={()=>setQuery("hotels with GBK offers")}>🏨 Hotels</button>
@@ -188,7 +227,14 @@ export default function Home() {
           <button className="close" onClick={()=>setRole(null)}>×</button>
           <div className="roleIcon">{roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍")}</div>
           <h2>{role} registration</h2>
-          {role==="FounderUser" ? <>
+          {role==="Auth" ? <>
+            <p>Use your GBK Loyalty account. Your account is used to protect merchant, order and reward records.</p>
+            {authMode==="signup" && <input placeholder="Full name" value={fullName} onChange={e=>setFullName(e.target.value)}/>}
+            <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)}/>
+            <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/>
+            <button className="primary" onClick={doAuth} disabled={apiBusy}>{apiBusy ? "Please wait…" : authMode==="login" ? "Sign in" : "Create account"}</button>
+            <button className="secondary" onClick={()=>setAuthMode(authMode==="login"?"signup":"login")}>{authMode==="login" ? "Create a new account" : "I already have an account"}</button>
+          </> :           {role==="FounderUser" ? <>
             <p>Add a user to your Founder network. Country Founders are restricted to their assigned country; Global Founders can select any country.</p>
             <input placeholder="User full name"/><input placeholder="Mobile or email"/>
             <select className="modalSelect"><option>Customer</option><option>Merchant prospect</option></select>
@@ -239,7 +285,7 @@ export default function Home() {
             <input placeholder="Full name"/>
             <input placeholder="Mobile or email"/>
           </>}
-          <button className="primary" onClick={()=>alert(role==="FounderUser" ? "User invitation saved for testing. Founder attribution will be recorded after authentication is connected." : role==="FounderBusiness" ? "Business listing saved for testing. Founder attribution will be recorded after authentication is connected." : `Merchant payment setup saved for testing: ${paymentMethod === "USDT" ? "USDT" : paymentCurrency}. Customer payment goes directly to the merchant. Verified payment will trigger the GBK reward flow.`)}>Continue →</button>
+          <button className="primary" onClick={async ()=>{ if(role==="Merchant" && session){ try { await ensureProfile(session,"merchant"); } catch(e:any){setAuthNotice(e.message||"Profile setup failed"); return;} } alert(role==="FounderUser" ? "User invitation saved for testing. Founder attribution will be recorded after authentication is connected." : role==="FounderBusiness" ? "Business listing saved for testing. Founder attribution will be recorded after authentication is connected." : `Merchant payment setup saved for testing: ${paymentMethod === "USDT" ? "USDT" : paymentCurrency}. Customer payment goes directly to the merchant. Verified payment will trigger the GBK reward flow.`)}>Continue →</button>
           <small>No token transfer happens from this screen.</small>
         </div>
       </div>}
