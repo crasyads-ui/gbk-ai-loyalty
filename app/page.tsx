@@ -16,7 +16,7 @@ const countries = ["Global","India","United Arab Emirates","United States","Unit
 
 const roles = [
   {icon:"👤",title:"Customer",text:"Ask GBK AI for products or services, pay the merchant normally and receive eligible GBK Loyalty rewards.",items:["Earn GBK","Hold • Swap • Transfer"]},
-  {icon:"🏪",title:"Merchant",text:"Register your business, accept the lead terms, choose a loyalty offer and maintain GBK reward balance in advance.",items:["5%–20% loyalty","Automatic rewards"]},
+  {icon:"🏪",title:"Merchant",text:"Register your business, accept the lead terms, choose a loyalty offer and maintain GBK reward balance in advance.",items:["5%–20% or Custom","Automatic rewards"]},
   {icon:"🌍",title:"Founder",text:"Country or Global Founder Members can onboard businesses and receive the Founder allocation from verified loyalty sales.",items:["Add businesses","Track earnings"]},
 ];
 
@@ -25,6 +25,8 @@ export default function Home() {
   const [language,setLanguage] = useState("English");
   const [country,setCountry] = useState("Global");
   const [role,setRole] = useState<string|null>(null);
+  const [merchantOffer,setMerchantOffer] = useState("10%");
+  const [customOffer,setCustomOffer] = useState("25");
   const [installPrompt,setInstallPrompt] = useState<any>(null);
   const [installed,setInstalled] = useState(false);
 
@@ -47,6 +49,11 @@ export default function Home() {
   };
 
   const scroll = () => document.getElementById("roles")?.scrollIntoView({behavior:"smooth"});
+
+  const selectedOffer = merchantOffer === "custom" ? Number(customOffer || 0) : Number(merchantOffer.replace("%",""));
+  const customerShare = selectedOffer * 0.6;
+  const founderShare = selectedOffer * 0.2;
+  const platformShare = selectedOffer * 0.2;
 
   return (
     <main className="shell">
@@ -108,11 +115,11 @@ export default function Home() {
         <div><span className="eyebrow">MERCHANT TERMS</span><h2>Simple rules before activation</h2></div>
         <div className="ruleGrid">
           <div><b>01 · Maintain GBK</b><p>Merchant deposits/approves the reward balance in advance.</p></div>
-          <div><b>02 · Choose loyalty</b><p>Merchant selects the customer loyalty offer, normally 5%–20%.</p></div>
-          <div><b>03 · Lead commission</b><p>Merchant can accept a separate lead commission before receiving eligible leads.</p></div>
-          <div><b>04 · Verified transaction</b><p>No reward is released merely because a lead was sent or a payment button was clicked.</p></div>
-          <div><b>05 · Returns</b><p>If a completed transaction is refunded, the corresponding reward can be reversed according to the published terms.</p></div>
-          <div><b>06 · Local currency</b><p>Customer pays the merchant in local currency. GBK handles the loyalty benefit separately.</p></div>
+          <div><b>02 · Choose loyalty</b><p>Merchant selects 5%, 10%, 15%, 20% or a custom loyalty percentage.</p></div>
+          <div><b>03 · Automatic split</b><p>The selected merchant offer is allocated 60% to the customer, 20% to the Founder/referrer and 20% to the GBK platform.</p></div>
+          <div><b>04 · Lead commission</b><p>Merchant can accept a separate lead commission before receiving eligible leads.</p></div>
+          <div><b>05 · Verified transaction</b><p>No reward is released merely because a lead was sent or a payment button was clicked.</p></div>
+          <div><b>06 · Returns</b><p>If a completed transaction is refunded, the corresponding reward can be reversed according to the published terms.</p></div>
         </div>
       </section>
 
@@ -139,7 +146,7 @@ export default function Home() {
       </section>
 
       <section className="merchant">
-        <div><span className="eyebrow">FOR BUSINESSES</span><h2>Activate loyalty. Receive eligible leads.</h2><p>Register your business, accept the commercial terms, choose 5%–20%, connect your wallet and maintain the required GBK reward balance.</p></div>
+        <div><span className="eyebrow">FOR BUSINESSES</span><h2>Activate loyalty. Receive eligible leads.</h2><p>Register your business, accept the commercial terms, choose 5%–20% or a custom percentage, connect your wallet and maintain the required GBK reward balance.</p></div>
         <button onClick={()=>setRole("Merchant")}>Register as Merchant →</button>
       </section>
 
@@ -153,7 +160,21 @@ export default function Home() {
             <input placeholder="Business name"/>
             <input placeholder="Owner name"/>
             <input placeholder="Mobile or email"/>
-            <select className="modalSelect" defaultValue="10%"><option>5% loyalty</option><option>10% loyalty</option><option>15% loyalty</option><option>20% loyalty</option></select>
+            <select className="modalSelect" value={merchantOffer} onChange={e=>setMerchantOffer(e.target.value)}>
+              <option value="5%">5% loyalty</option>
+              <option value="10%">10% loyalty</option>
+              <option value="15%">15% loyalty</option>
+              <option value="20%">20% loyalty</option>
+              <option value="custom">Custom percentage</option>
+            </select>
+            {merchantOffer === "custom" && <>
+              <input className="modalInput" type="number" min="1" max="50" step="0.1" value={customOffer} onChange={e=>setCustomOffer(e.target.value)} placeholder="Custom loyalty percentage"/>
+              <small>Enter 1%–50%. The final merchant offer is split 60% Customer / 20% Founder / 20% Platform.</small>
+            </>}
+            <div className="offerPreview">
+              <b>Selected offer: {selectedOffer > 0 ? selectedOffer : 0}%</b>
+              <span>Customer {customerShare.toFixed(1)}% · Founder {founderShare.toFixed(1)}% · Platform {platformShare.toFixed(1)}%</span>
+            </div>
             <select className="modalSelect" defaultValue="0%"><option>0% lead commission</option><option>5% lead commission</option><option>10% lead commission</option><option>15% lead commission</option><option>20% lead commission</option></select>
             <label className="check"><input type="checkbox"/> I accept that GBK provides leads and loyalty benefits; the merchant controls the product/service and its business policy.</label>
           </> : <>
