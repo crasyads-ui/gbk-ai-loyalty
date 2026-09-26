@@ -59,6 +59,7 @@ export default function Home() {
   const [founderTier,setFounderTier]=useState("COUNTRY_300");
   const [founderTxHash,setFounderTxHash]=useState("");
   const [founderStatus,setFounderStatus]=useState<any>(null);
+  const [merchantStatus,setMerchantStatus]=useState<any>(null);
   const isIndia = country === "India";
 
   useEffect(() => {
@@ -106,6 +107,22 @@ export default function Home() {
     setRole("Founder");
     if (!session) return;
     try { const r = await loyaltyApi(session,"founder_status",{}); setFounderStatus(r.founder || null); } catch {}
+  };
+  const openMerchantWallet = async () => {
+    setApiBusy(true); setAuthNotice("");
+    try {
+      let s = session || getStoredSession();
+      if (!s) { s = await signInAnonymously(); setSession(s); }
+      const data = await loyaltyApi(s,"my_data",{});
+      const merchant = (data.merchants || [])[0];
+      if (!merchant) { setRole("Merchant"); setAuthNotice("Merchant profile not found. Register as a merchant first."); return; }
+      setMerchantStatus({merchant});
+      const live = await loyaltyApi(s,"merchant_fund_status",{merchant_id:merchant.id});
+      setMerchantStatus(live);
+      setRole("MerchantWallet");
+    } catch(e:any) {
+      setAuthNotice(e.message || "Merchant wallet status could not be loaded.");
+    } finally { setApiBusy(false); }
   };
   const verifyFounder = async () => {
     if (!walletAddress) { await connectWallet("founder"); return; }
@@ -225,7 +242,7 @@ export default function Home() {
         <div className="topActions">
           <select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select>
           <select value={country} onChange={e=>setCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select>
-          <button className="walletBtn" onClick={()=>session ? setRole("Customer") : connectWallet("customer")}>{session ? "Wallet Connected" : "Connect Wallet"}</button>
+          <button className="walletBtn" onClick={()=>session ? openMerchantWallet() : connectWallet("merchant")}>{session ? "Merchant Wallet" : "Connect Wallet"}</button>
         </div>
       </header>
 
@@ -299,7 +316,7 @@ export default function Home() {
       <section className="stats">
         <div><b>0 GBK</b><span>Rewards earned</span></div>
         <div><b>0</b><span>Reward transactions</span></div>
-        <button onClick={()=>setRole("Customer")}>👛 Connect wallet</button>
+        <button onClick={()=>session ? openMerchantWallet() : connectWallet("merchant")}>👛 Merchant wallet</button>
       </section>
 
       <section id="offers">
@@ -328,7 +345,23 @@ export default function Home() {
           <button className="close" onClick={()=>setRole(null)}>×</button>
           <div className="roleIcon">{roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍")}</div>
           <h2>{role} registration</h2>
-          {role==="Auth" ? <>
+          {role==="MerchantWallet" ? <>
+            <p>Manage the connected merchant reward wallet. Customer payments remain direct to the merchant; GBK is used only for the merchant-funded loyalty reward pool.</p>
+            <div className="offerPreview">
+              <b>Merchant: {merchantStatus?.merchant?.business_name || "—"}</b>
+              <span>Wallet: {merchantStatus?.merchant?.profile_id ? "Connected" : "Not connected"}</span>
+            </div>
+            <div className="stats" style={{margin:"12px 0"}}>
+              <div><b>{merchantStatus?.live_gbk_balance_raw ? (Number(merchantStatus.live_gbk_balance_raw)/1e8).toLocaleString() : "0"} GBK</b><span>Live GBK balance</span></div>
+              <div><b>{merchantStatus?.threshold_raw ? (Number(merchantStatus.threshold_raw)/1e8).toLocaleString() : "0"} GBK</b><span>Current required balance</span></div>
+            </div>
+            <div className={merchantStatus?.active ? "status" : "status paused"}>
+              {merchantStatus?.active ? "🟢 Merchant reward balance eligible" : "⏸ Reward balance low"}
+              <span>{merchantStatus?.active ? "Eligible for reward-funded orders." : "Top up GBK in the connected merchant wallet; the system will re-check the live balance."}</span>
+            </div>
+            <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
+            <small>Send GBK only to the connected merchant wallet. The website does not take custody of merchant GBK.</small>
+          </> : s6
             <div className="walletConnectBox">
               <div className="roleIcon">👛</div>
               <h3>Connect your wallet</h3>
@@ -411,7 +444,7 @@ export default function Home() {
         </div>
       </div>}
 
-      <nav className="bottomNav"><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>setRole("Customer")}>👛<span>Wallet</span></a><a onClick={()=>setRole("Customer")}>☻<span>Profile</span></a></nav>
+      <nav className="bottomNav"><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>session ? openMerchantWallet() : connectWallet("merchant")}>👛<span>Wallet</span></a><a onClick={()=>setRole("Customer")}>☻<span>Profile</span></a></nav>
     </main>
   );
 }
