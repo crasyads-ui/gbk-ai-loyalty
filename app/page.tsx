@@ -194,35 +194,52 @@ export default function Home() {
   const openWallet = async () => {
     setApiBusy(true); setAuthNotice("");
     try {
-      const s = session || getStoredSession();
-      if (s) {
-        const data = await loyaltyApi(s,"my_data",{});
-        const merchant = (data?.merchants || [])[0];
-        const serverWallet = String(data?.profile?.wallet_address || "");
-        if (serverWallet) {
-          setWalletAddress(serverWallet);
-          setMerchantWallet(serverWallet);
-        }
-        if (merchant) {
-          await openMerchantWallet();
+      // The connected wallet is the merchant identity. Always reconcile it first;
+      // do not depend on an old anonymous session.
+      const connected = await getConnectedEvmWallet().catch(()=>null);
+      if (connected) {
+        setWalletAddress(connected);
+        setMerchantWallet(connected);
+        let s = session || getStoredSession();
+        if (!s) s = await signInAnonymously();
+        setSession(s);
+        await loyaltyApi(s,"profile_upsert",{
+          role:"merchant",
+          full_name:fullName || "GBK Wallet User",
+          country,
+          wallet_address:connected
+        });
+        const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:connected});
+        if (lookup?.merchant) {
+          setActiveWalletRole("merchant");
+          try { localStorage.setItem("gbk_loyalty_active_role","merchant"); } catch {}
+          const [live,dataWithOrders] = await Promise.all([
+            loyaltyApi(s,"merchant_fund_status",{merchant_id:lookup.merchant.id}),
+            loyaltyApi(s,"my_data",{})
+          ]);
+          setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});
+          setRole("MerchantWallet");
           return;
         }
       }
+
       if (activeWalletRole==="merchant") {
         await openMerchantWallet();
         return;
       }
       if (activeWalletRole==="customer") setRole("Customer");
       else if (activeWalletRole==="founder") setRole("Founder");
-      else setRole("Merchant");
-    } catch {
-      if (activeWalletRole==="merchant") await openMerchantWallet();
-      else if (activeWalletRole==="customer") setRole("Customer");
-      else if (activeWalletRole==="founder") setRole("Founder");
-      else setRole("Merchant");
+      else {
+        setRole("Merchant");
+        setAuthNotice("Connect the registered merchant wallet to view its live GBK balance.");
+      }
+    } catch(e:any) {
+      setAuthNotice(e.message || "Merchant wallet status could not be loaded.");
+      if (activeWalletRole==="merchant") {
+        try { await openMerchantWallet(); } catch {}
+      }
     } finally { setApiBusy(false); }
   };
-
   const waitForChainTx = async (txHash:string) => {
     const provider = (window as any).ethereum;
     if (!provider) return;
