@@ -18,7 +18,7 @@ const languages = ["English","हिन्दी","తెలుగు","বা�
 const countries = ["Global","India","United Arab Emirates","United States","United Kingdom","Singapore","Australia","Canada","Saudi Arabia","Malaysia","Germany","France","Italy","Spain","Portugal","Netherlands","Belgium","Switzerland","Austria","Sweden","Norway","Denmark","Finland","Ireland","New Zealand","Japan","South Korea","China","Hong Kong","Thailand","Indonesia","Philippines","Vietnam","Bangladesh","Sri Lanka","Nepal","Pakistan","South Africa","Nigeria","Kenya","Egypt","Turkey","Brazil","Mexico","Argentina","Colombia","Chile","Peru"];
 
 const roles = [
-  {icon:"👤",title:"Customer",text:"Ask GBK AI for products or services, pay the merchant normally and receive eligible GBK Loyalty rewards.",items:["Earn GBK","Hold • Swap • Transfer"]},
+  {icon:"👤",title:"Customer",text:"Find businesses, pay normally and earn eligible GBK Loyalty rewards.",items:["Earn GBK","Hold • Use • Transfer"]},
   {icon:"🏪",title:"Merchant",text:"Register your business, accept the lead terms, choose a loyalty offer and maintain GBK reward balance in advance.",items:["5%–20% or Custom","Automatic rewards"]},
   {icon:"🌍",title:"Founder",text:"Country or Global Founder Members can onboard businesses and receive the Founder allocation from verified loyalty sales.",items:["Add users","Add businesses","Track earnings"]},
 ];
@@ -475,9 +475,9 @@ export default function Home() {
 
       <section className="hero">
         <div className="eyebrow">🌐 GLOBAL CUSTOMER LOYALTY</div>
-        <h1>Ask • Shop • Earn • Hold • Swap • Transfer</h1>
-        <p>GBK AI brings customers to participating businesses and provides a simple, merchant-funded GBK Loyalty benefit after a verified qualifying transaction.</p>
-        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder="Ask GBK AI for anything: product, service, agriculture, hotel, repair, travel..."/><button onMouseDown={()=>setSearchFocused(true)} onClick={doSearch} disabled={apiBusy}>{apiBusy ? "Searching…" : "Ask AI"}</button></div>
+        <h1>Find • Buy • Earn GBK • Repeat</h1>
+        <p>Find a participating business, pay normally, and earn eligible GBK rewards after the purchase is verified. Simple loyalty for everyone.</p>
+        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder="What do you need? Hotel, food, repair, travel, shopping..."/><button onMouseDown={()=>setSearchFocused(true)} onClick={doSearch} disabled={apiBusy}>{apiBusy ? "Finding…" : "Find"}</button></div>
         <div className="suggestions">
           <button onClick={()=>setQuery("restaurants with GBK rewards")}>🍽️ Restaurants</button>
           <button onClick={()=>setQuery("hotels with GBK offers")}>🏨 Hotels</button>
@@ -487,7 +487,7 @@ export default function Home() {
       </section>
 
       {searchResults.length > 0 && <section id="searchResults" className="roleSection">
-        <div className="sectionHead"><div><span className="eyebrow">GBK AI RESULTS</span><h2>Businesses matching your request</h2><p>Choose a participating business to create a customer order.</p></div></div>
+        <div className="sectionHead"><div><span className="eyebrow">PARTICIPATING BUSINESSES</span><h2>Choose a business</h2><p>Pick a participating business and earn GBK on eligible purchases.</p></div></div>
         <div className="roleGrid">
           {searchResults.map((m:any)=><div className="roleCard" key={m.id}>
             <div className="roleIcon">🏪</div>
@@ -495,7 +495,7 @@ export default function Home() {
             <p>{[m.category,m.city,m.country].filter(Boolean).join(" • ")}</p>
             {m.description && <p>{m.description}</p>}
             <div><span className="roleTag">{Math.round(Number(m.loyalty_offer_bps||0)/100)}% GBK Loyalty</span><span className="roleTag">Active merchant</span></div>
-            <button className="primary" onClick={()=>setSelectedMerchant(m)}>View & Order →</button>
+            <button className="primary" onClick={()=>setSelectedMerchant(m)}>Earn GBK →</button>
           </div>)}
         </div>
       </section>}
@@ -508,19 +508,19 @@ export default function Home() {
           <p>{[selectedMerchant.category,selectedMerchant.city,selectedMerchant.country].filter(Boolean).join(" • ")}</p>
           <p>GBK Loyalty offer: <b>{Math.round(Number(selectedMerchant.loyalty_offer_bps||0)/100)}%</b></p>
           <label style={{display:"grid",gap:6,margin:"14px 0"}}>
-            <b>Order amount</b>
-            <input className="modalInput" inputMode="decimal" type="number" min="0.01" step="0.01" value={orderAmount} onChange={e=>setOrderAmount(e.target.value)} placeholder={country==="India" ? "Enter amount in INR" : "Enter amount in local currency"} />
+            <b>Purchase amount</b>
+            <input className="modalInput" inputMode="decimal" type="number" min="0.01" step="0.01" value={orderAmount} onChange={e=>setOrderAmount(e.target.value)} placeholder={country==="India" ? "Enter purchase amount in INR" : "Enter purchase amount in local currency"} />
           </label>
           {authNotice && <div className="notice" style={{margin:"12px 0"}}>{authNotice}</div>}
           <small>{selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH"
             ? "Pay the merchant directly. The merchant will verify the payment before any GBK reward is released."
             : "Continue to the merchant's configured payment method."}</small>
-          <button className="primary" disabled={apiBusy || !orderAmount} onClick={()=>createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Create Order → Send to Merchant" : "Create Order & Pay")}</button>
+          <button className="primary" disabled={apiBusy || !orderAmount} onClick={()=>createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Continue → Send to Merchant" : "Continue & Pay")}</button>
           <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");}}>Cancel</button>
         </div>
       </div>}
       <section id="roles" className="roleSection">
-        <div className="sectionHead"><div><span className="eyebrow">ONE APP • THREE ROLES</span><h2>Choose how you use GBK Loyalty</h2></div></div>
+        <div className="sectionHead"><div><span className="eyebrow">ONE APP • THREE ROLES</span><h2>Simple loyalty for everyone</h2></div></div>
         <div className="roleGrid">{roles.map(r=>
           <button className="roleCard" key={r.title} onClick={()=>setRole(r.title)}>
             <div className="roleIcon">{r.icon}</div><h3>{r.title}</h3><p>{r.text}</p>
@@ -582,11 +582,11 @@ export default function Home() {
       </section>
 
       <section className="how">
-        <span className="eyebrow">HOW IT WORKS</span><h2>Ask AI → Find business → Send order → Verify → Reward.</h2>
+        <span className="eyebrow">HOW IT WORKS</span><h2>Find → Buy → Earn</h2>
         <div className="steps">
-          <div><b>01</b><h3>Ask</h3><p>Customer asks GBK AI for any product or service, including agriculture and local needs.</p></div>
+          <div><b>01</b><h3>Find</h3><p>Tell GBK AI what you need and choose a participating business.</p></div>
           <div><b>02</b><h3>Route</h3><p>GBK AI searches registered eligible businesses and sends the request/order to the selected merchant.</p></div>
-          <div><b>03</b><h3>Complete & Reward</h3><p>Merchant completes the order, payment is verified, then the merchant-funded GBK allocation is distributed automatically.</p></div>
+          <div><b>03</b><h3>Earn</h3><p>After the purchase is verified and completed, eligible GBK rewards are released automatically.</p></div>
         </div>
       </section>
 
