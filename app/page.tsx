@@ -343,8 +343,8 @@ export default function Home() {
       {role && <div className="modalBackdrop" onClick={()=>setRole(null)}>
         <div className="modal" onClick={e=>e.stopPropagation()}>
           <button className="close" onClick={()=>setRole(null)}>×</button>
-          <div className="roleIcon">{roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍")}</div>
-          <h2>{role} registration</h2>
+          <div className="roleIcon">{role==="MerchantWallet" ? "👛" : (roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍"))}</div>
+          <h2>{role==="MerchantWallet" ? "Merchant Wallet" : `${role} registration`}</h2>
           {role==="MerchantWallet" ? <>
             <p>Manage the connected merchant reward wallet. Customer payments remain direct to the merchant; GBK is used only for the merchant-funded loyalty reward pool.</p>
             <div className="offerPreview">
@@ -440,7 +440,7 @@ export default function Home() {
             <input placeholder="Mobile or email"/>
           </>}
           {role==="Merchant" && authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
-          {role==="Founder" ? <button className="primary" onClick={verifyFounder} disabled={apiBusy}>{apiBusy ? "Verifying…" : "Verify Founder Member →"}</button> : <button className="primary" disabled={apiBusy} onClick={registerMerchant}>{role==="Merchant" ? (apiBusy ? "Registering…" : "Continue →") : "Continue →"}</button>}<small>No token transfer happens from this screen.</small>
+          {role==="Founder" ? <button className="primary" onClick={verifyFounder} disabled={apiBusy}>{apiBusy ? "Verifying…" : "Verify Founder Member →"}</button> : role==="Merchant" ? <button className="primary" disabled={apiBusy} onClick={registerMerchant}>{apiBusy ? "Registering…" : "Continue →"}</button> : null}<small>{role==="MerchantWallet" ? "No token transfer happens automatically. Send GBK only to the connected merchant wallet." : "No token transfer happens from this screen."}</small>
         </div>
       </div>}
 
