@@ -77,8 +77,18 @@ export default function Home() {
       const storedRole = localStorage.getItem("gbk_loyalty_active_role");
       if (storedRole === "customer" || storedRole === "merchant" || storedRole === "founder") setActiveWalletRole(storedRole);
     } catch {}
+    try {
+      const storedMerchantWallet = localStorage.getItem("gbk_loyalty_merchant_wallet") || "";
+      if (/^0x[a-fA-F0-9]{40}$/.test(storedMerchantWallet)) {
+        setMerchantWallet(storedMerchantWallet);
+        setWalletAddress(storedMerchantWallet);
+      }
+    } catch {}
     getConnectedEvmWallet().then((addr)=>{
-      if (addr) setWalletAddress(addr);
+      if (addr) {
+        setWalletAddress(addr);
+        try { localStorage.setItem("gbk_loyalty_merchant_wallet", addr); } catch {}
+      }
     }).catch(()=>{});
     // Restore an existing merchant session directly to Merchant Wallet.
     if (stored) {
@@ -146,6 +156,9 @@ export default function Home() {
       });
 
       setSession(s);
+      if (targetRole === "merchant") {
+        try { localStorage.setItem("gbk_loyalty_merchant_wallet", address); } catch {}
+      }
       setActiveWalletRole(targetRole);
       try { localStorage.setItem("gbk_loyalty_active_role", targetRole); } catch {}
       setRole(targetRole === "merchant" ? "Merchant" : targetRole === "founder" ? "Founder" : "Customer");
@@ -172,12 +185,14 @@ export default function Home() {
       // Reconcile the merchant by connected wallet. Anonymous sessions can change,
       // but the wallet is the merchant identity.
       const connected = await getConnectedEvmWallet().catch(()=>null);
+      const knownMerchantWallet = String(connected || merchantWallet || walletAddress || "").trim();
       if (connected) {
         setWalletAddress(connected);
         setMerchantWallet(connected);
+        try { localStorage.setItem("gbk_loyalty_merchant_wallet", connected); } catch {}
         await loyaltyApi(s,"profile_upsert",{role:"merchant",country,wallet_address:connected});
       }
-      const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:connected || merchantWallet || walletAddress});
+      const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:knownMerchantWallet});
       const merchant = lookup?.merchant || (await loyaltyApi(s,"my_data",{}))?.merchants?.[0];
       if (!merchant) { setRole("Merchant"); setAuthNotice("No merchant is registered for this wallet. Please complete merchant registration once."); return; }
       setMerchantStatus({merchant});
@@ -186,6 +201,7 @@ export default function Home() {
         loyaltyApi(s,"my_data",{})
       ]);
       setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});
+      try { localStorage.setItem("gbk_loyalty_merchant_wallet", String(live?.merchant?.profile_id ? (connected || knownMerchantWallet) : knownMerchantWallet)); } catch {}
       setRole("MerchantWallet");
     } catch(e:any) {
       setAuthNotice(e.message || "Merchant wallet status could not be loaded.");
@@ -197,9 +213,11 @@ export default function Home() {
       // The connected wallet is the merchant identity. Always reconcile it first;
       // do not depend on an old anonymous session.
       const connected = await getConnectedEvmWallet().catch(()=>null);
+      const knownMerchantWallet = String(connected || merchantWallet || walletAddress || "").trim();
       if (connected) {
         setWalletAddress(connected);
         setMerchantWallet(connected);
+        try { localStorage.setItem("gbk_loyalty_merchant_wallet", connected); } catch {}
         let s = session || getStoredSession();
         if (!s) s = await signInAnonymously();
         setSession(s);
@@ -209,7 +227,7 @@ export default function Home() {
           country,
           wallet_address:connected
         });
-        const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:connected});
+        const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:connected || knownMerchantWallet});
         if (lookup?.merchant) {
           setActiveWalletRole("merchant");
           try { localStorage.setItem("gbk_loyalty_active_role","merchant"); } catch {}
@@ -218,6 +236,7 @@ export default function Home() {
             loyaltyApi(s,"my_data",{})
           ]);
           setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});
+          try { localStorage.setItem("gbk_loyalty_merchant_wallet", String(connected || knownMerchantWallet)); } catch {}
           setRole("MerchantWallet");
           return;
         }
