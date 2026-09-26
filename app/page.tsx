@@ -469,7 +469,7 @@ export default function Home() {
       </header>
 
       <div className="globalBar">
-        <span>🌐 {country}</span><span>🗣️ {language}</span>
+        <span>🌐 {country}</span><span>💱 {country === "Global" ? "Local currency" : ({India:"INR","United Arab Emirates":"AED","United States":"USD","United Kingdom":"GBP","Singapore":"SGD","Australia":"AUD","Canada":"CAD","Saudi Arabia":"SAR","Malaysia":"MYR","Germany":"EUR","France":"EUR","Italy":"EUR","Spain":"EUR","Portugal":"EUR","Netherlands":"EUR","Belgium":"EUR","Switzerland":"CHF","Austria":"EUR","Sweden":"SEK","Norway":"NOK","Denmark":"DKK","Finland":"EUR","Ireland":"EUR","New Zealand":"NZD","Japan":"JPY","South Korea":"KRW","China":"CNY","Hong Kong":"HKD","Thailand":"THB","Indonesia":"IDR","Philippines":"PHP","Vietnam":"VND","Bangladesh":"BDT","Sri Lanka":"LKR","Nepal":"NPR","Pakistan":"PKR","South Africa":"ZAR","Nigeria":"NGN","Egypt":"EGP","Turkey":"TRY","Brazil":"BRL","Mexico":"MXN","Argentina":"ARS","Colombia":"COP","Chile":"CLP","Peru":"PEN"} as any)[country] || "Local currency"}</span><span>🗣️ {language}</span>
         {!installed && <button className="installBtn" onClick={install}>{installPrompt ? "📲 Install App" : "📲 PWA App"}</button>}
       </div>
 
@@ -600,6 +600,18 @@ export default function Home() {
           <div><b>02</b><h3>Buy normally</h3><p>Pay the business normally using its available payment method.</p></div>
           <div><b>03</b><h3>Get GBK rewards</h3><p>After the order is verified, eligible GBK rewards go to your customer wallet.</p></div>
         </div>
+      </section>
+
+      <section className="globalModel">
+        <div className="sectionHead"><div><span className="eyebrow">GLOBAL MODEL</span><h2>One loyalty experience. Every country.</h2></div></div>
+        <p className="globalModelLead">GBK Loyalty is designed around the customer’s local country, language and currency. Customers pay participating businesses normally; eligible GBK rewards are released only after the purchase is verified and the merchant has funded the reward pool.</p>
+        <div className="globalModelGrid">
+          <div><b>🌍 Country</b><span>Choose the customer’s country and discover participating local businesses.</span></div>
+          <div><b>💱 Local currency</b><span>Pay in the currency and payment method normally used by the merchant.</span></div>
+          <div><b>🗣️ Language</b><span>Use GBK Loyalty in supported local languages.</span></div>
+          <div><b>🎁 GBK reward</b><span>Verified purchases can receive the configured eligible GBK loyalty reward.</span></div>
+        </div>
+        <div className="globalModelFlow"><span>Country</span><b>→</b><span>Business</span><b>→</b><span>Local Payment</span><b>→</b><span>Verified Purchase</span><b>→</b><span>GBK Reward</span></div>
       </section>
 
       <section className="merchant">
