@@ -590,6 +590,20 @@ export default function Home() {
                     <b>{o.currency} {(Number(o.amount_minor||0)/100).toLocaleString()}</b>
                     <span style={{display:"block"}}>{o.merchant_response_status || "PENDING"} · Payment: {o.payment_status || "PENDING"}</span>
                     <span style={{display:"block"}}>{o.reward_required_raw && Number(o.reward_required_raw)>0 ? "Required for this order: "+(Number(o.reward_required_raw)/1e8).toLocaleString()+" GBK" : o.payment_status==="VERIFIED" ? "Reward requirement: calculated after completion" : "Reward requirement: pending payment verification"}</span>
+                    {o.reward_settlement_status && <span style={{display:"block",fontWeight:700}}>
+                      {o.reward_settlement_status==="SETTLED" ? "🟢 GBK reward settled" :
+                       o.reward_settlement_status==="AWAITING_MERCHANT_APPROVAL" ? "🟠 Merchant wallet approval required" :
+                       o.reward_settlement_status==="BLOCKCHAIN_SETTLEMENT_FAILED" ? "🔴 Blockchain settlement failed" :
+                       o.reward_settlement_status==="BLOCKCHAIN_SETTLEMENT_PENDING" ? "🟡 Blockchain settlement pending" :
+                       "⚪ Reward pending"}
+                    </span>}
+                    {o.reward_settlement_status==="AWAITING_MERCHANT_APPROVAL" && o.reward_required_raw && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={()=>approveRewardForOrder(o)}>
+                      {apiBusy ? "Approving…" : "Approve GBK reward spending"}
+                    </button>}
+                    {o.reward_settlement_status && o.reward_settlement_status!=="SETTLED" && o.payment_status==="VERIFIED" && o.merchant_response_status==="COMPLETED" && o.reward_settlement_status!=="AWAITING_MERCHANT_APPROVAL" && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={()=>retryRewardSettlement(o)}>
+                      {apiBusy ? "Releasing…" : "Retry reward release"}
+                    </button>}
+                    {o.reward_settlement_tx_hash && <a href={"https://bscscan.com/tx/"+o.reward_settlement_tx_hash} target="_blank" rel="noreferrer" style={{display:"block",marginTop:6}}>View GBK settlement transaction ↗</a>}
                     {o.merchant?.payment_provider==="DIRECT" && o.payment_status!=="VERIFIED" && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={async()=>{
                       if(!session)return;
                       setApiBusy(true);
