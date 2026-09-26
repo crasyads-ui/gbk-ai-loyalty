@@ -368,6 +368,28 @@ export default function Home() {
                   : "Top up GBK in the connected merchant wallet; the system will re-check the live balance."}</span>
             </div>
             <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
+            <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
+              <b>Orders & reward funding</b>
+              {(merchantStatus?.merchant_orders || []).length === 0
+                ? <span>No merchant orders yet. Eligible customer orders will appear here.</span>
+                : (merchantStatus.merchant_orders || []).slice(0,5).map((o:any)=>(
+                  <div key={o.id} style={{padding:"10px 0",borderTop:"1px solid rgba(0,0,0,.08)"}}>
+                    <b>{o.currency} {(Number(o.amount_minor||0)/100).toLocaleString()}</b>
+                    <span style={{display:"block"}}>{o.merchant_response_status || "PENDING"} · Payment: {o.payment_status || "PENDING"}</span>
+                    <span style={{display:"block"}}>{o.reward_required_raw && Number(o.reward_required_raw)>0 ? "Required: "+(Number(o.reward_required_raw)/1e8).toLocaleString()+" GBK" : "Reward requirement: pending verified payment"}</span>
+                    {["PENDING","ACCEPTED"].includes(o.merchant_response_status || "PENDING") && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={async()=>{
+                      if(!session)return;
+                      setApiBusy(true);
+                      try{
+                        const next=o.merchant_response_status==="PENDING"?"ACCEPTED":"COMPLETED";
+                        await loyaltyApi(session,"merchant_order_update",{order_id:o.id,status:next});
+                        setAuthNotice(next==="ACCEPTED" ? "Order accepted." : "Order marked completed. Payment verification remains required before reward release.");
+                        await openMerchantWallet();
+                      }catch(e:any){setAuthNotice(e.message||"Order update failed");}finally{setApiBusy(false);}
+                    }}>{o.merchant_response_status==="PENDING" ? "Accept order" : "Complete order"}</button>}
+                  </div>
+                ))}
+            </div>
           </> : role==="Auth" ? <>
             <div className="walletConnectBox">
               <div className="roleIcon">👛</div>
