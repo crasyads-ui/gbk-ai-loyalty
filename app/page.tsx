@@ -40,6 +40,7 @@ export default function Home() {
   const [paymentDetails,setPaymentDetails] = useState("");
   const [merchantWallet,setMerchantWallet] = useState("");
   const [session,setSession] = useState<LoyaltySession|null>(null);
+  const [activeWalletRole,setActiveWalletRole] = useState<"customer"|"merchant"|"founder"|null>(null);
   const [authMode,setAuthMode] = useState<"login"|"signup">("login");
   const [email,setEmail] = useState("");
   const [password,setPassword] = useState("");
@@ -70,6 +71,10 @@ export default function Home() {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
     const stored = getStoredSession();
     if (stored) setSession(stored);
+    try {
+      const storedRole = localStorage.getItem("gbk_loyalty_active_role");
+      if (storedRole === "customer" || storedRole === "merchant" || storedRole === "founder") setActiveWalletRole(storedRole);
+    } catch {}
     return () => w.removeEventListener("beforeinstallprompt",handler);
   }, []);
 
@@ -92,12 +97,42 @@ export default function Home() {
       const address = await connectEvmWallet();
       setWalletAddress(address);
       setMerchantWallet(address);
-      let s = getStoredSession();
-      if (!s) s = await signInAnonymously();
-      await loyaltyApi(s,"profile_upsert",{role:targetRole,full_name:fullName || "GBK Wallet User",country,wallet_address:address});
+
+      let s = session || getStoredSession();
+
+      // A wallet is the role/account boundary. If the connected wallet differs
+      // from the wallet stored in the current anonymous session, create a fresh
+      // Supabase anonymous session so one wallet cannot inherit another wallet's role.
+      if (s) {
+        try {
+          const current = await loyaltyApi(s, "my_data", {});
+          const currentWallet = String(current?.profile?.wallet_address || "").toLowerCase();
+          if (currentWallet && currentWallet !== address.toLowerCase()) {
+            s = await signInAnonymously();
+          }
+        } catch {
+          s = await signInAnonymously();
+        }
+      } else {
+        s = await signInAnonymously();
+      }
+
+      await loyaltyApi(s, "profile_upsert", {
+        role: targetRole,
+        full_name: fullName || "GBK Wallet User",
+        country,
+        wallet_address: address
+      });
+
       setSession(s);
+      setActiveWalletRole(targetRole);
+      try { localStorage.setItem("gbk_loyalty_active_role", targetRole); } catch {}
       setRole(targetRole === "merchant" ? "Merchant" : targetRole === "founder" ? "Founder" : "Customer");
-      setAuthNotice("Wallet connected successfully.");
+      setAuthNotice(targetRole === "merchant"
+        ? "Merchant wallet connected successfully."
+        : targetRole === "founder"
+          ? "Founder wallet connected successfully."
+          : "Customer wallet connected successfully.");
     } catch(e:any) {
       setAuthNotice(e.message || "Wallet connection failed.");
     } finally { setApiBusy(false); }
@@ -248,7 +283,7 @@ export default function Home() {
         <div className="topActions">
           <select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select>
           <select value={country} onChange={e=>setCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select>
-          <button className="walletBtn" onClick={()=>session ? openMerchantWallet() : connectWallet("merchant")}>{session ? "Merchant Wallet" : "Connect Wallet"}</button>
+          <button className="walletBtn" onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : setRole(activeWalletRole==="customer" ? "Customer" : activeWalletRole==="founder" ? "Founder" : "Merchant")}>{activeWalletRole==="merchant" ? "Merchant Wallet" : activeWalletRole==="customer" ? "Customer Wallet" : activeWalletRole==="founder" ? "Founder" : "Connect Wallet"}</button>
         </div>
       </header>
 
@@ -322,7 +357,7 @@ export default function Home() {
       <section className="stats">
         <div><b>0 GBK</b><span>Rewards earned</span></div>
         <div><b>0</b><span>Reward transactions</span></div>
-        <button onClick={()=>session ? openMerchantWallet() : connectWallet("merchant")}>👛 Merchant wallet</button>
+        <button onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : setRole(activeWalletRole==="customer" ? "Customer" : activeWalletRole==="founder" ? "Founder" : "Merchant")}>👛 {activeWalletRole==="merchant" ? "Merchant wallet" : activeWalletRole==="customer" ? "Customer wallet" : "Wallet"}</button>
       </section>
 
       <section id="offers">
@@ -395,6 +430,15 @@ export default function Home() {
                     }}>{o.merchant_response_status==="PENDING" ? "Accept order" : "Complete order"}</button>}
                   </div>
                 ))}
+            </div>
+          </> : role==="Customer" ? <>
+            <p>Connect a separate customer wallet for purchases and eligible GBK Loyalty rewards. This wallet is kept separate from your merchant reward wallet.</p>
+            <div className="walletConnectBox">
+              <div className="roleIcon">👛</div>
+              <h3>Customer wallet</h3>
+              <p>Your connected customer wallet is your customer identity and reward destination.</p>
+              <button className="primary" onClick={()=>connectWallet("customer")} disabled={apiBusy}>{apiBusy ? "Connecting…" : "Connect Customer Wallet"}</button>
+              {walletAddress && activeWalletRole==="customer" && <small>Connected: {walletAddress.slice(0,6)}…{walletAddress.slice(-4)}</small>}
             </div>
           </> : role==="Auth" ? <>
             <div className="walletConnectBox">
@@ -479,7 +523,7 @@ export default function Home() {
         </div>
       </div>}
 
-      <nav className="bottomNav"><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>session ? openMerchantWallet() : connectWallet("merchant")}>👛<span>Wallet</span></a><a onClick={()=>setRole("Customer")}>☻<span>Profile</span></a></nav>
+      <nav className="bottomNav"><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : setRole(activeWalletRole==="customer" ? "Customer" : activeWalletRole==="founder" ? "Founder" : "Merchant")}>👛<span>Wallet</span></a><a onClick={()=>setRole("Customer")}>☻<span>Profile</span></a></nav>
     </main>
   );
 }
