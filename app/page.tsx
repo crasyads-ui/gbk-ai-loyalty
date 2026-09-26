@@ -169,9 +169,17 @@ export default function Home() {
     try {
       let s = session || getStoredSession();
       if (!s) { s = await signInAnonymously(); setSession(s); }
-      const data = await loyaltyApi(s,"my_data",{});
-      const merchant = (data.merchants || [])[0];
-      if (!merchant) { setRole("Merchant"); setAuthNotice("Merchant profile not found. Register as a merchant first."); return; }
+      // Reconcile the merchant by connected wallet. Anonymous sessions can change,
+      // but the wallet is the merchant identity.
+      const connected = await getConnectedEvmWallet().catch(()=>null);
+      if (connected) {
+        setWalletAddress(connected);
+        setMerchantWallet(connected);
+        await loyaltyApi(s,"profile_upsert",{role:"merchant",country,wallet_address:connected});
+      }
+      const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:connected || merchantWallet || walletAddress});
+      const merchant = lookup?.merchant || (await loyaltyApi(s,"my_data",{}))?.merchants?.[0];
+      if (!merchant) { setRole("Merchant"); setAuthNotice("No merchant is registered for this wallet. Please complete merchant registration once."); return; }
       setMerchantStatus({merchant});
       const [live,dataWithOrders] = await Promise.all([
         loyaltyApi(s,"merchant_fund_status",{merchant_id:merchant.id}),
