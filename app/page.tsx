@@ -80,6 +80,17 @@ export default function Home() {
     getConnectedEvmWallet().then((addr)=>{
       if (addr) setWalletAddress(addr);
     }).catch(()=>{});
+    // Restore an existing merchant session directly to Merchant Wallet.
+    if (stored) {
+      loyaltyApi(stored,"my_data",{}).then((data:any)=>{
+        const merchant = (data?.merchants || [])[0];
+        if (merchant) {
+          setActiveWalletRole("merchant");
+          setMerchantStatus({merchant,merchant_orders:data?.merchant_orders || []});
+          try { localStorage.setItem("gbk_loyalty_active_role","merchant"); } catch {}
+        }
+      }).catch(()=>{});
+    }
     return () => w.removeEventListener("beforeinstallprompt",handler);
   }, []);
 
@@ -157,8 +168,11 @@ export default function Home() {
       const merchant = (data.merchants || [])[0];
       if (!merchant) { setRole("Merchant"); setAuthNotice("Merchant profile not found. Register as a merchant first."); return; }
       setMerchantStatus({merchant});
-      const live = await loyaltyApi(s,"merchant_fund_status",{merchant_id:merchant.id});
-      setMerchantStatus(live);
+      const [live,dataWithOrders] = await Promise.all([
+        loyaltyApi(s,"merchant_fund_status",{merchant_id:merchant.id}),
+        loyaltyApi(s,"my_data",{})
+      ]);
+      setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});
       setRole("MerchantWallet");
     } catch(e:any) {
       setAuthNotice(e.message || "Merchant wallet status could not be loaded.");
@@ -199,7 +213,7 @@ export default function Home() {
     if(!amount || !Number.isFinite(Number(amount)) || Number(amount)<=0){ setAuthNotice("Enter the purchase/order amount first."); return; }
     setApiBusy(true);
     try {
-      const currency = country==="India" ? "INR" : "USD";
+      const currency = String(m?.payment_currency || (country==="India" ? "INR" : "USD")).toUpperCase();
       const created = await loyaltyApi(session,"create_order",{merchant_id:m.id,amount_minor:Math.round(Number(amount)*100),currency,request_text:query,category:m.category,country,order_source:"GBK_AI"});
       let paid:any;
       try {
@@ -454,22 +468,22 @@ export default function Home() {
             <p>Manage the connected merchant reward wallet. Customer payments remain direct to the merchant; GBK is used only for the merchant-funded loyalty reward pool.</p>
             <div className="offerPreview" style={{display:"grid",gap:6}}>
               <b>Merchant: {merchantStatus?.merchant?.business_name || "—"}</b>
-              <span>Wallet: {merchantStatus?.merchant?.profile_id ? "Connected" : "Not connected"}</span>
+              <span>Wallet: {walletAddress ? walletAddress.slice(0,6)+"…"+walletAddress.slice(-4) : (merchantStatus?.merchant?.profile_id ? "Connected" : "Not connected")}</span>
             </div>
             <div className="stats" style={{margin:"12px 0"}}>
               <div><b>{merchantStatus?.live_gbk_balance_raw ? (Number(merchantStatus.live_gbk_balance_raw)/1e8).toLocaleString() : "0"} GBK</b><span>Live GBK balance</span></div>
-              <div><b>{merchantStatus?.threshold_raw ? (Number(merchantStatus.threshold_raw)/1e8).toLocaleString() : "0"} GBK</b><span>Current required balance</span></div>
+              <div><b>{merchantStatus?.threshold_raw ? (Number(merchantStatus.threshold_raw)/1e8).toLocaleString() : "0"} GBK</b><span>GBK funding reserve</span></div>
             </div>
             <div className={merchantStatus?.active || Number(merchantStatus?.threshold_raw || 0) === 0 && Number(merchantStatus?.live_gbk_balance_raw || 0) > 0 ? "status" : "status paused"}>
               {merchantStatus?.active
-                ? "🟢 Merchant reward balance eligible"
+                ? "🟢 Merchant active & funded"
                 : Number(merchantStatus?.threshold_raw || 0) === 0 && Number(merchantStatus?.live_gbk_balance_raw || 0) > 0
                   ? "🟢 Merchant wallet funded"
                   : "⏸ Reward balance low"}
               <span>{merchantStatus?.active
-                ? "Eligible for reward-funded orders."
+                ? "Eligible to receive reward-funded customer orders."
                 : Number(merchantStatus?.threshold_raw || 0) === 0 && Number(merchantStatus?.live_gbk_balance_raw || 0) > 0
-                  ? "No order-specific GBK requirement is set yet. The live wallet balance will be checked against each eligible order."
+                  ? "No order-specific reward is reserved yet. The live wallet balance will be checked against each eligible order."
                   : "Top up GBK in the connected merchant wallet; the system will re-check the live balance."}</span>
             </div>
             <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
@@ -496,13 +510,13 @@ export default function Home() {
                   <div key={o.id} style={{padding:"10px 0",borderTop:"1px solid rgba(0,0,0,.08)"}}>
                     <b>{o.currency} {(Number(o.amount_minor||0)/100).toLocaleString()}</b>
                     <span style={{display:"block"}}>{o.merchant_response_status || "PENDING"} · Payment: {o.payment_status || "PENDING"}</span>
-                    <span style={{display:"block"}}>{o.reward_required_raw && Number(o.reward_required_raw)>0 ? "Required: "+(Number(o.reward_required_raw)/1e8).toLocaleString()+" GBK" : "Reward requirement: pending verified payment"}</span>
+                    <span style={{display:"block"}}>{o.reward_required_raw && Number(o.reward_required_raw)>0 ? "Required for this order: "+(Number(o.reward_required_raw)/1e8).toLocaleString()+" GBK" : o.payment_status==="VERIFIED" ? "Reward requirement: calculated after completion" : "Reward requirement: pending payment verification"}</span>
                     {o.merchant?.payment_provider==="DIRECT" && o.payment_status!=="VERIFIED" && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={async()=>{
                       if(!session)return;
                       setApiBusy(true);
                       try{
                         await loyaltyApi(session,"direct_payment_verify",{order_id:o.id});
-                        setAuthNotice("Direct payment verified. Complete the order to prepare the GBK reward.");
+                        setAuthNotice("Direct payment verified. Now accept and complete the order to prepare the GBK reward.");
                         await openMerchantWallet();
                       }catch(e:any){setAuthNotice(e.message||"Payment verification failed");}finally{setApiBusy(false);}
                     }}>Verify direct payment</button>}
