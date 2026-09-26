@@ -25,6 +25,7 @@ const roles = [
 
 export default function Home() {
   const [query,setQuery] = useState("");
+  const [searchFocused,setSearchFocused] = useState(false);
   const [language,setLanguage] = useState("English");
   const [country,setCountry] = useState("Global");
   const [role,setRole] = useState<string|null>(null);
@@ -309,7 +310,7 @@ export default function Home() {
         <div className="eyebrow">🌐 GLOBAL CUSTOMER LOYALTY</div>
         <h1>Ask • Shop • Earn • Hold • Swap • Transfer</h1>
         <p>GBK AI brings customers to participating businesses and provides a simple, merchant-funded GBK Loyalty benefit after a verified qualifying transaction.</p>
-        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Ask GBK AI for anything: product, service, agriculture, hotel, repair, travel..."/><button onClick={doSearch} disabled={apiBusy}>{apiBusy ? "Searching…" : "Ask AI"}</button></div>
+        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder="Ask GBK AI for anything: product, service, agriculture, hotel, repair, travel..."/><button onMouseDown={()=>setSearchFocused(true)} onClick={doSearch} disabled={apiBusy}>{apiBusy ? "Searching…" : "Ask AI"}</button></div>
         <div className="suggestions">
           <button onClick={()=>setQuery("restaurants with GBK rewards")}>🍽️ Restaurants</button>
           <button onClick={()=>setQuery("hotels with GBK offers")}>🏨 Hotels</button>
@@ -577,7 +578,7 @@ export default function Home() {
         </div>
       </div>}
 
-      <nav className="bottomNav"><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : setRole(activeWalletRole==="customer" ? "Customer" : activeWalletRole==="founder" ? "Founder" : "Merchant")}>👛<span>Wallet</span></a><a onClick={()=>setRole("Customer")}>☻<span>Profile</span></a></nav>
+      <nav className={`bottomNav${searchFocused ? " searchFocused" : ""}`}><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : setRole(activeWalletRole==="customer" ? "Customer" : activeWalletRole==="founder" ? "Founder" : "Merchant")}>👛<span>Wallet</span></a><a onClick={()=>setRole("Customer")}>☻<span>Profile</span></a></nav>
     </main>
   );
 }
