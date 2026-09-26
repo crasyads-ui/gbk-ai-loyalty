@@ -41,6 +41,22 @@ async function switchToBsc(provider: any) {
   }
 }
 
+export async function getConnectedEvmWallet(): Promise<string> {
+  if (typeof window === "undefined") return "";
+  const w = window as any;
+  const candidates: any[] = [];
+  const add = (p: any) => { if (p && !candidates.includes(p)) candidates.push(p); };
+  if (Array.isArray(w.ethereum?.providers)) w.ethereum.providers.forEach(add);
+  add(w.ethereum);
+  for (const provider of candidates) {
+    try {
+      const accounts = await provider.request({ method: "eth_accounts" });
+      if (accounts?.length) return String(accounts[0]);
+    } catch {}
+  }
+  return "";
+}
+
 export async function connectEvmWallet(): Promise<string> {
   if (typeof window === "undefined") throw new Error("Wallet connection is available in the browser only.");
   const w = window as any;
