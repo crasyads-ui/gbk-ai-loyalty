@@ -474,11 +474,11 @@ export default function Home() {
       </div>
 
       <section className="hero">
-        <div className="eyebrow">🤖 INSTANT ASK GBK AI • GLOBAL LOYALTY</div>
-        <h1>Ask GBK AI. Find it. Buy it. Earn GBK.</h1>
-        <p>Tell us what you need. GBK AI finds participating businesses and services. Pay normally, then receive eligible GBK rewards.</p>
-        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder="Ask anything — hotel, restaurant, AC repair, travel, shopping..."/><button onMouseDown={()=>setSearchFocused(true)} onClick={doSearch} disabled={apiBusy}>{apiBusy ? "Searching…" : "Ask GBK AI"}</button></div>
-        <div className="askHint"><span>💬 Ask naturally — “I need a hotel in Dubai”, “find AC repair”, “find a restaurant”</span></div>
+        <div className="eyebrow">GBK LOYALTY • GLOBAL</div>
+        <h1>Buy normally. Get GBK rewards.</h1>
+        <p>Find participating businesses, buy normally, and receive eligible GBK rewards after the order is verified.</p>
+        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder="What do you need today?"/><button onMouseDown={()=>setSearchFocused(true)} onClick={doSearch} disabled={apiBusy}>{apiBusy ? "Searching…" : "Find businesses"}</button></div>
+        <div className="askHint"><span>Hotels • Restaurants • Shopping • Services • Travel</span></div>
         <div className="suggestions">
           <button onClick={()=>setQuery("restaurants with GBK rewards")}>🍽️ Restaurants</button>
           <button onClick={()=>setQuery("hotels with GBK offers")}>🏨 Hotels</button>
@@ -583,11 +583,11 @@ export default function Home() {
       </section>
 
       <section className="how">
-        <span className="eyebrow">THE GBK LOYALTY LOOP</span><h2>Ask → Find → Buy → Earn → Use → Repeat</h2>
+        <span className="eyebrow">HOW GBK LOYALTY WORKS</span><h2>Find → Buy → Earn → Use</h2>
         <div className="steps">
-          <div><b>01</b><h3>Ask</h3><p>Tell GBK AI what you need by typing naturally.</p></div>
-          <div><b>02</b><h3>Find & Buy</h3><p>Choose a participating business and pay the merchant normally in the available local payment method.</p></div>
-          <div><b>03</b><h3>Earn & Use</h3><p>After verification, eligible GBK rewards go to the customer wallet for future supported use.</p></div>
+          <div><b>01</b><h3>Find a business</h3><p>Search participating businesses and services.</p></div>
+          <div><b>02</b><h3>Buy normally</h3><p>Pay the business normally using its available payment method.</p></div>
+          <div><b>03</b><h3>Get GBK rewards</h3><p>After the order is verified, eligible GBK rewards go to your customer wallet.</p></div>
         </div>
       </section>
 
