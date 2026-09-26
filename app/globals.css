@@ -14,3 +14,8 @@
   .card{min-height:155px}
   .shareBusinessBtn{font-size:11px;padding:7px 9px}
 }
+
+/* Instant Ask GBK AI global customer UX */
+.askHint{margin-top:10px;max-width:760px;color:#f0e8ff;font-size:12px;opacity:.9}
+.roleOnlySection{display:none}
+@media(max-width:520px){.askHint{line-height:1.45}.hero p{font-size:14px}.hero h1{font-size:29px}.search button{font-size:12px}}
