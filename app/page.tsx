@@ -409,6 +409,21 @@ export default function Home() {
                   : "Top up GBK in the connected merchant wallet; the system will re-check the live balance."}</span>
             </div>
             <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
+            {merchantStatus?.merchant?.invitation_status !== "ACCEPTED" && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
+              <b>Merchant activation</b>
+              <span>Accept the GBK Loyalty terms to activate this business for customer search and orders. Activation verifies the connected merchant wallet and uses its current GBK balance as the reward funding allowance.</span>
+              <button className="primary" disabled={apiBusy} onClick={async()=>{
+                if(!session || !merchantStatus?.merchant?.id) return;
+                setApiBusy(true); setAuthNotice("");
+                try{
+                  const r=await loyaltyApi(session,"merchant_accept",{merchant_id:merchantStatus.merchant.id,terms_version:"GBK-LOYALTY-2026-09"});
+                  setAuthNotice(r?.activation?.status==="ACTIVE" ? "Merchant activated. Customers can now find this business." : "Merchant activation completed.");
+                  await openMerchantWallet();
+                }catch(e:any){setAuthNotice(e.message||"Merchant activation failed");}
+                finally{setApiBusy(false);}
+              }}>{apiBusy ? "Activating…" : "Accept Terms & Activate Merchant"}</button>
+            </div>}
+            {authNotice && <div className="status" style={{marginTop:10}}><span>{authNotice}</span></div>}
             <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
               <b>Orders & reward funding</b>
               {(merchantStatus?.merchant_orders || []).length === 0
