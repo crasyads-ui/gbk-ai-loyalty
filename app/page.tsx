@@ -529,7 +529,7 @@ export default function Home() {
         )}</div>
       </section>
 
-      <section className="split">
+      <section className="split compactInfo">
         <div className="panel">
           <span className="eyebrow">MERCHANT-FUNDED LOYALTY</span>
           <h2>One offer. Automatic distribution.</h2>
@@ -546,7 +546,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="founderWorkspace">
+      <section className="founderWorkspace roleOnlySection">
         <div className="sectionHead"><div><span className="eyebrow">FOUNDER NETWORK</span><h2>Country Founders can build the local GBK network</h2><p>Country Founders can add customers/users and businesses in their assigned country. Global Founders can add users and businesses globally.</p></div></div>
         <div className="founderGrid">
           <div className="founderPanel"><div className="roleIcon">👥</div><h3>Add User</h3><p>Invite customers, community members and prospective users into GBK Loyalty.</p><button className="primary" onClick={()=>setRole("FounderUser")}>＋ Add User</button></div>
@@ -556,7 +556,7 @@ export default function Home() {
         <div className="categoryStrip"><b>Business categories:</b>{businessCategories.map(x=><span key={x}>{x}</span>)}</div>
       </section>
 
-      <section className="merchantRules">
+      <section className="merchantRules roleOnlySection">
         <div><span className="eyebrow">MERCHANT TERMS</span><h2>Simple rules before activation</h2></div>
         <div className="ruleGrid">
           <div><b>01 · 100% order balance</b><p>Before an eligible order proceeds, the merchant must have 100% of the GBK value required for that order’s selected loyalty percentage. No partial funding.</p></div>
@@ -575,7 +575,7 @@ export default function Home() {
       </section>
 
       <section id="offers">
-        <div className="sectionHead"><div><span className="eyebrow">🎁 DISCOVER</span><h2>GBK Rewards Near You</h2></div><button className="textBtn">View all</button></div>
+        <div className="sectionHead"><div><span className="eyebrow">🎁 DISCOVER</span><h2>GBK Rewards by Category</h2></div><button className="textBtn">View all</button></div>
         <div className="grid">{offers.map(([icon,title,reward,note])=>
           <article className="card" key={title}><div className="icon">{icon}</div><h3>{title}</h3><strong>{reward}</strong><p>{note} with participating businesses.</p><button className="shareBusinessBtn" onClick={()=>shareBusiness(title)}>📤 Share Business</button><span className="arrow">›</span></article>
         )}</div>
