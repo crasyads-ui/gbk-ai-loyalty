@@ -41,6 +41,37 @@ async function switchToBsc(provider: any) {
   }
 }
 
+export async function approveMerchantRewardDistributor(amountRaw: string): Promise<string> {
+  if (typeof window === "undefined") throw new Error("Wallet approval is available in the browser only.");
+  const w = window as any;
+  const candidates: any[] = [];
+  const add = (p:any) => { if (p && !candidates.includes(p)) candidates.push(p); };
+  if (Array.isArray(w.ethereum?.providers)) w.ethereum.providers.forEach(add);
+  add(w.ethereum);
+  if (!candidates.length) throw new Error("Connect the merchant wallet first.");
+
+  const distributor = "0x5f0bC44E0BdFd22582a4066f0C68B948E41fa054";
+  const token = "0xdA0638EA374c4c5bF2914E6F4D5B2335dEb8D80D";
+  const value = BigInt(String(amountRaw));
+  if (value <= 0n) throw new Error("Invalid GBK approval amount.");
+  const padded = (v:string) => v.toLowerCase().replace(/^0x/,"").padStart(64,"0");
+  const approveData = "0x095ea7b3" + padded(distributor) + value.toString(16).padStart(64,"0");
+
+  let lastError:any = null;
+  for (const provider of candidates) {
+    try {
+      await switchToBsc(provider);
+      const accounts = await provider.request({method:"eth_accounts"});
+      if (!accounts?.length) await provider.request({method:"eth_requestAccounts"});
+      const from = String((accounts?.[0] || (await provider.request({method:"eth_accounts"}))?.[0] || "")).toLowerCase();
+      if (!from) continue;
+      const txHash = await provider.request({method:"eth_sendTransaction",params:[{from,to:token,data:approveData}]});
+      return String(txHash);
+    } catch(e:any) { lastError=e; }
+  }
+  throw lastError || new Error("GBK reward approval failed.");
+}
+
 export async function getConnectedEvmWallet(): Promise<string> {
   if (typeof window === "undefined") return "";
   const w = window as any;
