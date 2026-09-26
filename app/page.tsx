@@ -200,6 +200,10 @@ export default function Home() {
           return;
         }
       }
+      if (activeWalletRole==="merchant") {
+        await openMerchantWallet();
+        return;
+      }
       if (activeWalletRole==="customer") setRole("Customer");
       else if (activeWalletRole==="founder") setRole("Founder");
       else setRole("Merchant");
