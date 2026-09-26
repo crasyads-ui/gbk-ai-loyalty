@@ -200,7 +200,24 @@ export default function Home() {
     try {
       const currency = country==="India" ? "INR" : "USD";
       const created = await loyaltyApi(session,"create_order",{merchant_id:m.id,amount_minor:Math.round(Number(amount)*100),currency,request_text:query,category:m.category,country,order_source:"GBK_AI"});
-      const paid = await loyaltyApi(session,"payment_create",{order_id:created.order.id});
+      let paid:any;
+      try {
+        paid = await loyaltyApi(session,"payment_create",{order_id:created.order.id});
+      } catch (e:any) {
+        // Direct/Cash merchants do not use an online gateway. Keep the order active
+        // so the merchant can verify the payment manually.
+        if (m?.payment_provider === "DIRECT" || m?.payment_method === "CASH") {
+          setAuthNotice("Order sent to the merchant. Pay the merchant directly; the merchant must verify the payment before your GBK reward can be released.");
+          setSelectedMerchant(null);
+          return;
+        }
+        throw e;
+      }
+      if (paid?.payment?.provider === "DIRECT") {
+        setAuthNotice("Order sent to the merchant. Pay the merchant directly; the merchant must verify the payment before your GBK reward can be released.");
+        setSelectedMerchant(null);
+        return;
+      }
       if (paid?.payment?.provider === "RAZORPAY") {
         await new Promise<void>((resolve,reject)=>{
           const w:any=window;
