@@ -476,8 +476,8 @@ export default function Home() {
       <section className="hero">
         <div className="eyebrow">🤖 INSTANT ASK GBK AI • GLOBAL LOYALTY</div>
         <h1>Ask GBK AI. Find it. Buy it. Earn GBK.</h1>
-        <p>Tell GBK AI what you need. We help you find participating businesses and services. Pay normally, receive eligible GBK rewards, and keep them for future use.</p>
-        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder="What do you need? Hotel, food, repair, travel, shopping..."/><button onMouseDown={()=>setSearchFocused(true)} onClick={doSearch} disabled={apiBusy}>{apiBusy ? "Finding…" : "Find"}</button></div>
+        <p>Tell us what you need. GBK AI finds participating businesses and services. Pay normally, then receive eligible GBK rewards.</p>
+        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder="Ask anything — hotel, restaurant, AC repair, travel, shopping..."/><button onMouseDown={()=>setSearchFocused(true)} onClick={doSearch} disabled={apiBusy}>{apiBusy ? "Searching…" : "Ask GBK AI"}</button></div>
         <div className="askHint"><span>💬 Ask naturally — “I need a hotel in Dubai”, “find AC repair”, “find a restaurant”</span></div>
         <div className="suggestions">
           <button onClick={()=>setQuery("restaurants with GBK rewards")}>🍽️ Restaurants</button>
