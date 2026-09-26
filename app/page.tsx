@@ -50,6 +50,7 @@ export default function Home() {
   const [apiBusy,setApiBusy] = useState(false);
   const [searchResults,setSearchResults] = useState<any[]>([]);
   const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
+  const [orderAmount,setOrderAmount] = useState("");
   const [merchantBusinessName,setMerchantBusinessName]=useState("");
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
   const [merchantPhone,setMerchantPhone]=useState("");
@@ -194,8 +195,8 @@ export default function Home() {
   };
   const createOrderFor = async (m:any) => {
     if(!session){setRole("Auth");return;}
-    const amount=window.prompt("Enter purchase/order amount in local currency:");
-    if(!amount || !Number.isFinite(Number(amount)) || Number(amount)<=0) return;
+    const amount=String(orderAmount||"").trim();
+    if(!amount || !Number.isFinite(Number(amount)) || Number(amount)<=0){ setAuthNotice("Enter the purchase/order amount first."); return; }
     setApiBusy(true);
     try {
       const currency = country==="India" ? "INR" : "USD";
@@ -357,8 +358,15 @@ export default function Home() {
           <h2>{selectedMerchant.business_name}</h2>
           <p>{[selectedMerchant.category,selectedMerchant.city,selectedMerchant.country].filter(Boolean).join(" • ")}</p>
           <p>GBK Loyalty offer: <b>{Math.round(Number(selectedMerchant.loyalty_offer_bps||0)/100)}%</b></p>
-          <button className="primary" disabled={apiBusy} onClick={()=>createOrderFor(selectedMerchant)}>{apiBusy ? "Preparing order…" : "Create Order & Pay"}</button>
-          <button className="secondary" onClick={()=>setSelectedMerchant(null)}>Cancel</button>
+          <label style={{display:"grid",gap:6,margin:"14px 0"}}>
+            <b>Order amount</b>
+            <input className="modalInput" inputMode="decimal" type="number" min="0.01" step="0.01" value={orderAmount} onChange={e=>setOrderAmount(e.target.value)} placeholder={country==="India" ? "Enter amount in INR" : "Enter amount in local currency"} />
+          </label>
+          <small>{selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH"
+            ? "Pay the merchant directly. The merchant will verify the payment before any GBK reward is released."
+            : "Continue to the merchant's configured payment method."}</small>
+          <button className="primary" disabled={apiBusy || !orderAmount} onClick={()=>createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Create Order → Send to Merchant" : "Create Order & Pay")}</button>
+          <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");}}>Cancel</button>
         </div>
       </div>}
       <section id="roles" className="roleSection">
