@@ -57,3 +57,23 @@
   .how{padding:18px 14px}
   .steps>div{padding:15px}
 }
+
+
+/* Wallet roles and platform model */
+.walletExplainer{max-width:900px;margin:24px auto;padding:24px;border-radius:24px;background:rgba(255,255,255,.82);border:1px solid rgba(0,0,0,.08)}
+.walletExplainer h2{margin:6px 0 18px}
+.walletRoleGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.walletRoleGrid article{padding:16px;border:1px solid rgba(0,0,0,.08);border-radius:18px;background:rgba(255,255,255,.72)}
+.walletRoleGrid h3{margin:8px 0 6px;font-size:16px}
+.walletRoleGrid p{margin:0;color:#6b6873;font-size:13px;line-height:1.5}
+.walletFlow{margin-top:16px;padding:14px;border-radius:16px;background:#f7f3ff;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;font-size:12px}
+.walletFlow span{color:#6b6873}
+@media(max-width:700px){
+ .walletExplainer{margin:20px 14px;padding:18px}
+ .walletRoleGrid{grid-template-columns:1fr 1fr}
+ .walletRoleGrid article{padding:14px}
+ .walletFlow{justify-content:flex-start}
+}
+@media(max-width:420px){
+ .walletRoleGrid{grid-template-columns:1fr}
+}
