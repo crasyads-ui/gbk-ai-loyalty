@@ -176,10 +176,20 @@ export default function Home() {
   };
   const doSearch = async () => {
     const q=query.trim(); if(q.length<2){setAuthNotice("Please enter what you need.");return;}
-    if(!session){setRole("Auth");setAuthNotice("Sign in first to search registered GBK Loyalty businesses.");return;}
     setApiBusy(true); setAuthNotice("");
-    try { const r=await loyaltyApi(session,"search",{query:q,country}); setSearchResults(r.results||[]); document.getElementById("searchResults")?.scrollIntoView({behavior:"smooth"}); }
-    catch(e:any){setAuthNotice(e.message||"Search failed");} finally {setApiBusy(false);}
+    try {
+      let activeSession=session;
+      if(!activeSession){
+        activeSession=await signInAnonymously();
+        setSession(activeSession);
+        try{ await loyaltyApi(activeSession,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null}); }catch{}
+      }
+      const r=await loyaltyApi(activeSession,"search",{query:q,country});
+      setSearchResults(r.results||[]);
+      setAuthNotice(r.results?.length ? "" : "No active GBK Loyalty businesses matched this request yet.");
+      setTimeout(()=>document.getElementById("searchResults")?.scrollIntoView({behavior:"smooth",block:"start"}),50);
+    } catch(e:any){setAuthNotice(e.message||"Search failed");}
+    finally {setApiBusy(false);}
   };
   const createOrderFor = async (m:any) => {
     if(!session){setRole("Auth");return;}
