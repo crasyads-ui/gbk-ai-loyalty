@@ -163,7 +163,13 @@ export default function Home() {
               name:paid.payment.merchant_name,
               description:"GBK AI Loyalty",
               order_id:paid.payment.order_id,
-              handler:()=>{setAuthNotice("Payment submitted. Waiting for verified gateway payment before GBK reward settlement.");resolve();},
+              handler:async(response:any)=>{
+                try{
+                  const verified=await loyaltyApi(session,"payment_verify",{order_id:paid.payment.gbk_order_id,payment_id:response.razorpay_payment_id,signature:response.razorpay_signature});
+                  setAuthNotice(verified?.settlement?.status==="REWARD_PREPARED" ? "Payment verified and GBK reward prepared." : "Payment verified. Reward settlement is waiting for merchant completion or funding.");
+                }catch(e:any){setAuthNotice(e.message||"Payment verification failed.");}
+                resolve();
+              },
               modal:{ondismiss:()=>resolve()}
             });
             rzp.on("payment.failed",(r:any)=>{setAuthNotice(r?.error?.description||"Payment failed.");resolve();});
