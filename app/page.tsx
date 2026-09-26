@@ -361,7 +361,7 @@ export default function Home() {
             </div>
             <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
             <small>Send GBK only to the connected merchant wallet. The website does not take custody of merchant GBK.</small>
-          </> : s6
+          </> : role==="Auth" ? <>
             <div className="walletConnectBox">
               <div className="roleIcon">👛</div>
               <h3>Connect your wallet</h3>
