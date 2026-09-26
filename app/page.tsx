@@ -474,10 +474,11 @@ export default function Home() {
       </div>
 
       <section className="hero">
-        <div className="eyebrow">🌐 GLOBAL CUSTOMER LOYALTY</div>
-        <h1>Find • Buy • Earn GBK • Repeat</h1>
-        <p>Find a participating business, pay normally, and earn eligible GBK rewards after the purchase is verified. Simple loyalty for everyone.</p>
+        <div className="eyebrow">🤖 INSTANT ASK GBK AI • GLOBAL LOYALTY</div>
+        <h1>Ask GBK AI. Find it. Buy it. Earn GBK.</h1>
+        <p>Tell GBK AI what you need. We help you find participating businesses and services. Pay normally, receive eligible GBK rewards, and keep them for future use.</p>
         <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder="What do you need? Hotel, food, repair, travel, shopping..."/><button onMouseDown={()=>setSearchFocused(true)} onClick={doSearch} disabled={apiBusy}>{apiBusy ? "Finding…" : "Find"}</button></div>
+        <div className="askHint"><span>💬 Ask naturally — “I need a hotel in Dubai”, “find AC repair”, “find a restaurant”</span></div>
         <div className="suggestions">
           <button onClick={()=>setQuery("restaurants with GBK rewards")}>🍽️ Restaurants</button>
           <button onClick={()=>setQuery("hotels with GBK offers")}>🏨 Hotels</button>
@@ -519,7 +520,7 @@ export default function Home() {
           <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");}}>Cancel</button>
         </div>
       </div>}
-      <section id="roles" className="roleSection">
+      <section id="roles" className="roleSection roleOnlySection">
         <div className="sectionHead"><div><span className="eyebrow">ONE APP • THREE ROLES</span><h2>Simple loyalty for everyone</h2></div></div>
         <div className="roleGrid">{roles.map(r=>
           <button className="roleCard" key={r.title} onClick={()=>setRole(r.title)}>
@@ -569,7 +570,7 @@ export default function Home() {
       </section>
 
       <section className="stats">
-        <div><b>0 GBK</b><span>Rewards earned</span></div>
+        <div><b>GBK</b><span>Rewards from eligible purchases</span></div>
         <div><b>0</b><span>Reward transactions</span></div>
         <button onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : setRole(activeWalletRole==="customer" ? "Customer" : activeWalletRole==="founder" ? "Founder" : "Merchant")}>👛 {activeWalletRole==="merchant" ? "Merchant wallet" : activeWalletRole==="customer" ? "Customer wallet" : activeWalletRole==="founder" ? "Founder wallet" : "Wallet"}</button>
       </section>
@@ -582,11 +583,11 @@ export default function Home() {
       </section>
 
       <section className="how">
-        <span className="eyebrow">HOW IT WORKS</span><h2>Find → Buy → Earn</h2>
+        <span className="eyebrow">THE GBK LOYALTY LOOP</span><h2>Ask → Find → Buy → Earn → Use → Repeat</h2>
         <div className="steps">
-          <div><b>01</b><h3>Find</h3><p>Tell GBK AI what you need and choose a participating business.</p></div>
-          <div><b>02</b><h3>Route</h3><p>GBK AI searches registered eligible businesses and sends the request/order to the selected merchant.</p></div>
-          <div><b>03</b><h3>Earn</h3><p>After the purchase is verified and completed, eligible GBK rewards are released automatically.</p></div>
+          <div><b>01</b><h3>Ask</h3><p>Tell GBK AI what you need by typing naturally.</p></div>
+          <div><b>02</b><h3>Find & Buy</h3><p>Choose a participating business and pay the merchant normally in the available local payment method.</p></div>
+          <div><b>03</b><h3>Earn & Use</h3><p>After verification, eligible GBK rewards go to the customer wallet for future supported use.</p></div>
         </div>
       </section>
 
