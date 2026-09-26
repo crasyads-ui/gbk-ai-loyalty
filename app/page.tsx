@@ -282,16 +282,21 @@ export default function Home() {
     finally {setApiBusy(false);}
   };
   const createOrderFor = async (m:any) => {
-    if(!session){setRole("Auth");return;}
     const amount=String(orderAmount||"").trim();
     if(!amount || !Number.isFinite(Number(amount)) || Number(amount)<=0){ setAuthNotice("Enter the purchase/order amount first."); return; }
     setApiBusy(true);
     try {
+      let activeSession=session || getStoredSession();
+      if(!activeSession){
+        activeSession=await signInAnonymously();
+        setSession(activeSession);
+        await loyaltyApi(activeSession,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null});
+      }
       const currency = String(m?.payment_currency || (country==="India" ? "INR" : "USD")).toUpperCase();
-      const created = await loyaltyApi(session,"create_order",{merchant_id:m.id,amount_minor:Math.round(Number(amount)*100),currency,request_text:query,category:m.category,country,order_source:"GBK_AI"});
+      const created = await loyaltyApi(activeSession,"create_order",{merchant_id:m.id,amount_minor:Math.round(Number(amount)*100),currency,request_text:query,category:m.category,country,order_source:"GBK_AI"});
       let paid:any;
       try {
-        paid = await loyaltyApi(session,"payment_create",{order_id:created.order.id});
+        paid = await loyaltyApi(activeSession,"payment_create",{order_id:created.order.id});
       } catch (e:any) {
         // Direct/Cash merchants do not use an online gateway. Keep the order active
         // so the merchant can verify the payment manually.
@@ -320,7 +325,7 @@ export default function Home() {
               order_id:paid.payment.order_id,
               handler:async(response:any)=>{
                 try{
-                  const verified=await loyaltyApi(session,"payment_verify",{order_id:paid.payment.gbk_order_id,payment_id:response.razorpay_payment_id,signature:response.razorpay_signature});
+                  const verified=await loyaltyApi(activeSession,"payment_verify",{order_id:paid.payment.gbk_order_id,payment_id:response.razorpay_payment_id,signature:response.razorpay_signature});
                   setAuthNotice(verified?.settlement?.status==="REWARD_PREPARED" ? "Payment verified and GBK reward prepared." : "Payment verified. Reward settlement is waiting for merchant completion or funding.");
                 }catch(e:any){setAuthNotice(e.message||"Payment verification failed.");}
                 resolve();
@@ -459,6 +464,7 @@ export default function Home() {
             <b>Order amount</b>
             <input className="modalInput" inputMode="decimal" type="number" min="0.01" step="0.01" value={orderAmount} onChange={e=>setOrderAmount(e.target.value)} placeholder={country==="India" ? "Enter amount in INR" : "Enter amount in local currency"} />
           </label>
+          {authNotice && <div className="notice" style={{margin:"12px 0"}}>{authNotice}</div>}
           <small>{selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH"
             ? "Pay the merchant directly. The merchant will verify the payment before any GBK reward is released."
             : "Continue to the merchant's configured payment method."}</small>
