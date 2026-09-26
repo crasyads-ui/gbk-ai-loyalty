@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, getConnectedEvmWallet, type LoyaltySession } from "../lib/loyalty";
+import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, getConnectedEvmWallet, approveMerchantRewardDistributor, type LoyaltySession } from "../lib/loyalty";
 
 const businessCategories = ["All Products & Services","Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries & Supermarkets","Fashion & Apparel","Electronics","Pharmacies & Health Stores","Salons & Beauty","AC Repair","Plumbing & Electrical","Home Services","Automotive & EV","Fuel & Charging","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education & Courses","Spoken English","Healthcare & Clinics","Real Estate","Agriculture & Farm Services","Seeds & Fertilizer","Farm Equipment","Crop Advisory","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops","Wholesale & Distribution","Manufacturing","Construction","Cleaning Services","Pet Services"];
 
@@ -209,6 +209,43 @@ export default function Home() {
       else if (activeWalletRole==="founder") setRole("Founder");
       else setRole("Merchant");
     } finally { setApiBusy(false); }
+  };
+
+  const waitForChainTx = async (txHash:string) => {
+    const provider = (window as any).ethereum;
+    if (!provider) return;
+    for (let i=0;i<30;i++) {
+      const receipt = await provider.request({method:"eth_getTransactionReceipt",params:[txHash]}).catch(()=>null);
+      if (receipt) {
+        if (String(receipt.status).toLowerCase() !== "0x1") throw new Error("GBK approval transaction failed.");
+        return;
+      }
+      await new Promise(resolve=>setTimeout(resolve,2000));
+    }
+    throw new Error("Approval transaction is still pending. Refresh the Merchant Wallet after confirmation.");
+  };
+  const approveRewardForOrder = async (order:any) => {
+    if (!order?.reward_required_raw || Number(order.reward_required_raw)<=0) return;
+    setApiBusy(true); setAuthNotice("");
+    try {
+      const txHash=await approveMerchantRewardDistributor(String(order.reward_required_raw));
+      setAuthNotice("GBK reward approval submitted. Waiting for confirmation…");
+      await waitForChainTx(txHash);
+      const result=await loyaltyApi(session!,"reward_settle",{order_id:order.id});
+      setAuthNotice(result?.status==="SETTLED" ? "GBK reward released successfully." : (result?.error || "Reward settlement is pending."));
+      await openMerchantWallet();
+    } catch(e:any) { setAuthNotice(e.message || "GBK reward approval failed."); }
+    finally { setApiBusy(false); }
+  };
+  const retryRewardSettlement = async (order:any) => {
+    if (!session) return;
+    setApiBusy(true); setAuthNotice("");
+    try {
+      const result=await loyaltyApi(session,"reward_settle",{order_id:order.id});
+      setAuthNotice(result?.status==="SETTLED" ? "GBK reward released successfully." : (result?.error || "Reward settlement is still pending."));
+      await openMerchantWallet();
+    } catch(e:any) { setAuthNotice(e.message || "Reward settlement failed."); }
+    finally { setApiBusy(false); }
   };
 
   const verifyFounder = async () => {
