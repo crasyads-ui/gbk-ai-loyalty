@@ -77,3 +77,13 @@
 @media(max-width:420px){
  .walletRoleGrid{grid-template-columns:1fr}
 }
+
+
+/* Separate wallet login choices */
+.walletChoiceGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.walletChoice{appearance:none;border:1px solid rgba(0,0,0,.1);border-radius:18px;background:#fff;padding:18px;text-align:left;cursor:pointer;display:grid;gap:7px}
+.walletChoice:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(60,30,120,.1)}
+.walletChoice>span{font-size:28px}
+.walletChoice b{font-size:17px}
+.walletChoice small{font-size:12px;line-height:1.45;color:#6b6873}
+@media(max-width:620px){.walletChoiceGrid{grid-template-columns:1fr}.walletChoice{display:grid;grid-template-columns:auto 1fr;column-gap:12px}.walletChoice>span{grid-row:span 2}.walletChoice small{grid-column:2}}
