@@ -286,12 +286,15 @@ export default function Home() {
     if(!amount || !Number.isFinite(Number(amount)) || Number(amount)<=0){ setAuthNotice("Enter the purchase/order amount first."); return; }
     setApiBusy(true);
     try {
-      let activeSession=session || getStoredSession();
-      if(!activeSession){
+      let activeSession:any=null;
+      try {
+        activeSession=JSON.parse(localStorage.getItem("gbk_loyalty_customer_session")||"null");
+      } catch {}
+      if(!activeSession?.access_token){
         activeSession=await signInAnonymously();
-        setSession(activeSession);
-        await loyaltyApi(activeSession,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null});
+        localStorage.setItem("gbk_loyalty_customer_session",JSON.stringify(activeSession));
       }
+      await loyaltyApi(activeSession,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null});
       const currency = String(m?.payment_currency || (country==="India" ? "INR" : "USD")).toUpperCase();
       const created = await loyaltyApi(activeSession,"create_order",{merchant_id:m.id,amount_minor:Math.round(Number(amount)*100),currency,request_text:query,category:m.category,country,order_source:"GBK_AI"});
       let paid:any;
