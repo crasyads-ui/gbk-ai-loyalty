@@ -489,6 +489,15 @@ export default function Home() {
                     <b>{o.currency} {(Number(o.amount_minor||0)/100).toLocaleString()}</b>
                     <span style={{display:"block"}}>{o.merchant_response_status || "PENDING"} · Payment: {o.payment_status || "PENDING"}</span>
                     <span style={{display:"block"}}>{o.reward_required_raw && Number(o.reward_required_raw)>0 ? "Required: "+(Number(o.reward_required_raw)/1e8).toLocaleString()+" GBK" : "Reward requirement: pending verified payment"}</span>
+                    {o.merchant?.payment_provider==="DIRECT" && o.payment_status!=="VERIFIED" && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={async()=>{
+                      if(!session)return;
+                      setApiBusy(true);
+                      try{
+                        await loyaltyApi(session,"direct_payment_verify",{order_id:o.id});
+                        setAuthNotice("Direct payment verified. Complete the order to prepare the GBK reward.");
+                        await openMerchantWallet();
+                      }catch(e:any){setAuthNotice(e.message||"Payment verification failed");}finally{setApiBusy(false);}
+                    }}>Verify direct payment</button>}
                     {["PENDING","ACCEPTED"].includes(o.merchant_response_status || "PENDING") && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={async()=>{
                       if(!session)return;
                       setApiBusy(true);
