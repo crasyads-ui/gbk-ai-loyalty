@@ -305,6 +305,31 @@ export default function Home() {
         </div>
       </section>
 
+      {searchResults.length > 0 && <section id="searchResults" className="roleSection">
+        <div className="sectionHead"><div><span className="eyebrow">GBK AI RESULTS</span><h2>Businesses matching your request</h2><p>Choose a participating business to create a customer order.</p></div></div>
+        <div className="roleGrid">
+          {searchResults.map((m:any)=><div className="roleCard" key={m.id}>
+            <div className="roleIcon">🏪</div>
+            <h3>{m.business_name}</h3>
+            <p>{[m.category,m.city,m.country].filter(Boolean).join(" • ")}</p>
+            {m.description && <p>{m.description}</p>}
+            <div><span className="roleTag">{Math.round(Number(m.loyalty_offer_bps||0)/100)}% GBK Loyalty</span><span className="roleTag">Active merchant</span></div>
+            <button className="primary" onClick={()=>setSelectedMerchant(m)}>View & Order →</button>
+          </div>)}
+        </div>
+      </section>}
+      {searchResults.length === 0 && authNotice && authNotice.includes("No") && <section id="searchResults" className="roleSection"><div className="status"><span>{authNotice}</span></div></section>}
+      {selectedMerchant && <div className="modalBackdrop">
+        <div className="modal">
+          <button className="modalClose" onClick={()=>setSelectedMerchant(null)}>×</button>
+          <div className="roleIcon">🏪</div>
+          <h2>{selectedMerchant.business_name}</h2>
+          <p>{[selectedMerchant.category,selectedMerchant.city,selectedMerchant.country].filter(Boolean).join(" • ")}</p>
+          <p>GBK Loyalty offer: <b>{Math.round(Number(selectedMerchant.loyalty_offer_bps||0)/100)}%</b></p>
+          <button className="primary" disabled={apiBusy} onClick={()=>createOrderFor(selectedMerchant)}>{apiBusy ? "Preparing order…" : "Create Order & Pay"}</button>
+          <button className="secondary" onClick={()=>setSelectedMerchant(null)}>Cancel</button>
+        </div>
+      </div>}
       <section id="roles" className="roleSection">
         <div className="sectionHead"><div><span className="eyebrow">ONE APP • THREE ROLES</span><h2>Choose how you use GBK Loyalty</h2></div></div>
         <div className="roleGrid">{roles.map(r=>
