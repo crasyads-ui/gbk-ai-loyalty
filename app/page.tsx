@@ -277,7 +277,7 @@ export default function Home() {
     setApiBusy(true); setAuthNotice("");
     try {
       const txHash=await approveMerchantRewardDistributor(String(order.reward_required_raw));
-      setAuthNotice("GBK reward approval submitted. Waiting for confirmation…");
+      setAuthNotice("One-time GBK reward approval submitted. Waiting for confirmation…");
       await waitForChainTx(txHash);
       const result=await loyaltyApi(session!,"reward_settle",{order_id:order.id});
       setAuthNotice(result?.status==="SETTLED" ? "GBK reward released successfully." : (result?.error || "Reward settlement is pending."));
@@ -655,7 +655,7 @@ export default function Home() {
                        "⚪ Reward pending"}
                     </span>}
                     {o.reward_settlement_status==="AWAITING_MERCHANT_APPROVAL" && o.reward_required_raw && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={()=>approveRewardForOrder(o)}>
-                      {apiBusy ? "Approving…" : "Approve GBK reward spending"}
+                      {apiBusy ? "Approving…" : "Approve GBK rewards once"}
                     </button>}
                     {o.reward_settlement_status && o.reward_settlement_status!=="SETTLED" && o.payment_status==="VERIFIED" && o.merchant_response_status==="COMPLETED" && o.reward_settlement_status!=="AWAITING_MERCHANT_APPROVAL" && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={()=>retryRewardSettlement(o)}>
                       {apiBusy ? "Releasing…" : "Retry reward release"}
@@ -666,7 +666,8 @@ export default function Home() {
                       setApiBusy(true);
                       try{
                         await loyaltyApi(session,"direct_payment_verify",{order_id:o.id});
-                        setAuthNotice("Direct payment verified. Now accept and complete the order to prepare the GBK reward.");
+                        await loyaltyApi(session,"merchant_order_update",{order_id:o.id,status:"COMPLETED"});
+                        setAuthNotice("Payment verified and order completed. Releasing the GBK reward…");
                         await openMerchantWallet();
                       }catch(e:any){setAuthNotice(e.message||"Payment verification failed");}finally{setApiBusy(false);}
                     }}>Verify direct payment</button>}
