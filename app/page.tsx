@@ -355,12 +355,19 @@ export default function Home() {
               <div><b>{merchantStatus?.live_gbk_balance_raw ? (Number(merchantStatus.live_gbk_balance_raw)/1e8).toLocaleString() : "0"} GBK</b><span>Live GBK balance</span></div>
               <div><b>{merchantStatus?.threshold_raw ? (Number(merchantStatus.threshold_raw)/1e8).toLocaleString() : "0"} GBK</b><span>Current required balance</span></div>
             </div>
-            <div className={merchantStatus?.active ? "status" : "status paused"}>
-              {merchantStatus?.active ? "🟢 Merchant reward balance eligible" : "⏸ Reward balance low"}
-              <span>{merchantStatus?.active ? "Eligible for reward-funded orders." : "Top up GBK in the connected merchant wallet; the system will re-check the live balance."}</span>
+            <div className={merchantStatus?.active || Number(merchantStatus?.threshold_raw || 0) === 0 && Number(merchantStatus?.live_gbk_balance_raw || 0) > 0 ? "status" : "status paused"}>
+              {merchantStatus?.active
+                ? "🟢 Merchant reward balance eligible"
+                : Number(merchantStatus?.threshold_raw || 0) === 0 && Number(merchantStatus?.live_gbk_balance_raw || 0) > 0
+                  ? "🟢 Merchant wallet funded"
+                  : "⏸ Reward balance low"}
+              <span>{merchantStatus?.active
+                ? "Eligible for reward-funded orders."
+                : Number(merchantStatus?.threshold_raw || 0) === 0 && Number(merchantStatus?.live_gbk_balance_raw || 0) > 0
+                  ? "No order-specific GBK requirement is set yet. The live wallet balance will be checked against each eligible order."
+                  : "Top up GBK in the connected merchant wallet; the system will re-check the live balance."}</span>
             </div>
             <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
-            <small>Send GBK only to the connected merchant wallet. The website does not take custody of merchant GBK.</small>
           </> : role==="Auth" ? <>
             <div className="walletConnectBox">
               <div className="roleIcon">👛</div>
@@ -440,7 +447,7 @@ export default function Home() {
             <input placeholder="Mobile or email"/>
           </>}
           {role==="Merchant" && authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
-          {role==="Founder" ? <button className="primary" onClick={verifyFounder} disabled={apiBusy}>{apiBusy ? "Verifying…" : "Verify Founder Member →"}</button> : role==="Merchant" ? <button className="primary" disabled={apiBusy} onClick={registerMerchant}>{apiBusy ? "Registering…" : "Continue →"}</button> : null}<small>{role==="MerchantWallet" ? "No token transfer happens automatically. Send GBK only to the connected merchant wallet." : "No token transfer happens from this screen."}</small>
+          {role==="Founder" ? <button className="primary" onClick={verifyFounder} disabled={apiBusy}>{apiBusy ? "Verifying…" : "Verify Founder Member →"}</button> : role==="Merchant" ? <button className="primary" disabled={apiBusy} onClick={registerMerchant}>{apiBusy ? "Registering…" : "Continue →"}</button> : null}{role==="MerchantWallet" ? <small>Send GBK only to the connected merchant wallet. The website does not take custody of merchant GBK.</small> : <small>No token transfer happens from this screen.</small>}
         </div>
       </div>}
 
