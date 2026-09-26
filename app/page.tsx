@@ -629,7 +629,7 @@ export default function Home() {
               <span>🔐 Separate role login</span>
               <small>Connecting a wallet for one role does not automatically make it a Merchant or Founder account.</small>
             </div>
-          </> : {role==="MerchantWallet" ? <>
+          </> : role==="MerchantWallet" ? <>
             <p>Manage the connected merchant reward wallet. Customer payments remain direct to the merchant; GBK is used only for the merchant-funded loyalty reward pool.</p>
             <div className="offerPreview" style={{display:"grid",gap:6}}>
               <b>Merchant: {merchantStatus?.merchant?.business_name || "—"}</b>
