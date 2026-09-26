@@ -464,7 +464,7 @@ export default function Home() {
         <div className="topActions">
           <select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select>
           <select value={country} onChange={e=>setCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select>
-          <button className="walletBtn" onClick={openWallet}>👛 Wallet</button>
+          <button className="walletBtn" onClick={()=>setRole("WalletChooser")}>👛 Wallet</button>
         </div>
       </header>
 
@@ -612,7 +612,24 @@ export default function Home() {
           <button className="close" onClick={()=>setRole(null)}>×</button>
           <div className="roleIcon">{role==="MerchantWallet" ? "👛" : (roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍"))}</div>
           <h2>{role==="MerchantWallet" ? "Merchant Wallet" : `${role} registration`}</h2>
-          {role==="MerchantWallet" ? <>
+          {role==="WalletChooser" ? <>
+            <p>Choose which GBK Loyalty account you want to enter. Each role uses its own wallet identity.</p>
+            <div className="walletChoiceGrid">
+              <button className="walletChoice" onClick={async()=>{await connectWallet("customer");}}>
+                <span>👤</span><b>Customer</b><small>Buy, earn and manage your GBK rewards.</small>
+              </button>
+              <button className="walletChoice" onClick={async()=>{await connectWallet("merchant"); await openMerchantWallet();}}>
+                <span>🏪</span><b>Merchant</b><small>Manage your business, orders and GBK reward funding.</small>
+              </button>
+              <button className="walletChoice" onClick={async()=>{await connectWallet("founder");}}>
+                <span>🌍</span><b>Founder</b><small>Enter your verified Founder account and benefits.</small>
+              </button>
+            </div>
+            <div className="status" style={{marginTop:14}}>
+              <span>🔐 Separate role login</span>
+              <small>Connecting a wallet for one role does not automatically make it a Merchant or Founder account.</small>
+            </div>
+          </> : {role==="MerchantWallet" ? <>
             <p>Manage the connected merchant reward wallet. Customer payments remain direct to the merchant; GBK is used only for the merchant-funded loyalty reward pool.</p>
             <div className="offerPreview" style={{display:"grid",gap:6}}>
               <b>Merchant: {merchantStatus?.merchant?.business_name || "—"}</b>
