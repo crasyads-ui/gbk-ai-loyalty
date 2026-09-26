@@ -19,3 +19,19 @@
 .askHint{margin-top:10px;max-width:760px;color:#f0e8ff;font-size:12px;opacity:.9}
 .roleOnlySection{display:none}
 @media(max-width:520px){.askHint{line-height:1.45}.hero p{font-size:14px}.hero h1{font-size:29px}.search button{font-size:12px}}
+
+/* Customer-first homepage: keep the first screen focused on asking and finding */
+.compactInfo,#offers,.stats,.merchant{display:none}
+.how{margin-top:28px}
+@media(max-width:520px){
+  .hero{padding:26px 16px}
+  .hero h1{font-size:28px;letter-spacing:-.5px}
+  .hero p{font-size:13px;line-height:1.5}
+  .search{margin-top:20px}
+  .search input{font-size:14px}
+  .search button{white-space:nowrap;padding:11px 10px}
+  .suggestions{gap:6px}
+  .suggestions button{font-size:11px;padding:7px 9px}
+  .how{padding:18px;margin-top:22px}
+  .how h2{font-size:20px}
+}
