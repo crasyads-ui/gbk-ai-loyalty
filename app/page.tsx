@@ -347,7 +347,7 @@ export default function Home() {
           <h2>{role==="MerchantWallet" ? "Merchant Wallet" : `${role} registration`}</h2>
           {role==="MerchantWallet" ? <>
             <p>Manage the connected merchant reward wallet. Customer payments remain direct to the merchant; GBK is used only for the merchant-funded loyalty reward pool.</p>
-            <div className="offerPreview">
+            <div className="offerPreview" style={{display:"grid",gap:6}}>
               <b>Merchant: {merchantStatus?.merchant?.business_name || "—"}</b>
               <span>Wallet: {merchantStatus?.merchant?.profile_id ? "Connected" : "Not connected"}</span>
             </div>
