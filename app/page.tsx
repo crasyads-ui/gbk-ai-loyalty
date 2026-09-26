@@ -84,6 +84,11 @@ export default function Home() {
     if (stored) {
       loyaltyApi(stored,"my_data",{}).then((data:any)=>{
         const merchant = (data?.merchants || [])[0];
+        const storedWallet = String(data?.profile?.wallet_address || "");
+        if (storedWallet) {
+          setWalletAddress(storedWallet);
+          setMerchantWallet(storedWallet);
+        }
         if (merchant) {
           setActiveWalletRole("merchant");
           setMerchantStatus({merchant,merchant_orders:data?.merchant_orders || []});
@@ -178,6 +183,34 @@ export default function Home() {
       setAuthNotice(e.message || "Merchant wallet status could not be loaded.");
     } finally { setApiBusy(false); }
   };
+  const openWallet = async () => {
+    setApiBusy(true); setAuthNotice("");
+    try {
+      const s = session || getStoredSession();
+      if (s) {
+        const data = await loyaltyApi(s,"my_data",{});
+        const merchant = (data?.merchants || [])[0];
+        const serverWallet = String(data?.profile?.wallet_address || "");
+        if (serverWallet) {
+          setWalletAddress(serverWallet);
+          setMerchantWallet(serverWallet);
+        }
+        if (merchant) {
+          await openMerchantWallet();
+          return;
+        }
+      }
+      if (activeWalletRole==="customer") setRole("Customer");
+      else if (activeWalletRole==="founder") setRole("Founder");
+      else setRole("Merchant");
+    } catch {
+      if (activeWalletRole==="merchant") await openMerchantWallet();
+      else if (activeWalletRole==="customer") setRole("Customer");
+      else if (activeWalletRole==="founder") setRole("Founder");
+      else setRole("Merchant");
+    } finally { setApiBusy(false); }
+  };
+
   const verifyFounder = async () => {
     if (!walletAddress) { await connectWallet("founder"); return; }
     if (!session) { await connectWallet("founder"); return; }
@@ -284,7 +317,16 @@ export default function Home() {
     setApiBusy(true);
     setAuthNotice("");
     try {
-      if (!merchantWallet) {
+      const existingSession = session || getStoredSession();
+      if (existingSession) {
+        const existingData = await loyaltyApi(existingSession,"my_data",{});
+        const existingMerchant = (existingData?.merchants || [])[0];
+        if (existingMerchant) {
+          setApiBusy(false);
+          await openMerchantWallet();
+          return;
+        }
+      }      if (!merchantWallet) {
         await connectWallet("merchant");
         return;
       }
@@ -329,7 +371,7 @@ export default function Home() {
         <div className="topActions">
           <select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select>
           <select value={country} onChange={e=>setCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select>
-          <button className="walletBtn" onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : setRole(activeWalletRole==="customer" ? "Customer" : activeWalletRole==="founder" ? "Founder" : "Merchant")}>{activeWalletRole==="merchant" ? "Merchant Wallet" : activeWalletRole==="customer" ? "Customer Wallet" : activeWalletRole==="founder" ? "Founder" : "Connect Wallet"}</button>
+          <button className="walletBtn" onClick={openWallet}>{activeWalletRole==="merchant" ? "Merchant Wallet" : activeWalletRole==="customer" ? "Customer Wallet" : activeWalletRole==="founder" ? "Founder" : "Wallet"}</button>
         </div>
       </header>
 
@@ -435,7 +477,7 @@ export default function Home() {
       <section className="stats">
         <div><b>0 GBK</b><span>Rewards earned</span></div>
         <div><b>0</b><span>Reward transactions</span></div>
-        <button onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : setRole(activeWalletRole==="customer" ? "Customer" : activeWalletRole==="founder" ? "Founder" : "Merchant")}>👛 {activeWalletRole==="merchant" ? "Merchant wallet" : activeWalletRole==="customer" ? "Customer wallet" : "Wallet"}</button>
+        <button onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : setRole(activeWalletRole==="customer" ? "Customer" : activeWalletRole==="founder" ? "Founder" : "Merchant")}>👛 {activeWalletRole==="merchant" ? "Merchant wallet" : activeWalletRole==="customer" ? "Customer wallet" : activeWalletRole==="founder" ? "Founder wallet" : "Wallet"}</button>
       </section>
 
       <section id="offers">
