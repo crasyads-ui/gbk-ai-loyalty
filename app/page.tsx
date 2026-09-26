@@ -464,7 +464,7 @@ export default function Home() {
         <div className="topActions">
           <select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select>
           <select value={country} onChange={e=>setCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select>
-          <button className="walletBtn" onClick={openWallet}>{activeWalletRole==="merchant" ? "Merchant Wallet" : activeWalletRole==="customer" ? "Customer Wallet" : activeWalletRole==="founder" ? "Founder" : "Wallet"}</button>
+          <button className="walletBtn" onClick={openWallet}>👛 Wallet</button>
         </div>
       </header>
 
@@ -582,7 +582,18 @@ export default function Home() {
         )}</div>
       </section>
 
-      <section className="how">
+      <section className="walletExplainer">
+  <div className="sectionHead"><div><span className="eyebrow">👛 ONE WALLET • DIFFERENT ROLES</span><h2>How the GBK Loyalty system works</h2></div></div>
+  <div className="walletRoleGrid">
+    <article><div className="icon">👤</div><h3>Customer Wallet</h3><p>Receive eligible GBK rewards after verified purchases and use them in supported GBK services.</p></article>
+    <article><div className="icon">🏪</div><h3>Merchant Wallet</h3><p>Keep GBK available for your loyalty rewards. Customer payments go directly to the merchant.</p></article>
+    <article><div className="icon">🌍</div><h3>Founder Wallet</h3><p>Receive the qualifying Founder allocation when eligible loyalty activity is attributed to the Founder.</p></article>
+    <article><div className="icon">🏢</div><h3>Platform</h3><p>Operates discovery, marketplace, loyalty, verification and reward settlement infrastructure and receives its defined platform allocation.</p></article>
+  </div>
+  <div className="walletFlow"><b>Customer</b><span>Find → Buy → Earn</span><b>Merchant</b><span>Serve → Fund Rewards</span><b>Founder</b><span>Connect → Qualify</span><b>Platform</b><span>Operate → Settle</span></div>
+</section>
+
+<section className="how">
         <span className="eyebrow">HOW GBK LOYALTY WORKS</span><h2>Find → Buy → Earn → Use</h2>
         <div className="steps">
           <div><b>01</b><h3>Find a business</h3><p>Search participating businesses and services.</p></div>
