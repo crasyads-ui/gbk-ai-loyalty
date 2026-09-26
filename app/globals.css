@@ -87,3 +87,13 @@
 .walletChoice b{font-size:17px}
 .walletChoice small{font-size:12px;line-height:1.45;color:#6b6873}
 @media(max-width:620px){.walletChoiceGrid{grid-template-columns:1fr}.walletChoice{display:grid;grid-template-columns:auto 1fr;column-gap:12px}.walletChoice>span{grid-row:span 2}.walletChoice small{grid-column:2}}
+
+/* Global country/currency loyalty model */
+.globalModel{margin:24px auto 0;max-width:1120px;padding:24px;border:1px solid rgba(0,0,0,.08);border-radius:24px;background:linear-gradient(180deg,#fff,#faf9ff)}
+.globalModelLead{max-width:900px;color:#625f6d;line-height:1.65;margin:8px 0 18px}
+.globalModelGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.globalModelGrid>div{padding:15px;border:1px solid rgba(0,0,0,.07);border-radius:16px;background:#fff;display:grid;gap:7px}
+.globalModelGrid b{font-size:15px}.globalModelGrid span{font-size:12px;line-height:1.45;color:#6b6873}
+.globalModelFlow{margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;font-size:13px}.globalModelFlow span{padding:8px 12px;border-radius:999px;background:#f3f1f8}.globalModelFlow b{opacity:.55}
+@media(max-width:760px){.globalModelGrid{grid-template-columns:1fr 1fr}.globalModel{margin-left:12px;margin-right:12px;padding:18px}.globalModelFlow{justify-content:flex-start}}
+@media(max-width:430px){.globalModelGrid{grid-template-columns:1fr}.globalModelFlow{gap:7px}.globalModelFlow span{font-size:11px}}
