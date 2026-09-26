@@ -454,6 +454,7 @@ export default function Home() {
               <p>Your connected customer wallet is your customer identity and reward destination.</p>
               <button className="primary" onClick={()=>connectWallet("customer")} disabled={apiBusy}>{apiBusy ? "Connecting…" : "Connect Customer Wallet"}</button>
               {walletAddress && activeWalletRole==="customer" && <small>Connected: {walletAddress.slice(0,6)}…{walletAddress.slice(-4)}</small>}
+              <button className="secondary" onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Switching…" : "Switch to Merchant Wallet"}</button>
             </div>
           </> : role==="Auth" ? <>
             <div className="walletConnectBox">
