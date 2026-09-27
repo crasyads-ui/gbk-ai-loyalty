@@ -271,6 +271,14 @@ export default function Home() {
         setMerchantWallet(connected);
         try { localStorage.setItem("gbk_loyalty_merchant_wallet", connected); } catch {}
       }
+      // merchant_wallet_lookup requires a wallet-linked profile first.
+      // Establish that profile without creating a new merchant record.
+      await loyaltyApi(s,"profile_upsert",{
+        role:"merchant",
+        full_name:fullName || "GBK Wallet User",
+        country,
+        wallet_address:knownMerchantWallet
+      });
       const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:knownMerchantWallet});
       const merchant = lookup?.merchant || (await loyaltyApi(s,"my_data",{}))?.merchants?.[0];
       if (!merchant) { setRole("Merchant"); setAuthNotice("No merchant is registered for this wallet. Please complete merchant registration once."); return; }
@@ -301,6 +309,16 @@ export default function Home() {
         let s = session || getStoredSession();
         if (!s) s = await signInAnonymously();
         setSession(s);
+        // The wallet chooser can be opened before a role/profile exists.
+        // Create/update only the wallet-linked profile, then resolve the
+        // existing merchant record. This prevents registered merchants from
+        // being sent to registration just because the anonymous session is new.
+        await loyaltyApi(s,"profile_upsert",{
+          role:"merchant",
+          full_name:fullName || "GBK Wallet User",
+          country,
+          wallet_address:connected || knownMerchantWallet
+        });
         const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:connected || knownMerchantWallet});
         if (lookup?.merchant) {
           setActiveWalletRole("merchant");
