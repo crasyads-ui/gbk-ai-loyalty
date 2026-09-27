@@ -169,20 +169,29 @@ export default function Home() {
       }
       setSession(s);
 
-      // Merchant wallets are resolved against the existing merchant record
-      // BEFORE creating/updating a role profile. This gives registered merchants
-      // a direct path to Merchant Wallet, while a new wallet goes to registration.
+      // Merchant wallets are identified by the connected EVM address.
+      // Check the registered merchant record first, then create/reconcile the
+      // wallet-linked profile only if needed.
       if (targetRole === "merchant") {
-        // Establish the current wallet-linked profile first. The backend lookup
-        // requires an authenticated GBK Loyalty profile, but this does not create
-        // a merchant record.
-        await loyaltyApi(s, "profile_upsert", {
-          role: "merchant",
-          full_name: fullName || "GBK Wallet User",
-          country,
-          wallet_address: address
-        });
-        const lookup = await loyaltyApi(s, "merchant_wallet_lookup", { wallet_address: address });
+        let lookup = await loyaltyApi(s, "merchant_wallet_lookup", { wallet_address: address });
+        if (lookup?.merchant) {
+          await loyaltyApi(s, "profile_upsert", {
+            role: "merchant",
+            full_name: fullName || "GBK Wallet User",
+            country,
+            wallet_address: address
+          });
+          lookup = await loyaltyApi(s, "merchant_wallet_lookup", { wallet_address: address });
+        } else {
+          await loyaltyApi(s, "profile_upsert", {
+            role: "merchant",
+            full_name: fullName || "GBK Wallet User",
+            country,
+            wallet_address: address
+          });
+          lookup = await loyaltyApi(s, "merchant_wallet_lookup", { wallet_address: address });
+        }
+
         if (lookup?.merchant) {
           setActiveWalletRole("merchant");
           setMerchantStatus({merchant: lookup.merchant});
@@ -203,14 +212,6 @@ export default function Home() {
           return;
         }
 
-        // No registered merchant exists for this wallet. Only now create the
-        // merchant profile and show the new-merchant registration form.
-        await loyaltyApi(s, "profile_upsert", {
-          role: "merchant",
-          full_name: fullName || "GBK Wallet User",
-          country,
-          wallet_address: address
-        });
         try {
           localStorage.setItem("gbk_loyalty_merchant_wallet", address);
           localStorage.setItem("gbk_loyalty_active_role", "merchant");
