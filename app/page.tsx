@@ -68,7 +68,9 @@ export default function Home() {
   const [founderTier,setFounderTier]=useState("COUNTRY_300");
   const [founderTxHash,setFounderTxHash]=useState("");
   const [founderStatus,setFounderStatus]=useState<any>(null);
-  const [merchantStatus,setMerchantStatus]=useState<any>(null);\n  const [merchantChainStatus,setMerchantChainStatus] = useState<{balanceRaw:string;allowanceRaw:string}|null>(null);\n  const [merchantChainBusy,setMerchantChainBusy] = useState(false);
+  const [merchantStatus,setMerchantStatus]=useState<any>(null);
+  const [merchantChainStatus,setMerchantChainStatus] = useState<{balanceRaw:string;allowanceRaw:string}|null>(null);
+  const [merchantChainBusy,setMerchantChainBusy] = useState(false);
   const isIndia = country === "India";
   const holderRewardMin = 0.7;
   const holderRewardMax = 6.3;
@@ -277,7 +279,8 @@ export default function Home() {
         loyaltyApi(s,"merchant_fund_status",{merchant_id:merchant.id}),
         loyaltyApi(s,"my_data",{})
       ]);
-      setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});\n      await refreshMerchantChainStatus(connected || knownMerchantWallet);
+      setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});
+      await refreshMerchantChainStatus(connected || knownMerchantWallet);
       try { localStorage.setItem("gbk_loyalty_merchant_wallet", String(live?.merchant?.profile_id ? (connected || knownMerchantWallet) : knownMerchantWallet)); } catch {}
       setRole("MerchantWallet");
     } catch(e:any) {
@@ -306,7 +309,8 @@ export default function Home() {
             loyaltyApi(s,"merchant_fund_status",{merchant_id:lookup.merchant.id}),
             loyaltyApi(s,"my_data",{})
           ]);
-          setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});\n          await refreshMerchantChainStatus(connected || knownMerchantWallet);
+          setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});
+          await refreshMerchantChainStatus(connected || knownMerchantWallet);
           try { localStorage.setItem("gbk_loyalty_merchant_wallet", String(connected || knownMerchantWallet)); } catch {}
           setRole("MerchantWallet");
           return;
