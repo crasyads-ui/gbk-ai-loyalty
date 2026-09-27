@@ -114,3 +114,55 @@
   .voiceReadBtn{width:100%;margin-top:8px}
   .sectionHead{display:block}
 }
+
+
+/* Professional GBK holder growth card */
+.holderGrowth{
+  max-width:1120px;
+  margin:22px auto 28px;
+  padding:26px;
+  border:1px solid #e6dcef;
+  border-radius:24px;
+  background:linear-gradient(135deg,#ffffff 0%,#fbf9ff 100%);
+  box-shadow:0 12px 32px rgba(45,24,75,.07);
+}
+.holderGrowthHeader{display:flex;align-items:flex-start;gap:14px}
+.holderGrowthIcon{
+  flex:0 0 46px;width:46px;height:46px;border-radius:15px;
+  display:grid;place-items:center;font-size:23px;
+  background:linear-gradient(135deg,#ede9fe,#f5e8ff);
+  border:1px solid #ddd0f5;
+}
+.holderGrowthHeader h2{margin:5px 0 6px;font-size:25px;letter-spacing:-.3px;color:#251b35}
+.holderGrowthHeader p{margin:0;max-width:760px;color:#6d6577;font-size:14px;line-height:1.55}
+.holderRate{
+  margin:20px 0 14px;padding:14px 16px;border-radius:16px;
+  background:#f5f0ff;border:1px solid #e5d8fa;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.holderRate span{font-size:10px;font-weight:900;letter-spacing:1.5px;color:#756b83}
+.holderRate strong{font-size:20px;color:#6d28d9}
+.holderExamples{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.holderExample{
+  padding:17px;border:1px solid #ebe5f2;border-radius:17px;background:#fff;
+  display:grid;gap:7px;
+}
+.holderExample span{font-size:11px;font-weight:800;color:#81788c;text-transform:uppercase;letter-spacing:.4px}
+.holderExample b{font-size:17px;color:#2b2335;line-height:1.35}
+.holderExample small{font-size:11px;color:#81788c}
+.holderNote{
+  margin-top:14px;padding:12px 14px;border-radius:14px;
+  background:#faf8fd;border:1px solid #eee8f5;
+  display:flex;gap:9px;align-items:flex-start;
+}
+.holderNote>span{font-size:14px;color:#7c3aed}
+.holderNote p{margin:0;color:#756d80;font-size:11px;line-height:1.5}
+@media(max-width:700px){
+  .holderGrowth{margin:18px 0 24px;padding:18px;border-radius:20px}
+  .holderGrowthHeader h2{font-size:21px}
+  .holderGrowthHeader p{font-size:13px}
+  .holderExamples{grid-template-columns:1fr}
+  .holderRate{padding:12px 14px}
+  .holderRate strong{font-size:18px}
+  .holderExample{padding:14px}
+}
