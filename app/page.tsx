@@ -883,17 +883,13 @@ export default function Home() {
                 finally { setApiBusy(false); }
               }} disabled={apiBusy}>{apiBusy ? "Approving…" : "Approve GBK rewards once"}</button>}
             </div>
-            <div className={merchantStatus?.active || Number(merchantStatus?.threshold_raw || 0) === 0 && Number(merchantStatus?.live_gbk_balance_raw || 0) > 0 ? "status" : "status paused"}>
-              {merchantStatus?.active
+            <div className={Number(merchantChainStatus?.balanceRaw || merchantStatus?.live_gbk_balance_raw || 0) > 0 ? "status" : "status paused"}>
+              {Number(merchantChainStatus?.balanceRaw || merchantStatus?.live_gbk_balance_raw || 0) > 0
                 ? "🟢 Merchant active & funded"
-                : Number(merchantStatus?.threshold_raw || 0) === 0 && Number(merchantStatus?.live_gbk_balance_raw || 0) > 0
-                  ? "🟢 Merchant wallet funded"
-                  : "⏸ Reward balance low"}
-              <span>{merchantStatus?.active
-                ? "Eligible to receive reward-funded customer orders."
-                : Number(merchantStatus?.threshold_raw || 0) === 0 && Number(merchantStatus?.live_gbk_balance_raw || 0) > 0
-                  ? "No order-specific reward is reserved yet. The live wallet balance will be checked against each eligible order."
-                  : "Top up GBK in the connected merchant wallet; the system will re-check the live balance."}</span>
+                : "⏸ Reward balance low"}
+              <span>{Number(merchantChainStatus?.balanceRaw || merchantStatus?.live_gbk_balance_raw || 0) > 0
+                ? "Live GBK balance is available. Each eligible order is checked against the live balance before reward settlement."
+                : "Top up GBK in the connected merchant wallet; the system will re-check the live balance."}</span>
             </div>
             <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
             {merchantStatus?.merchant?.invitation_status !== "ACCEPTED" && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
