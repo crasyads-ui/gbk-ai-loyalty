@@ -16,6 +16,8 @@ const offers = [
 
 const languages = ["English","हिन्दी","తెలుగు","বাংলা","தமிழ்","मराठी","Español","العربية","Français","Português"];
 const countries = ["Global","India","United Arab Emirates","United States","United Kingdom","Singapore","Australia","Canada","Saudi Arabia","Malaysia","Germany","France","Italy","Spain","Portugal","Netherlands","Belgium","Switzerland","Austria","Sweden","Norway","Denmark","Finland","Ireland","New Zealand","Japan","South Korea","China","Hong Kong","Thailand","Indonesia","Philippines","Vietnam","Bangladesh","Sri Lanka","Nepal","Pakistan","South Africa","Nigeria","Kenya","Egypt","Turkey","Brazil","Mexico","Argentina","Colombia","Chile","Peru"];
+const currencyMap: Record<string,string> = {India:"INR", "United Arab Emirates":"AED", "United States":"USD", "United Kingdom":"GBP", Singapore:"SGD", Australia:"AUD", Canada:"CAD", "Saudi Arabia":"SAR", Malaysia:"MYR", Germany:"EUR", France:"EUR", Italy:"EUR", Spain:"EUR", Portugal:"EUR", Netherlands:"EUR", Belgium:"EUR", Switzerland:"CHF", Austria:"EUR", Sweden:"SEK", Norway:"NOK", Denmark:"DKK", Finland:"EUR", Ireland:"EUR", "New Zealand":"NZD", Japan:"JPY", "South Korea":"KRW", China:"CNY", "Hong Kong":"HKD", Thailand:"THB", Indonesia:"IDR", Philippines:"PHP", Vietnam:"VND", Bangladesh:"BDT", "Sri Lanka":"LKR", Nepal:"NPR", Pakistan:"PKR", "South Africa":"ZAR", Nigeria:"NGN", Egypt:"EGP", Turkey:"TRY", Brazil:"BRL", Mexico:"MXN", Argentina:"ARS", Colombia:"COP", Chile:"CLP", Peru:"PEN"};
+const currencyForCountry = (value:string) => currencyMap[value] || "USD";
 
 const roles = [
   {icon:"👤",title:"Customer",text:"Find businesses, pay normally and earn eligible GBK Loyalty rewards.",items:["Earn GBK","Hold • Use • Transfer"]},
@@ -28,6 +30,7 @@ export default function Home() {
   const [searchFocused,setSearchFocused] = useState(false);
   const [language,setLanguage] = useState("English");
   const [country,setCountry] = useState("Global");
+  const [currency,setCurrency] = useState("USD");
   const [role,setRole] = useState<string|null>(null);
   const [merchantOffer,setMerchantOffer] = useState("10%");
   const [customOffer,setCustomOffer] = useState("25");
@@ -64,6 +67,7 @@ export default function Home() {
   const [founderStatus,setFounderStatus]=useState<any>(null);
   const [merchantStatus,setMerchantStatus]=useState<any>(null);
   const isIndia = country === "India";
+  const selectCountry = (value:string) => { setCountry(value); const next = value === "Global" ? "USD" : currencyForCountry(value); setCurrency(next); setPaymentCurrency(next); try { localStorage.setItem("gbk_loyalty_country", value); localStorage.setItem("gbk_loyalty_currency", next); } catch {} };
 
   useEffect(() => {
     const w = window as any;
@@ -463,13 +467,13 @@ export default function Home() {
         <div className="brand"><span className="brandMark">G</span><div><strong>GBK AI</strong><small>LOYALTY</small></div></div>
         <div className="topActions">
           <select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select>
-          <select value={country} onChange={e=>setCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select>
+          <select value={country} onChange={e=>selectCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select>
           <button className="walletBtn" onClick={()=>setRole("WalletChooser")}>👛 Wallet</button>
         </div>
       </header>
 
       <div className="globalBar">
-        <span>🌐 {country}</span><span>💱 {country === "Global" ? "Local currency" : ({India:"INR","United Arab Emirates":"AED","United States":"USD","United Kingdom":"GBP","Singapore":"SGD","Australia":"AUD","Canada":"CAD","Saudi Arabia":"SAR","Malaysia":"MYR","Germany":"EUR","France":"EUR","Italy":"EUR","Spain":"EUR","Portugal":"EUR","Netherlands":"EUR","Belgium":"EUR","Switzerland":"CHF","Austria":"EUR","Sweden":"SEK","Norway":"NOK","Denmark":"DKK","Finland":"EUR","Ireland":"EUR","New Zealand":"NZD","Japan":"JPY","South Korea":"KRW","China":"CNY","Hong Kong":"HKD","Thailand":"THB","Indonesia":"IDR","Philippines":"PHP","Vietnam":"VND","Bangladesh":"BDT","Sri Lanka":"LKR","Nepal":"NPR","Pakistan":"PKR","South Africa":"ZAR","Nigeria":"NGN","Egypt":"EGP","Turkey":"TRY","Brazil":"BRL","Mexico":"MXN","Argentina":"ARS","Colombia":"COP","Chile":"CLP","Peru":"PEN"} as any)[country] || "Local currency"}</span><span>🗣️ {language}</span>
+        <label className="localeControl">🌐 <select value={country} onChange={e=>selectCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select></label><label className="localeControl">💱 <select value={currency} onChange={e=>{setCurrency(e.target.value);setPaymentCurrency(e.target.value);try{localStorage.setItem("gbk_loyalty_currency",e.target.value)}catch{}}} aria-label="Currency"><option value="USD">USD $</option><option value="INR">INR ₹</option><option value="AED">AED د.إ</option><option value="GBP">GBP £</option><option value="EUR">EUR €</option><option value="SGD">SGD S$</option><option value="AUD">AUD A$</option><option value="CAD">CAD C$</option><option value="SAR">SAR ﷼</option><option value="MYR">MYR RM</option><option value="CHF">CHF</option><option value="JPY">JPY ¥</option><option value="KRW">KRW ₩</option><option value="CNY">CNY ¥</option><option value="HKD">HKD $</option><option value="THB">THB ฿</option><option value="IDR">IDR Rp</option><option value="PHP">PHP ₱</option><option value="VND">VND ₫</option><option value="BDT">BDT ৳</option><option value="LKR">LKR Rs</option><option value="NPR">NPR Rs</option><option value="PKR">PKR Rs</option><option value="ZAR">ZAR R</option><option value="NGN">NGN ₦</option><option value="EGP">EGP £</option><option value="TRY">TRY ₺</option><option value="BRL">BRL R$</option><option value="MXN">MXN $</option><option value="ARS">ARS $</option><option value="COP">COP $</option><option value="CLP">CLP $</option><option value="PEN">PEN S/</option><option value="SEK">SEK kr</option><option value="NOK">NOK kr</option><option value="DKK">DKK kr</option><option value="NZD">NZD $</option></select></label><label className="localeControl">🗣️ <select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select></label>
         {!installed && <button className="installBtn" onClick={install}>{installPrompt ? "📲 Install App" : "📲 PWA App"}</button>}
       </div>
 
