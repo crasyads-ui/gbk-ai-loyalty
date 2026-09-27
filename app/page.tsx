@@ -610,13 +610,43 @@ export default function Home() {
           <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");}}>Cancel</button>
         </div>
       </div>}
-      <section className="offerPreview" style={{display:"grid",gap:8,marginBottom:18}}>
-        <b>💎 Hold GBK &amp; Grow Your GBK Balance Automatically</b>
-        <span>GBK Loyalty Tokens received through the ecosystem can automatically increase according to the applicable holder reward rate.</span>
-        <strong>Weekly variable rate: 0.7%–6.3%</strong>
-        <span>Example: <b>100 GBK → 105 GBK</b> at a 5% weekly rate.</span>
-        <span>Example for larger holders: <b>100,000 GBK → 100,700 GBK</b> at 0.7% weekly, or <b>100,000 GBK → 106,300 GBK</b> at 6.3% weekly.</span>
-        <small>Rewards are in GBK tokens. The applicable rate may vary, and GBK market value depends on market demand and supply. Automatic increases should only apply where supported by the deployed GBK protocol/contract.</small>
+      <section className="holderGrowth">
+        <div className="holderGrowthHeader">
+          <div className="holderGrowthIcon">💎</div>
+          <div>
+            <span className="eyebrow">GBK LOYALTY TOKEN</span>
+            <h2>Hold GBK. Grow Your GBK Balance.</h2>
+            <p>GBK Loyalty Tokens received through the ecosystem can automatically increase according to the applicable holder reward rate.</p>
+          </div>
+        </div>
+
+        <div className="holderRate">
+          <span>WEEKLY VARIABLE RATE</span>
+          <strong>0.7%–6.3%</strong>
+        </div>
+
+        <div className="holderExamples">
+          <div className="holderExample">
+            <span>Everyday example</span>
+            <b>100 GBK → 105 GBK</b>
+            <small>At a 5% weekly rate</small>
+          </div>
+          <div className="holderExample">
+            <span>Larger holder example</span>
+            <b>100,000 GBK → 100,700 GBK</b>
+            <small>At 0.7% weekly</small>
+          </div>
+          <div className="holderExample">
+            <span>Higher applicable rate example</span>
+            <b>100,000 GBK → 106,300 GBK</b>
+            <small>At 6.3% weekly</small>
+          </div>
+        </div>
+
+        <div className="holderNote">
+          <span>ⓘ</span>
+          <p>Rewards are additional GBK tokens, not cash payments. The applicable rate may vary, and GBK market value can change with market demand and supply. Automatic increases should only apply where supported by the deployed GBK protocol/contract.</p>
+        </div>
       </section>
 
       <section id="roles" className="roleSection roleOnlySection">
