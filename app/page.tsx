@@ -865,8 +865,8 @@ export default function Home() {
               </div>
               <div className="merchantWalletMetric">
                 <span>Database balance</span>
-                <b>{merchantStatus?.live_gbk_balance_raw ? (Number(merchantStatus.live_gbk_balance_raw)/1e8).toLocaleString() : "0"} GBK</b>
-                <small>Used by the loyalty service for merchant funding checks.</small>
+                <b>{merchantStatus?.merchant?.gbk_balance_raw != null ? (Number(merchantStatus.merchant.gbk_balance_raw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : (merchantStatus?.live_gbk_balance_raw ? (Number(merchantStatus.live_gbk_balance_raw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : "0")} GBK</b>
+                <small>Database funding balance recorded for this merchant. Live on-chain balance above is used for current funding checks.</small>
               </div>
             </div>
             <div className="merchantWalletActions">
