@@ -610,6 +610,15 @@ export default function Home() {
           <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");}}>Cancel</button>
         </div>
       </div>}
+      <section className="offerPreview" style={{display:"grid",gap:8,marginBottom:18}}>
+        <b>💎 Hold GBK &amp; Grow Your GBK Balance Automatically</b>
+        <span>GBK Loyalty Tokens received through the ecosystem can automatically increase according to the applicable holder reward rate.</span>
+        <strong>Weekly variable rate: 0.7%–6.3%</strong>
+        <span>Example: <b>100 GBK → 105 GBK</b> at a 5% weekly rate.</span>
+        <span>Example for larger holders: <b>100,000 GBK → 100,700 GBK</b> at 0.7% weekly, or <b>100,000 GBK → 106,300 GBK</b> at 6.3% weekly.</span>
+        <small>Rewards are in GBK tokens. The applicable rate may vary, and GBK market value depends on market demand and supply. Automatic increases should only apply where supported by the deployed GBK protocol/contract.</small>
+      </section>
+
       <section id="roles" className="roleSection roleOnlySection">
         <div className="sectionHead"><div><span className="eyebrow">ONE APP • THREE ROLES</span><h2>Simple loyalty for everyone</h2></div></div>
         <div className="roleGrid">{roles.map(r=>
