@@ -195,3 +195,5 @@
   .merchantWalletPrimary strong{font-size:23px}
   .merchantWalletActions>*{flex:1;min-width:145px}
 }
+
+.founderRegistrationGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.founderRegistrationGrid label{display:grid;gap:6px;color:#64748b;font-size:12px;font-weight:700}.founderRegistrationGrid select{width:100%;padding:12px;border:1px solid #dbe4f0;border-radius:12px;background:#fff;color:#172554;font-weight:700}.modal .secondary{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer}@media(max-width:600px){.founderRegistrationGrid{grid-template-columns:1fr}}
