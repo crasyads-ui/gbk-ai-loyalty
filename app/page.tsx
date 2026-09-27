@@ -165,6 +165,50 @@ export default function Home() {
       } else {
         s = await signInAnonymously();
       }
+      setSession(s);
+
+      // Merchant wallets are resolved against the existing merchant record
+      // BEFORE creating/updating a role profile. This gives registered merchants
+      // a direct path to Merchant Wallet, while a new wallet goes to registration.
+      if (targetRole === "merchant") {
+        const lookup = await loyaltyApi(s, "merchant_wallet_lookup", { wallet_address: address });
+        if (lookup?.merchant) {
+          setActiveWalletRole("merchant");
+          setMerchantStatus({merchant: lookup.merchant});
+          try {
+            localStorage.setItem("gbk_loyalty_merchant_wallet", address);
+            localStorage.setItem("gbk_loyalty_active_role", "merchant");
+          } catch {}
+          try {
+            const [live, dataWithOrders] = await Promise.all([
+              loyaltyApi(s, "merchant_fund_status", { merchant_id: lookup.merchant.id }),
+              loyaltyApi(s, "my_data", {})
+            ]);
+            setMerchantStatus({...live, merchant_orders:dataWithOrders?.merchant_orders || []});
+            await refreshMerchantChainStatus(address);
+          } catch {}
+          setRole("MerchantWallet");
+          setAuthNotice(`Existing merchant found: ${lookup.merchant.business_name || "Registered business"}. Merchant Wallet opened.`);
+          return;
+        }
+
+        // No registered merchant exists for this wallet. Only now create the
+        // merchant profile and show the new-merchant registration form.
+        await loyaltyApi(s, "profile_upsert", {
+          role: "merchant",
+          full_name: fullName || "GBK Wallet User",
+          country,
+          wallet_address: address
+        });
+        try {
+          localStorage.setItem("gbk_loyalty_merchant_wallet", address);
+          localStorage.setItem("gbk_loyalty_active_role", "merchant");
+        } catch {}
+        setActiveWalletRole("merchant");
+        setRole("Merchant");
+        setAuthNotice("New merchant wallet connected. Complete the registration form to create the merchant account.");
+        return;
+      }
 
       await loyaltyApi(s, "profile_upsert", {
         role: targetRole,
@@ -173,18 +217,12 @@ export default function Home() {
         wallet_address: address
       });
 
-      setSession(s);
-      if (targetRole === "merchant") {
-        try { localStorage.setItem("gbk_loyalty_merchant_wallet", address); } catch {}
-      }
       setActiveWalletRole(targetRole);
       try { localStorage.setItem("gbk_loyalty_active_role", targetRole); } catch {}
-      setRole(targetRole === "merchant" ? "Merchant" : targetRole === "founder" ? "Founder" : "Customer");
-      setAuthNotice(targetRole === "merchant"
-        ? "Merchant wallet connected successfully."
-        : targetRole === "founder"
-          ? "Founder wallet connected successfully."
-          : "Customer wallet connected successfully.");
+      setRole(targetRole === "founder" ? "Founder" : "Customer");
+      setAuthNotice(targetRole === "founder"
+        ? "Founder wallet connected successfully."
+        : "Customer wallet connected successfully.");
     } catch(e:any) {
       setAuthNotice(e.message || "Wallet connection failed.");
     } finally { setApiBusy(false); }
@@ -221,7 +259,6 @@ export default function Home() {
         setWalletAddress(connected);
         setMerchantWallet(connected);
         try { localStorage.setItem("gbk_loyalty_merchant_wallet", connected); } catch {}
-        await loyaltyApi(s,"profile_upsert",{role:"merchant",country,wallet_address:connected});
       }
       const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:knownMerchantWallet});
       const merchant = lookup?.merchant || (await loyaltyApi(s,"my_data",{}))?.merchants?.[0];
@@ -252,12 +289,6 @@ export default function Home() {
         let s = session || getStoredSession();
         if (!s) s = await signInAnonymously();
         setSession(s);
-        await loyaltyApi(s,"profile_upsert",{
-          role:"merchant",
-          full_name:fullName || "GBK Wallet User",
-          country,
-          wallet_address:connected
-        });
         const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:connected || knownMerchantWallet});
         if (lookup?.merchant) {
           setActiveWalletRole("merchant");
@@ -758,7 +789,7 @@ export default function Home() {
 
       <section className="merchant">
         <div><span className="eyebrow">FOR BUSINESSES</span><h2>Activate loyalty. Receive eligible leads.</h2><p>Register any legitimate product or service business, accept the commercial terms, choose 5%–20% or a custom percentage, connect your wallet and maintain enough GBK reward balance for eligible orders.</p></div>
-        <button onClick={()=>setRole("Merchant")}>Register as Merchant →</button>
+        <button onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Connecting…" : "Connect / Register Merchant →"}</button>
       </section>
 
       {role && <div className="modalBackdrop" onClick={()=>setRole(null)}>
@@ -772,8 +803,8 @@ export default function Home() {
               <button className="walletChoice" onClick={async()=>{await connectWallet("customer");}}>
                 <span>👤</span><b>Customer</b><small>Buy, earn and manage your GBK rewards.</small>
               </button>
-              <button className="walletChoice" onClick={async()=>{await connectWallet("merchant"); await openMerchantWallet();}}>
-                <span>🏪</span><b>Merchant</b><small>Manage your business, orders and GBK reward funding.</small>
+              <button className="walletChoice" onClick={async()=>{await connectWallet("merchant");}}>
+                <span>🏪</span><b>Merchant</b><small>Connect your merchant wallet. Registered businesses open directly; new businesses continue to registration.</small>
               </button>
               <button className="walletChoice" onClick={async()=>{await connectWallet("founder");}}>
                 <span>🌍</span><b>Founder</b><small>Enter your verified Founder account and benefits.</small>
@@ -987,7 +1018,7 @@ export default function Home() {
         </div>
       </div>}
 
-      <nav className={`bottomNav${searchFocused ? " searchFocused" : ""}`}><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : setRole(activeWalletRole==="customer" ? "Customer" : activeWalletRole==="founder" ? "Founder" : "Merchant")}>👛<span>Wallet</span></a><a onClick={()=>setRole("Customer")}>☻<span>Profile</span></a></nav>
+      <nav className={`bottomNav${searchFocused ? " searchFocused" : ""}`}><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : activeWalletRole==="customer" ? setRole("Customer") : activeWalletRole==="founder" ? setRole("Founder") : connectWallet("merchant")}>👛<span>Wallet</span></a><a onClick={()=>setRole("Customer")}>☻<span>Profile</span></a></nav>
     </main>
   );
 }
