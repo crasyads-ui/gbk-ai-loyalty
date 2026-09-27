@@ -796,9 +796,9 @@ export default function Home() {
         <div className="modal" onClick={e=>e.stopPropagation()}>
           <button className="close" onClick={()=>setRole(null)}>×</button>
           <div className="roleIcon">{role==="MerchantWallet" ? "👛" : (roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍"))}</div>
-          <h2>{role==="MerchantWallet" ? "Merchant Wallet" : `${role} registration`}</h2>
+          <h2>{role==="MerchantWallet" ? "Merchant Wallet" : role==="WalletChooser" ? "Choose Your Wallet" : `${role} registration`}</h2>
           {role==="WalletChooser" ? <>
-            <p>Choose which GBK Loyalty account you want to enter. Each role uses its own wallet identity.</p>
+            <p>Connect your wallet to enter the correct GBK Loyalty account. Registered merchants open directly; new merchants can register after wallet connection.</p>
             <div className="walletChoiceGrid">
               <button className="walletChoice" onClick={async()=>{await connectWallet("customer");}}>
                 <span>👤</span><b>Customer</b><small>Buy, earn and manage your GBK rewards.</small>
@@ -811,8 +811,8 @@ export default function Home() {
               </button>
             </div>
             <div className="status" style={{marginTop:14}}>
-              <span>🔐 Separate role login</span>
-              <small>Connecting a wallet for one role does not automatically make it a Merchant or Founder account.</small>
+              <span>🔐 Wallet-based role access</span>
+              <small>Merchant wallets are checked against the registered merchant record. Existing merchants open directly; unregistered wallets continue to new merchant registration.</small>
             </div>
           </> : role==="MerchantWallet" ? <>
             <p>Manage the connected merchant reward wallet. Customer payments remain direct to the merchant; GBK is used only for the merchant-funded loyalty reward pool.</p>
