@@ -197,3 +197,5 @@
 }
 
 .founderRegistrationGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.founderRegistrationGrid label{display:grid;gap:6px;color:#64748b;font-size:12px;font-weight:700}.founderRegistrationGrid select{width:100%;padding:12px;border:1px solid #dbe4f0;border-radius:12px;background:#fff;color:#172554;font-weight:700}.modal .secondary{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer}@media(max-width:600px){.founderRegistrationGrid{grid-template-columns:1fr}}
+
+.founderNetworkList{display:grid;gap:10px;margin-top:12px}.founderNetworkList .offerPreview{display:grid;gap:7px}.founderNetworkList .offerPreview>div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid rgba(0,0,0,.08)}.founderNetworkList .offerPreview>div span{color:#64748b;font-size:12px}@media(max-width:600px){.founderNetworkList .offerPreview>div{display:grid;gap:2px}}
