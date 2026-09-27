@@ -855,7 +855,7 @@ export default function Home() {
             <div className="merchantWalletLive">
               <div className="merchantWalletPrimary">
                 <span>LIVE ON-CHAIN GBK BALANCE</span>
-                <strong>{merchantChainStatus ? (Number(merchantChainStatus.balanceRaw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : "—"} <em>GBK</em></strong>
+                <strong>{merchantChainStatus ? (Number(merchantChainStatus.balanceRaw)/1e8).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"} <em>GBK</em></strong>
                 <small>{merchantChainStatus ? "Read directly from the connected BNB Smart Chain wallet." : "Connect the merchant wallet to read the live balance."}</small>
               </div>
               <div className="merchantWalletMetric">
@@ -865,7 +865,7 @@ export default function Home() {
               </div>
               <div className="merchantWalletMetric">
                 <span>Database balance</span>
-                <b>{merchantStatus?.merchant?.gbk_balance_raw != null ? (Number(merchantStatus.merchant.gbk_balance_raw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : (merchantStatus?.live_gbk_balance_raw ? (Number(merchantStatus.live_gbk_balance_raw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : "0")} GBK</b>
+                <b>{merchantStatus?.merchant?.gbk_balance_raw != null ? (Number(merchantStatus.merchant.gbk_balance_raw)/1e8).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : (merchantStatus?.live_gbk_balance_raw ? (Number(merchantStatus.live_gbk_balance_raw)/1e8).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : "0")} GBK</b>
                 <small>Database funding balance recorded for this merchant. Live on-chain balance above is used for current funding checks.</small>
               </div>
             </div>
