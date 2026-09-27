@@ -97,3 +97,20 @@
 .globalModelFlow{margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;font-size:13px}.globalModelFlow span{padding:8px 12px;border-radius:999px;background:#f3f1f8}.globalModelFlow b{opacity:.55}
 @media(max-width:760px){.globalModelGrid{grid-template-columns:1fr 1fr}.globalModel{margin-left:12px;margin-right:12px;padding:18px}.globalModelFlow{justify-content:flex-start}}
 @media(max-width:430px){.globalModelGrid{grid-template-columns:1fr}.globalModelFlow{gap:7px}.globalModelFlow span{font-size:11px}}
+
+
+/* Multilingual GBK AI voice search */
+.voiceBtn{border:0!important;background:#f3ebff!important;color:#6d28d9!important;border-radius:12px!important;padding:11px 12px!important;font-weight:900!important;white-space:nowrap;cursor:pointer}
+.voiceBtn:disabled{opacity:.7;cursor:default}
+.voiceStatus{max-width:760px;margin:8px auto 0;text-align:center;color:#f0e8ff;font-size:11px;font-weight:700;min-height:16px}
+.voiceReadBtn{white-space:nowrap}
+@media(max-width:520px){
+  .hero .search{gap:4px}
+  .hero .search span{padding:0 4px}
+  .hero .search input{min-width:70px}
+  .hero .search button{min-width:auto}
+  .hero .search .voiceBtn{padding:10px 9px!important;font-size:11px}
+  .hero .search>button:last-child{padding:10px 9px;font-size:11px}
+  .voiceReadBtn{width:100%;margin-top:8px}
+  .sectionHead{display:block}
+}
