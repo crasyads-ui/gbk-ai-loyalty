@@ -58,6 +58,7 @@ export default function Home() {
   const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
   const [orderAmount,setOrderAmount] = useState("");
   const [merchantBusinessName,setMerchantBusinessName]=useState("");
+  const [founderReferralCode,setFounderReferralCode]=useState("");
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
   const [merchantPhone,setMerchantPhone]=useState("");
   const [merchantEmail,setMerchantEmail]=useState("");
@@ -640,6 +641,7 @@ export default function Home() {
         payment_currency: paymentCurrency,
         payment_method: paymentMethod,
         payment_details: { details: paymentDetails, owner: merchantOwnerName },
+        founder_referral_code: founderReferralCode.trim() || null,
       });
       setAuthNotice("Merchant registration submitted successfully.");
       setRole(null);
@@ -1033,6 +1035,8 @@ export default function Home() {
             <input type="email" placeholder="Email (optional)" value={merchantEmail} onChange={e=>setMerchantEmail(e.target.value)}/>
             <select className="modalSelect" value={merchantCategory} onChange={e=>setMerchantCategory(e.target.value)}>{businessCategories.map(x=><option key={x}>{x}</option>)}</select>
             <input placeholder="City" value={merchantCity} onChange={e=>setMerchantCity(e.target.value)}/>
+            <input className="modalInput" placeholder="Founder referral code (optional)" value={founderReferralCode} onChange={e=>setFounderReferralCode(e.target.value.toUpperCase())}/>
+            <small>Optional. Anyone can list a business directly. Enter a verified Founder code only if this business was referred by that Founder.</small>
             <select className="modalSelect" value={merchantOffer} onChange={e=>setMerchantOffer(e.target.value)}>
               <option value="5%">5% loyalty</option>
               <option value="10%">10% loyalty</option>
@@ -1092,6 +1096,11 @@ export default function Home() {
             <input className="modalInput" value={founderTxHash} onChange={e=>setFounderTxHash(e.target.value)} placeholder="BSC transaction hash from Founder membership"/>
             <a className="secondary" href="https://founder.gbkai.com" target="_blank" rel="noreferrer">Open Founder Membership Portal ↗</a>
             {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
+            {founderStatus?.founder_verified && <div className="offerPreview" style={{marginTop:12}}>
+              <b>Founder referral code</b>
+              <span>Share this code with businesses you personally refer to GBK Loyalty.</span>
+              <strong style={{fontSize:20,letterSpacing:1}}>{founderStatus.founder_referral_code || "Generated for your Founder account"}</strong>
+            </div>}
             {founderStatus?.founder_verified && <div className="founderNetworkList">
               <div className="offerPreview"><b>👥 My User Referrals ({founderNetwork.users.length})</b>{founderNetwork.users.length===0?<span>No user referrals yet.</span>:founderNetwork.users.slice(0,8).map((u:any)=><div key={u.id}><strong>{u.referred_name}</strong><span>{u.country} · {u.status}</span></div>)}</div>
               <div className="offerPreview"><b>🏪 My Business Referrals ({founderNetwork.businesses.length})</b>{founderNetwork.businesses.length===0?<span>No business referrals yet.</span>:founderNetwork.businesses.slice(0,8).map((b:any)=><div key={b.id}><strong>{b.business_name}</strong><span>{b.city}, {b.country} · {b.listing_status} · {b.invitation_status}</span></div>)}</div>
