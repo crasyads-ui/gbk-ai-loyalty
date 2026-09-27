@@ -16,7 +16,7 @@ const offers = [
 
 const languages = ["English","हिन्दी","తెలుగు","বাংলা","தமிழ்","मराठी","Español","العربية","Français","Português"];
 const countries = ["Global","India","United Arab Emirates","United States","United Kingdom","Singapore","Australia","Canada","Saudi Arabia","Malaysia","Germany","France","Italy","Spain","Portugal","Netherlands","Belgium","Switzerland","Austria","Sweden","Norway","Denmark","Finland","Ireland","New Zealand","Japan","South Korea","China","Hong Kong","Thailand","Indonesia","Philippines","Vietnam","Bangladesh","Sri Lanka","Nepal","Pakistan","South Africa","Nigeria","Kenya","Egypt","Turkey","Brazil","Mexico","Argentina","Colombia","Chile","Peru"];
-const currencyMap: Record<string,string> = {India:"INR", "United Arab Emirates":"AED", "United States":"USD", "United Kingdom":"GBP", Singapore:"SGD", Australia:"AUD", Canada:"CAD", "Saudi Arabia":"SAR", Malaysia:"MYR", Germany:"EUR", France:"EUR", Italy:"EUR", Spain:"EUR", Portugal:"EUR", Netherlands:"EUR", Belgium:"EUR", Switzerland:"CHF", Austria:"EUR", Sweden:"SEK", Norway:"NOK", Denmark:"DKK", Finland:"EUR", Ireland:"EUR", "New Zealand":"NZD", Japan:"JPY", "South Korea":"KRW", China:"CNY", "Hong Kong":"HKD", Thailand:"THB", Indonesia:"IDR", Philippines:"PHP", Vietnam:"VND", Bangladesh:"BDT", "Sri Lanka":"LKR", Nepal:"NPR", Pakistan:"PKR", "South Africa":"ZAR", Nigeria:"NGN", Egypt:"EGP", Turkey:"TRY", Brazil:"BRL", Mexico:"MXN", Argentina:"ARS", Colombia:"COP", Chile:"CLP", Peru:"PEN"};
+const currencyMap: Record<string,string> = {India:"INR", "United Arab Emirates":"AED", "United States":"USD", "United Kingdom":"GBP", Singapore:"SGD", Australia:"AUD", Canada:"CAD", "Saudi Arabia":"SAR", Malaysia:"MYR", Germany:"EUR", France:"EUR", Italy:"EUR", Spain:"EUR", Portugal:"EUR", Netherlands:"EUR", Belgium:"EUR", Switzerland:"CHF", Austria:"EUR", Sweden:"SEK", Norway:"NOK", Denmark:"DKK", Finland:"EUR", Ireland:"EUR", "New Zealand":"NZD", Japan:"JPY", "South Korea":"KRW", China:"CNY", "Hong Kong":"HKD", Thailand:"THB", Indonesia:"IDR", Philippines:"PHP", Vietnam:"VND", Bangladesh:"BDT", "Sri Lanka":"LKR", Nepal:"NPR", Pakistan:"PKR", "South Africa":"ZAR", Nigeria:"NGN", Kenya:"KES", Egypt:"EGP", Turkey:"TRY", Brazil:"BRL", Mexico:"MXN", Argentina:"ARS", Colombia:"COP", Chile:"CLP", Peru:"PEN"};
 const currencyForCountry = (value:string) => currencyMap[value] || "USD";
 
 const roles = [
@@ -28,6 +28,9 @@ const roles = [
 export default function Home() {
   const [query,setQuery] = useState("");
   const [searchFocused,setSearchFocused] = useState(false);
+  const [voiceListening,setVoiceListening] = useState(false);
+  const [voiceSupported,setVoiceSupported] = useState(false);
+  const [speaking,setSpeaking] = useState(false);
   const [language,setLanguage] = useState("English");
   const [country,setCountry] = useState("Global");
   const [currency,setCurrency] = useState("USD");
@@ -77,6 +80,14 @@ export default function Home() {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
     const stored = getStoredSession();
     if (stored) setSession(stored);
+    try {
+      const storedCountry = localStorage.getItem("gbk_loyalty_country");
+      const storedCurrency = localStorage.getItem("gbk_loyalty_currency");
+      if (storedCountry && countries.includes(storedCountry)) setCountry(storedCountry);
+      if (storedCurrency) { setCurrency(storedCurrency); setPaymentCurrency(storedCurrency); }
+    } catch {}
+    const SpeechRecognitionCtor = w.SpeechRecognition || w.webkitSpeechRecognition;
+    setVoiceSupported(!!SpeechRecognitionCtor);
     try {
       const storedRole = localStorage.getItem("gbk_loyalty_active_role");
       if (storedRole === "customer" || storedRole === "merchant" || storedRole === "founder") setActiveWalletRole(storedRole);
@@ -312,8 +323,48 @@ export default function Home() {
     } catch(e:any) { setAuthNotice(e.message || "Founder verification failed."); }
     finally { setApiBusy(false); }
   };
-  const doSearch = async () => {
-    const q=query.trim(); if(q.length<2){setAuthNotice("Please enter what you need.");return;}
+  const speechLangMap:Record<string,string> = {
+    "English":"en-IN","हिन्दी":"hi-IN","తెలుగు":"te-IN","বাংলা":"bn-IN","தமிழ்":"ta-IN",
+    "मराठी":"mr-IN","Español":"es-ES","العربية":"ar-SA","Français":"fr-FR","Português":"pt-BR"
+  };
+  const speakText = (text:string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    try {
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = speechLangMap[language] || "en-IN";
+      utter.rate = 0.95;
+      utter.onstart = () => setSpeaking(true);
+      utter.onend = () => setSpeaking(false);
+      utter.onerror = () => setSpeaking(false);
+      const voices = synth.getVoices();
+      const wanted = (speechLangMap[language] || "en-IN").toLowerCase();
+      const voice = voices.find(v => v.lang.toLowerCase() === wanted) || voices.find(v => v.lang.toLowerCase().startsWith(wanted.split("-")[0]));
+      if (voice) utter.voice = voice;
+      synth.speak(utter);
+    } catch {}
+  };
+  const spokenSummary = (results:any[]) => {
+    if (!results.length) {
+      speakText(language === "తెలుగు" ? "మీ అభ్యర్థనకు సరిపడే GBK AI Loyalty వ్యాపారాలు ప్రస్తుతం కనిపించలేదు." :
+        language === "हिन्दी" ? "आपकी खोज से मेल खाने वाले GBK AI Loyalty व्यवसाय अभी नहीं मिले।" :
+        language === "தமிழ்" ? "உங்கள் தேடலுக்கு பொருந்தும் GBK AI Loyalty வணிகங்கள் இப்போது கிடைக்கவில்லை." :
+        language === "العربية" ? "لم يتم العثور على شركات GBK AI Loyalty مطابقة لطلبك حالياً." :
+        "No matching GBK AI Loyalty businesses were found yet.");
+      return;
+    }
+    const names = results.slice(0,3).map((m:any)=>m.business_name).filter(Boolean);
+    const prefix = language === "తెలుగు" ? "మీకు సరిపడే వ్యాపారాలు దొరికాయి." :
+      language === "हिन्दी" ? "आपकी खोज के लिए व्यवसाय मिले हैं।" :
+      language === "தமிழ்" ? "உங்கள் தேடலுக்கு பொருந்தும் வணிகங்கள் கிடைத்துள்ளன." :
+      language === "العربية" ? "وجدت شركات مناسبة لطلبك." :
+      "I found matching businesses for you.";
+    speakText(prefix + " " + names.join(", ") + ".");
+  };
+  const doSearch = async (requestedQuery?:string) => {
+    const q=String(requestedQuery ?? query).trim(); if(q.length<2){setAuthNotice("Please enter what you need.");return;}
+    if (q !== query) setQuery(q);
     setApiBusy(true); setAuthNotice("");
     try {
       let activeSession=session;
@@ -323,11 +374,42 @@ export default function Home() {
         try{ await loyaltyApi(activeSession,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null}); }catch{}
       }
       const r=await loyaltyApi(activeSession,"search",{query:q,country});
-      setSearchResults(r.results||[]);
-      setAuthNotice(r.results?.length ? "" : "No active GBK Loyalty businesses matched this request yet.");
+      const results=r.results||[];
+      setSearchResults(results);
+      setAuthNotice(results.length ? "" : "No active GBK Loyalty businesses matched this request yet.");
+      if (voiceListening || requestedQuery) spokenSummary(results);
       setTimeout(()=>document.getElementById("searchResults")?.scrollIntoView({behavior:"smooth",block:"start"}),50);
-    } catch(e:any){setAuthNotice(e.message||"Search failed");}
-    finally {setApiBusy(false);}
+    } catch(e:any){setAuthNotice(e.message||"Search failed"); if(requestedQuery) speakText("Search failed. Please try again.");}
+    finally {setApiBusy(false); }
+  };
+  const startVoiceSearch = () => {
+    const w:any = window;
+    const SpeechRecognitionCtor = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      setAuthNotice("Voice search is not supported in this browser. You can type your request instead.");
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognitionCtor();
+      recognition.lang = speechLangMap[language] || "en-IN";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onstart = () => { setVoiceListening(true); setAuthNotice("🎙️ Listening… speak your request."); };
+      recognition.onresult = (event:any) => {
+        const transcript = String(event.results?.[0]?.[0]?.transcript || "").trim();
+        if (transcript) { setQuery(transcript); doSearch(transcript); }
+      };
+      recognition.onerror = (event:any) => {
+        setVoiceListening(false);
+        setAuthNotice(event?.error === "not-allowed" ? "Microphone permission is required for voice search." : "Voice search could not hear you. Please try again.");
+      };
+      recognition.onend = () => setVoiceListening(false);
+      recognition.start();
+    } catch {
+      setVoiceListening(false);
+      setAuthNotice("Voice search could not start. Please try again.");
+    }
   };
   const createOrderFor = async (m:any) => {
     const amount=String(orderAmount||"").trim();
@@ -343,8 +425,8 @@ export default function Home() {
         localStorage.setItem("gbk_loyalty_customer_session",JSON.stringify(activeSession));
       }
       await loyaltyApi(activeSession,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null});
-      const currency = String(m?.payment_currency || (country==="India" ? "INR" : "USD")).toUpperCase();
-      const created = await loyaltyApi(activeSession,"create_order",{merchant_id:m.id,amount_minor:Math.round(Number(amount)*100),currency,request_text:query,category:m.category,country,order_source:"GBK_AI"});
+      const orderCurrency = String(m?.payment_currency || currency).toUpperCase();
+      const created = await loyaltyApi(activeSession,"create_order",{merchant_id:m.id,amount_minor:Math.round(Number(amount)*100),currency:orderCurrency,request_text:query,category:m.category,country,order_source:"GBK_AI"});
       let paid:any;
       try {
         paid = await loyaltyApi(activeSession,"payment_create",{order_id:created.order.id});
@@ -481,7 +563,8 @@ export default function Home() {
         <div className="eyebrow">GBK LOYALTY • GLOBAL</div>
         <h1>Buy normally. Get GBK rewards.</h1>
         <p>Find participating businesses, buy normally, and receive eligible GBK rewards after the order is verified.</p>
-        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder="What do you need today?"/><button onMouseDown={()=>setSearchFocused(true)} onClick={doSearch} disabled={apiBusy}>{apiBusy ? "Searching…" : "Find businesses"}</button></div>
+        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder={language==="తెలుగు" ? "మీకు ఏమి కావాలి?" : language==="हिन्दी" ? "आज आपको क्या चाहिए?" : "What do you need today?"}/><button className="voiceBtn" onMouseDown={()=>setSearchFocused(true)} onClick={startVoiceSearch} disabled={apiBusy || voiceListening} aria-label="Speak your request">{voiceListening ? "🎙️ Listening" : "🎤 Speak"}</button><button onMouseDown={()=>setSearchFocused(true)} onClick={()=>doSearch()} disabled={apiBusy}>{apiBusy ? "Searching…" : "Find businesses"}</button></div>
+<div className="voiceStatus">{voiceSupported ? (voiceListening ? "🎙️ GBK AI is listening in " + language : "🎤 Speak in your selected language") : "⌨️ Type your request or use your device voice input"}</div>
         <div className="askHint"><span>Hotels • Restaurants • Shopping • Services • Travel</span></div>
         <div className="suggestions">
           <button onClick={()=>setQuery("restaurants with GBK rewards")}>🍽️ Restaurants</button>
@@ -492,7 +575,7 @@ export default function Home() {
       </section>
 
       {searchResults.length > 0 && <section id="searchResults" className="roleSection">
-        <div className="sectionHead"><div><span className="eyebrow">PARTICIPATING BUSINESSES</span><h2>Choose a business</h2><p>Pick a participating business and earn GBK on eligible purchases.</p></div></div>
+        <div className="sectionHead"><div><span className="eyebrow">PARTICIPATING BUSINESSES</span><h2>Choose a business</h2><p>Pick a participating business and earn GBK on eligible purchases.</p></div><button className="secondary voiceReadBtn" onClick={()=>spokenSummary(searchResults)}>{speaking ? "🔊 Speaking…" : "🔊 Read results aloud"}</button></div>
         <div className="roleGrid">
           {searchResults.map((m:any)=><div className="roleCard" key={m.id}>
             <div className="roleIcon">🏪</div>
