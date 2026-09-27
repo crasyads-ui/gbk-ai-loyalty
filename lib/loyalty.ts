@@ -236,22 +236,65 @@ export function getStoredSession(): LoyaltySession | null {
 
 export function signOut() { localStorage.removeItem("gbk_loyalty_session"); }
 
+let refreshPromise: Promise<LoyaltySession> | null = null;
+
 async function refreshStoredSession(session: LoyaltySession): Promise<LoyaltySession> {
-  if (!session.refresh_token) throw new Error("Session expired. Please reconnect your wallet.");
-  const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({ refresh_token: session.refresh_token }),
-  });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok || !data.access_token) throw new Error(data.error_description || data.msg || "Session expired. Please reconnect your wallet.");
-  localStorage.setItem("gbk_loyalty_session", JSON.stringify(data));
-  return data;
+  if (typeof window === "undefined") throw new Error("Session refresh is available in the browser only.");
+
+  // Supabase rotates refresh tokens. Multiple API calls can receive 401 at the
+  // same time, so never refresh the same token concurrently. Also prefer a
+  // newer session already written by another request/tab.
+  try {
+    const latest = getStoredSession();
+    if (latest?.access_token && latest.access_token !== session.access_token) return latest;
+  } catch {}
+
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const latest = getStoredSession() || session;
+    if (!latest.refresh_token) throw new Error("Session expired. Please reconnect your wallet.");
+
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ refresh_token: latest.refresh_token }),
+    });
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok || !data.access_token) {
+      const msg = String(data.error_description || data.msg || data.error || "");
+      // A rotated refresh token may have been consumed by another tab/request.
+      // Recover with a fresh anonymous wallet session instead of trapping the
+      // user on "Invalid Refresh Token: Already Used".
+      if (/refresh token.*already used|invalid refresh token|refresh token not found|refresh_token_not_found/i.test(msg)) {
+        const fresh = await signInAnonymously();
+        return fresh;
+      }
+      throw new Error(msg || "Session expired. Please reconnect your wallet.");
+    }
+
+    localStorage.setItem("gbk_loyalty_session", JSON.stringify(data));
+    return data as LoyaltySession;
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
 }
 
 export async function loyaltyApi(session: LoyaltySession, action: string, payload: Record<string, unknown> = {}) {
   let activeSession = session;
   for (let attempt = 0; attempt < 2; attempt++) {
+    // Another request may have refreshed the session since this call started.
+    // Use the newest locally stored access token before retrying.
+    const stored = getStoredSession();
+    if (stored?.access_token && stored.access_token !== activeSession.access_token) {
+      activeSession = stored;
+    }
+
     const r = await fetch(`${SUPABASE_URL}/functions/v1/loyalty-api`, {
       method: "POST",
       headers: authHeaders(activeSession.access_token),
@@ -259,10 +302,12 @@ export async function loyaltyApi(session: LoyaltySession, action: string, payloa
     });
     const data = await r.json().catch(() => ({}));
     if (r.ok) return data;
+
     if (r.status === 401 && attempt === 0) {
       activeSession = await refreshStoredSession(activeSession);
       continue;
     }
+
     throw new Error(data.error || "GBK Loyalty request failed");
   }
   throw new Error("GBK Loyalty request failed");
