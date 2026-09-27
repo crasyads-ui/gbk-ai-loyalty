@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, getConnectedEvmWallet, approveMerchantRewardDistributor, type LoyaltySession } from "../lib/loyalty";
+import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, getConnectedEvmWallet, approveMerchantRewardDistributor, getGbkWalletStatus, type LoyaltySession } from "../lib/loyalty";
 
 const businessCategories = ["All Products & Services","Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries & Supermarkets","Fashion & Apparel","Electronics","Pharmacies & Health Stores","Salons & Beauty","AC Repair","Plumbing & Electrical","Home Services","Automotive & EV","Fuel & Charging","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education & Courses","Spoken English","Healthcare & Clinics","Real Estate","Agriculture & Farm Services","Seeds & Fertilizer","Farm Equipment","Crop Advisory","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops","Wholesale & Distribution","Manufacturing","Construction","Cleaning Services","Pet Services"];
 
@@ -68,7 +68,7 @@ export default function Home() {
   const [founderTier,setFounderTier]=useState("COUNTRY_300");
   const [founderTxHash,setFounderTxHash]=useState("");
   const [founderStatus,setFounderStatus]=useState<any>(null);
-  const [merchantStatus,setMerchantStatus]=useState<any>(null);
+  const [merchantStatus,setMerchantStatus]=useState<any>(null);\n  const [merchantChainStatus,setMerchantChainStatus] = useState<{balanceRaw:string;allowanceRaw:string}|null>(null);\n  const [merchantChainBusy,setMerchantChainBusy] = useState(false);
   const isIndia = country === "India";
   const holderRewardMin = 0.7;
   const holderRewardMax = 6.3;
@@ -195,6 +195,19 @@ export default function Home() {
     if (!session) return;
     try { const r = await loyaltyApi(session,"founder_status",{}); setFounderStatus(r.founder || null); } catch {}
   };
+  const refreshMerchantChainStatus = async (address?:string) => {
+    const target = String(address || merchantWallet || walletAddress || "").trim();
+    if (!/^0x[a-fA-F0-9]{40}$/.test(target)) return;
+    setMerchantChainBusy(true);
+    try {
+      const live = await getGbkWalletStatus(target);
+      setMerchantChainStatus(live);
+    } catch (e:any) {
+      setMerchantChainStatus(null);
+      setAuthNotice(e.message || "Live GBK wallet balance could not be read.");
+    } finally { setMerchantChainBusy(false); }
+  };
+
   const openMerchantWallet = async () => {
     setApiBusy(true); setAuthNotice("");
     try {
@@ -218,7 +231,7 @@ export default function Home() {
         loyaltyApi(s,"merchant_fund_status",{merchant_id:merchant.id}),
         loyaltyApi(s,"my_data",{})
       ]);
-      setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});
+      setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});\n      await refreshMerchantChainStatus(connected || knownMerchantWallet);
       try { localStorage.setItem("gbk_loyalty_merchant_wallet", String(live?.merchant?.profile_id ? (connected || knownMerchantWallet) : knownMerchantWallet)); } catch {}
       setRole("MerchantWallet");
     } catch(e:any) {
@@ -253,7 +266,7 @@ export default function Home() {
             loyaltyApi(s,"merchant_fund_status",{merchant_id:lookup.merchant.id}),
             loyaltyApi(s,"my_data",{})
           ]);
-          setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});
+          setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});\n          await refreshMerchantChainStatus(connected || knownMerchantWallet);
           try { localStorage.setItem("gbk_loyalty_merchant_wallet", String(connected || knownMerchantWallet)); } catch {}
           setRole("MerchantWallet");
           return;
@@ -776,9 +789,36 @@ export default function Home() {
               <b>Merchant: {merchantStatus?.merchant?.business_name || "—"}</b>
               <span>Wallet: {walletAddress ? walletAddress.slice(0,6)+"…"+walletAddress.slice(-4) : (merchantStatus?.merchant?.profile_id ? "Connected" : "Not connected")}</span>
             </div>
-            <div className="stats" style={{margin:"12px 0"}}>
-              <div><b>{merchantStatus?.live_gbk_balance_raw ? (Number(merchantStatus.live_gbk_balance_raw)/1e8).toLocaleString() : "0"} GBK</b><span>Live GBK balance</span></div>
-              <div><b>{merchantStatus?.threshold_raw ? (Number(merchantStatus.threshold_raw)/1e8).toLocaleString() : "0"} GBK</b><span>GBK funding reserve</span></div>
+            <div className="merchantWalletLive">
+              <div className="merchantWalletPrimary">
+                <span>LIVE ON-CHAIN GBK BALANCE</span>
+                <strong>{merchantChainStatus ? (Number(merchantChainStatus.balanceRaw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : "—"} <em>GBK</em></strong>
+                <small>{merchantChainStatus ? "Read directly from the connected BNB Smart Chain wallet." : "Connect the merchant wallet to read the live balance."}</small>
+              </div>
+              <div className="merchantWalletMetric">
+                <span>Reward allowance</span>
+                <b>{merchantChainStatus ? (merchantChainStatus.allowanceRaw === "0" ? "Not approved" : "Approved") : "—"}</b>
+                <small>{merchantChainStatus?.allowanceRaw && merchantChainStatus.allowanceRaw !== "0" ? "Distributor approval is active." : "One-time approval is required before reward settlement."}</small>
+              </div>
+              <div className="merchantWalletMetric">
+                <span>Database balance</span>
+                <b>{merchantStatus?.live_gbk_balance_raw ? (Number(merchantStatus.live_gbk_balance_raw)/1e8).toLocaleString() : "0"} GBK</b>
+                <small>Used by the loyalty service for merchant funding checks.</small>
+              </div>
+            </div>
+            <div className="merchantWalletActions">
+              <button className="secondary" onClick={()=>refreshMerchantChainStatus()} disabled={merchantChainBusy}>{merchantChainBusy ? "Reading wallet…" : "↻ Refresh live balance"}</button>
+              {merchantChainStatus && merchantChainStatus.allowanceRaw === "0" && <button className="primary" onClick={async()=>{
+                setApiBusy(true); setAuthNotice("");
+                try {
+                  const txHash = await approveMerchantRewardDistributor("1");
+                  setAuthNotice("GBK reward approval submitted. Confirm the transaction in your merchant wallet.");
+                  await waitForChainTx(txHash);
+                  await refreshMerchantChainStatus();
+                  setAuthNotice("GBK reward approval confirmed. The merchant wallet is ready for eligible reward settlements.");
+                } catch(e:any) { setAuthNotice(e.message || "GBK reward approval failed."); }
+                finally { setApiBusy(false); }
+              }} disabled={apiBusy}>{apiBusy ? "Approving…" : "Approve GBK rewards once"}</button>}
             </div>
             <div className={merchantStatus?.active || Number(merchantStatus?.threshold_raw || 0) === 0 && Number(merchantStatus?.live_gbk_balance_raw || 0) > 0 ? "status" : "status paused"}>
               {merchantStatus?.active
