@@ -70,6 +70,9 @@ export default function Home() {
   const [founderStatus,setFounderStatus]=useState<any>(null);
   const [merchantStatus,setMerchantStatus]=useState<any>(null);
   const isIndia = country === "India";
+  const holderRewardMin = 0.7;
+  const holderRewardMax = 6.3;
+
   const selectCountry = (value:string) => { setCountry(value); const next = value === "Global" ? "USD" : currencyForCountry(value); setCurrency(next); setPaymentCurrency(next); try { localStorage.setItem("gbk_loyalty_country", value); localStorage.setItem("gbk_loyalty_currency", next); } catch {} };
 
   useEffect(() => {
