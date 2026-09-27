@@ -1037,6 +1037,21 @@ export default function Home() {
               {isIndia && <small>India: INR/local payment only. USDT is disabled for this merchant flow.</small>}
             </div>
             <label className="check"><input type="checkbox"/> I accept that GBK provides leads and loyalty benefits; the merchant controls the product/service and its business policy.</label>
+          </> : role==="Founder" ? <>
+            <p>Founder registration is required before Founder benefits are available in GBK Loyalty. Connect the same wallet used for your verified Founder membership.</p>
+            <div className="walletRequiredBox">
+              <b>Founder wallet — required</b>
+              <small>Your wallet is used to match the verified Founder membership. No private key or seed phrase is requested.</small>
+              <input className="modalInput" value={walletAddress || ""} readOnly placeholder="Connect Founder wallet"/>
+              <button type="button" className="secondary" onClick={()=>connectWallet("founder")} disabled={apiBusy}>{walletAddress ? "Wallet Connected" : "Connect Founder Wallet"}</button>
+            </div>
+            <div className="founderRegistrationGrid">
+              <label><span>Founder type</span><select value={founderType} onChange={e=>setFounderType(e.target.value as "country"|"global")}><option value="country">Country Founder</option><option value="global">Global Founder</option></select></label>
+              <label><span>Founder tier</span><select value={founderTier} onChange={e=>setFounderTier(e.target.value)}><option value="COUNTRY_300">Country Founder — $300</option><option value="COUNTRY_500">Country Growth Founder — $500</option><option value="COUNTRY_1000">Country Leadership Founder — $1,000</option><option value="GLOBAL_3000">Global Founder — $3,000</option><option value="GLOBAL_5000">Global Growth Founder — $5,000</option><option value="GLOBAL_10000">Global Leadership Founder — $10,000</option></select></label>
+            </div>
+            <input className="modalInput" value={founderTxHash} onChange={e=>setFounderTxHash(e.target.value)} placeholder="BSC transaction hash from Founder membership"/>
+            <a className="secondary" href="https://founder.gbkai.com" target="_blank" rel="noreferrer">Open Founder Membership Portal ↗</a>
+            {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
           </> : <>
             <p>Start with simple registration. Wallet connection, verification and role-specific setup come next.</p>
             <input placeholder="Full name"/>
