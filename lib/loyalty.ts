@@ -50,7 +50,7 @@ export async function approveMerchantRewardDistributor(amountRaw: string): Promi
   add(w.ethereum);
   if (!candidates.length) throw new Error("Connect the merchant wallet first.");
 
-  const distributor = "0x5f0bC44E0BdFd22582a4066f0C68B948E41fa054";
+  const distributor = "0xB75d8b183e4c906837Bc95094bf132616D53842A";
   const token = "0xdA0638EA374c4c5bF2914E6F4D5B2335dEb8D80D";
   const requested = BigInt(String(amountRaw));
   if (requested <= BigInt(0)) throw new Error("Invalid GBK approval amount.");
@@ -85,7 +85,7 @@ export async function getGbkWalletStatus(address: string): Promise<{balanceRaw:s
   if (!candidates.length) throw new Error("Connect the merchant wallet first.");
 
   const token = "0xdA0638EA374c4c5bF2914E6F4D5B2335dEb8D80D";
-  const distributor = "0x5f0bC44E0BdFd22582a4066f0C68B948E41fa054";
+  const distributor = "0xB75d8b183e4c906837Bc95094bf132616D53842A";
   const pad = (v:string) => v.toLowerCase().replace(/^0x/,"").padStart(64,"0");
   const balanceData = "0x70a08231" + pad(address);
   const allowanceData = "0xdd62ed3e" + pad(address) + pad(distributor);
