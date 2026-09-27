@@ -75,6 +75,38 @@ export async function approveMerchantRewardDistributor(amountRaw: string): Promi
   throw lastError || new Error("GBK reward approval failed.");
 }
 
+export async function getGbkWalletStatus(address: string): Promise<{balanceRaw:string; allowanceRaw:string}> {
+  if (typeof window === "undefined") throw new Error("Wallet balance is available in the browser only.");
+  const w = window as any;
+  const candidates: any[] = [];
+  const addProvider = (p:any) => { if (p && !candidates.includes(p)) candidates.push(p); };
+  if (Array.isArray(w.ethereum?.providers)) w.ethereum.providers.forEach(addProvider);
+  addProvider(w.ethereum);
+  if (!candidates.length) throw new Error("Connect the merchant wallet first.");
+
+  const token = "0xdA0638EA374c4c5bF2914E6F4D5B2335dEb8D80D";
+  const distributor = "0x5f0bC44E0BdFd22582a4066f0C68B948E41fa054";
+  const pad = (v:string) => v.toLowerCase().replace(/^0x/,"").padStart(64,"0");
+  const balanceData = "0x70a08231" + pad(address);
+  const allowanceData = "0xdd62ed3e" + pad(address) + pad(distributor);
+
+  let lastError:any = null;
+  for (const provider of candidates) {
+    try {
+      await switchToBsc(provider);
+      const [balance, allowance] = await Promise.all([
+        provider.request({method:"eth_call",params:[{to:token,data:balanceData},"latest"]}),
+        provider.request({method:"eth_call",params:[{to:token,data:allowanceData},"latest"]}),
+      ]);
+      return {
+        balanceRaw: String(BigInt(balance || "0x0")),
+        allowanceRaw: String(BigInt(allowance || "0x0")),
+      };
+    } catch(e:any) { lastError=e; }
+  }
+  throw lastError || new Error("Unable to read the GBK wallet.");
+}
+
 export async function getConnectedEvmWallet(): Promise<string> {
   if (typeof window === "undefined") return "";
   const w = window as any;
