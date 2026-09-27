@@ -171,6 +171,15 @@ export default function Home() {
       // BEFORE creating/updating a role profile. This gives registered merchants
       // a direct path to Merchant Wallet, while a new wallet goes to registration.
       if (targetRole === "merchant") {
+        // Establish the current wallet-linked profile first. The backend lookup
+        // requires an authenticated GBK Loyalty profile, but this does not create
+        // a merchant record.
+        await loyaltyApi(s, "profile_upsert", {
+          role: "merchant",
+          full_name: fullName || "GBK Wallet User",
+          country,
+          wallet_address: address
+        });
         const lookup = await loyaltyApi(s, "merchant_wallet_lookup", { wallet_address: address });
         if (lookup?.merchant) {
           setActiveWalletRole("merchant");
