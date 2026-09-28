@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, getConnectedEvmWallet, approveMerchantRewardDistributor, getGbkWalletStatus, type LoyaltySession } from "../lib/loyalty";
 
 const businessCategories = ["All Products & Services","Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries & Supermarkets","Fashion & Apparel","Electronics","Pharmacies & Health Stores","Salons & Beauty","AC Repair","Plumbing & Electrical","Home Services","Automotive & EV","Fuel & Charging","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education & Courses","Spoken English","Healthcare & Clinics","Real Estate","Agriculture & Farm Services","Seeds & Fertilizer","Farm Equipment","Crop Advisory","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops","Wholesale & Distribution","Manufacturing","Construction","Cleaning Services","Pet Services"];
@@ -38,6 +39,8 @@ export default function Home() {
   const [merchantOffer,setMerchantOffer] = useState("10%");
   const [customOffer,setCustomOffer] = useState("25");
   const [shareNotice,setShareNotice] = useState("");
+  const [merchantQr,setMerchantQr] = useState("");
+  const [qrBusy,setQrBusy] = useState(false);
   const [suggestedBusinessId,setSuggestedBusinessId] = useState("");
   const [claimBusiness,setClaimBusiness] = useState<any|null>(null);
   const [claimName,setClaimName] = useState("");
@@ -102,6 +105,20 @@ export default function Home() {
   const holderRewardMax = 6.3;
 
   const selectCountry = (value:string) => { setCountry(value); const next = value === "Global" ? "USD" : currencyForCountry(value); setCurrency(next); setPaymentCurrency(next); try { localStorage.setItem("gbk_loyalty_country", value); localStorage.setItem("gbk_loyalty_currency", next); } catch {} };
+
+  useEffect(() => {
+    const merchantId = new URLSearchParams(window.location.search).get("merchant");
+    if(!merchantId)return;
+    (async()=>{
+      try{
+        let active=getStoredSession();
+        if(!active) active=await signInAnonymously();
+        setSession(active);
+        const result=await loyaltyApi(active,"get_merchant",{merchant_id:merchantId});
+        if(result?.merchant){setSelectedMerchant(result.merchant);}
+      }catch(e:any){setAuthNotice(e?.message||"Business page could not be opened.");}
+    })();
+  }, []);
 
   useEffect(() => {
     const claimId = new URLSearchParams(window.location.search).get("claim");
@@ -631,6 +648,27 @@ export default function Home() {
     }
   };
 
+  const openMerchantQr = async (merchant:any) => {
+    setQrBusy(true); setMerchantQr("");
+    try{
+      const url=`${window.location.origin}/?merchant=${merchant.id}`;
+      const data=await QRCode.toDataURL(url,{width:320,margin:2,errorCorrectionLevel:"M"});
+      setMerchantQr(data);
+    }catch(e:any){setAuthNotice(e?.message||"QR code could not be created.");}
+    finally{setQrBusy(false);}
+  };
+  const shareMerchantQr = async (merchant:any) => {
+    const url=`${window.location.origin}/?merchant=${merchant.id}`;
+    try{
+      if(navigator.share) await navigator.share({title:`${merchant.business_name} — GBK Loyalty`,text:"Scan or open this GBK Loyalty business page.",url});
+      else {await navigator.clipboard.writeText(url);setShareNotice("Business link copied.");}
+    }catch{}
+  };
+  const downloadMerchantQr = () => {
+    if(!merchantQr)return;
+    const a=document.createElement("a"); a.href=merchantQr; a.download="gbk-loyalty-business-qr.png"; a.click();
+  };
+
   const suggestBusiness = async () => {
     const targetCountry = suggestBusinessCountry || (country !== "Global" ? country : "");
     if (!suggestBusinessName.trim() || !suggestBusinessCity.trim() || !targetCountry) { setAuthNotice("Enter the business name, city and country."); return; }
@@ -779,6 +817,12 @@ export default function Home() {
           <h2>{selectedMerchant.business_name}</h2>
           <p>{[selectedMerchant.category,selectedMerchant.city,selectedMerchant.country].filter(Boolean).join(" • ")}</p>
           <p>GBK Loyalty offer: <b>{Math.round(Number(selectedMerchant.loyalty_offer_bps||0)/100)}%</b></p>
+          <div className="offerPreview" style={{display:"grid",gap:8,margin:"14px 0",textAlign:"center"}}>
+            <b>📱 Scan to open this business</b>
+            {merchantQr ? <img src={merchantQr} alt={`GBK Loyalty QR for ${selectedMerchant.business_name}`} style={{width:220,height:220,maxWidth:"100%",margin:"0 auto",background:"#fff",padding:10,borderRadius:16}}/> : <button className="secondary" type="button" onClick={()=>openMerchantQr(selectedMerchant)} disabled={qrBusy}>{qrBusy?"Creating QR…":"Generate Business QR"}</button>}
+            {merchantQr && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><button className="secondary" type="button" onClick={downloadMerchantQr}>⬇️ Download QR</button><button className="secondary" type="button" onClick={()=>shareMerchantQr(selectedMerchant)}>📤 Share</button></div>}
+            {shareNotice && <small>{shareNotice}</small>}
+          </div>
           <label style={{display:"grid",gap:6,margin:"14px 0"}}>
             <b>Purchase amount</b>
             <input className="modalInput" inputMode="decimal" type="number" min="0.01" step="0.01" value={orderAmount} onChange={e=>setOrderAmount(e.target.value)} placeholder={country==="India" ? "Enter purchase amount in INR" : "Enter purchase amount in local currency"} />
