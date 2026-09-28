@@ -788,7 +788,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="founderWorkspace roleOnlySection">
+      <section className={`founderWorkspace roleOnlySection ${activeWalletRole==="founder" ? "founderVisible" : ""}">
         <div className="sectionHead"><div><span className="eyebrow">FOUNDER NETWORK</span><h2>Country Founders can build the local GBK network</h2><p>Country Founders can add customers/users and businesses in their assigned country. Global Founders can add users and businesses globally.</p></div></div>
         <div className="founderGrid">
           <div className="founderPanel"><div className="roleIcon">👥</div><h3>Add User</h3><p>Invite customers, community members and prospective users into GBK Loyalty.</p><button className="primary" onClick={()=>setRole("FounderUser")}>＋ Add User</button></div>
@@ -828,7 +828,7 @@ export default function Home() {
   <div className="walletRoleGrid">
     <article><div className="icon">👤</div><h3>Customer Wallet</h3><p>Receive eligible GBK rewards after verified purchases and use them in supported GBK services.</p></article>
     <article><div className="icon">🏪</div><h3>Merchant Wallet</h3><p>Keep GBK available for your loyalty rewards. Customer payments go directly to the merchant.</p></article>
-    <article><div className="icon">🌍</div><h3>Founder Wallet</h3><p>Receive the qualifying Founder allocation when eligible loyalty activity is attributed to the Founder.</p></article>
+    <article className={activeWalletRole==="founder" ? "walletRoleActive" : ""} onClick={()=>{if(activeWalletRole==="founder") openFounder(); else connectWallet("founder");}} role="button" tabIndex={0}><div className="icon">🌍</div><h3>Founder Wallet</h3><p>Receive the qualifying Founder allocation when eligible loyalty activity is attributed to the Founder.</p><button className="secondary" type="button" onClick={(e)=>{e.stopPropagation(); if(activeWalletRole==="founder") openFounder(); else connectWallet("founder");}}>👑 Open Founder</button></article>
     <article><div className="icon">🏢</div><h3>Platform</h3><p>Operates discovery, marketplace, loyalty, verification and reward settlement infrastructure and receives its defined platform allocation.</p></article>
   </div>
   <div className="walletFlow"><b>Customer</b><span>Find → Buy → Earn</span><b>Merchant</b><span>Serve → Fund Rewards</span><b>Founder</b><span>Connect → Qualify</span><b>Platform</b><span>Operate → Settle</span></div>
