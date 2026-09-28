@@ -1102,6 +1102,15 @@ export default function Home() {
               <strong style={{fontSize:20,letterSpacing:1}}>{founderStatus.founder_referral_code || "Generated for your Founder account"}</strong>
             </div>}
             {founderStatus?.founder_verified && <div className="founderNetworkList">
+              <div className="offerPreview" style={{marginTop:12}}>
+                <b>👑 Founder Network</b>
+                <span>Add users and businesses directly from your verified Founder account.</span>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,marginTop:10}}>
+                  <button className="primary" type="button" onClick={()=>setRole("FounderUser")}>👤 Add User</button>
+                  <button className="primary" type="button" onClick={()=>setRole("FounderBusiness")}>🏪 Add Business</button>
+                </div>
+                <button className="secondary" type="button" style={{marginTop:10,width:"100%"}} onClick={()=>loadFounderNetwork()}>↻ Refresh My Network</button>
+              </div>
               <div className="offerPreview"><b>👥 My User Referrals ({founderNetwork.users.length})</b>{founderNetwork.users.length===0?<span>No user referrals yet.</span>:founderNetwork.users.slice(0,8).map((u:any)=><div key={u.id}><strong>{u.referred_name}</strong><span>{u.country} · {u.status}</span></div>)}</div>
               <div className="offerPreview"><b>🏪 My Business Referrals ({founderNetwork.businesses.length})</b>{founderNetwork.businesses.length===0?<span>No business referrals yet.</span>:founderNetwork.businesses.slice(0,8).map((b:any)=><div key={b.id}><strong>{b.business_name}</strong><span>{b.city}, {b.country} · {b.listing_status} · {b.invitation_status}</span></div>)}</div>
             </div>}
