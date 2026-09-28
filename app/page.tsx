@@ -284,8 +284,8 @@ export default function Home() {
     const targetCountry=founderBusinessCountry||(country!=="Global"?country:"");
     if(!founderBusinessName.trim()||!founderBusinessCity.trim()||!targetCountry){setAuthNotice("Enter the business name, city and country.");return;}
     setApiBusy(true);setAuthNotice("");
-    try{await loyaltyApi(active,"founder_add_business",{business_name:founderBusinessName.trim(),owner_name:founderBusinessOwner.trim()||null,phone:founderBusinessContact.includes("@")?null:founderBusinessContact.trim()||null,email:founderBusinessContact.includes("@")?founderBusinessContact.trim():null,category:founderBusinessCategory,country:targetCountry,city:founderBusinessCity.trim(),address:founderBusinessAddress.trim()||null,website:founderBusinessWebsite.trim()||null,loyalty_offer_percent:Number(founderBusinessOffer.replace("%",""))});await loadFounderNetwork(active);setFounderBusinessName("");setFounderBusinessOwner("");setFounderBusinessContact("");setFounderBusinessCity("");setFounderBusinessCountry("");setFounderBusinessAddress("");setFounderBusinessWebsite("");setAuthNotice("New merchant saved. Owner activation is required before public customer search.");setRole("Founder");}
-    catch(e:any){setAuthNotice(e.message||"New merchant could not be saved.");}finally{setApiBusy(false);}
+    try{await loyaltyApi(active,"founder_add_business",{business_name:founderBusinessName.trim(),owner_name:founderBusinessOwner.trim()||null,phone:founderBusinessContact.includes("@")?null:founderBusinessContact.trim()||null,email:founderBusinessContact.includes("@")?founderBusinessContact.trim():null,category:founderBusinessCategory,country:targetCountry,city:founderBusinessCity.trim(),address:founderBusinessAddress.trim()||null,website:founderBusinessWebsite.trim()||null,loyalty_offer_percent:Number(founderBusinessOffer.replace("%",""))});await loadFounderNetwork(active);setFounderBusinessName("");setFounderBusinessOwner("");setFounderBusinessContact("");setFounderBusinessCity("");setFounderBusinessCountry("");setFounderBusinessAddress("");setFounderBusinessWebsite("");setAuthNotice("Business referral saved. Owner activation is required before public customer search.");setRole("Founder");}
+    catch(e:any){setAuthNotice(e.message||"Business referral could not be saved.");}finally{setApiBusy(false);}
   };
   const refreshMerchantChainStatus = async (address?:string) => {
     const target = String(address || merchantWallet || walletAddress || "").trim();
@@ -615,38 +615,23 @@ export default function Home() {
 
   const suggestBusiness = async () => {
     const targetCountry = suggestBusinessCountry || (country !== "Global" ? country : "");
-    if (!suggestBusinessName.trim() || !suggestBusinessCity.trim() || !targetCountry) {
-      setAuthNotice("Enter the business name, city and country.");
-      return;
-    }
+    if (!suggestBusinessName.trim() || !suggestBusinessCity.trim() || !targetCountry) { setAuthNotice("Enter the business name, city and country."); return; }
     setApiBusy(true); setAuthNotice("");
     try {
       let activeSession = session || getStoredSession();
       if (!activeSession) activeSession = await signInAnonymously();
       setSession(activeSession);
       const result = await loyaltyApi(activeSession, "suggest_business", {
-        business_name: suggestBusinessName.trim(),
-        category: suggestBusinessCategory === "All Products & Services" ? null : suggestBusinessCategory,
-        city: suggestBusinessCity.trim(),
-        country: targetCountry,
-        address: suggestBusinessAddress.trim() || null,
-        phone: suggestBusinessPhone.trim() || null,
-        website: suggestBusinessWebsite.trim() || null,
-        maps_url: suggestBusinessMapsUrl.trim() || null,
-        source: "COMMUNITY"
+        business_name:suggestBusinessName.trim(),
+        category:suggestBusinessCategory==="All Products & Services" ? null : suggestBusinessCategory,
+        city:suggestBusinessCity.trim(), country:targetCountry,
+        address:suggestBusinessAddress.trim()||null, phone:suggestBusinessPhone.trim()||null,
+        website:suggestBusinessWebsite.trim()||null, maps_url:suggestBusinessMapsUrl.trim()||null, source:"COMMUNITY"
       });
-      if (result?.status === "EXISTS") {
-        setAuthNotice("This business is already in GBK Loyalty. Search for it instead.");
-      } else if (result?.status === "ALREADY_SUGGESTED") {
-        setAuthNotice("This business has already been suggested and is waiting for review.");
-      } else {
-        setAuthNotice("Business suggestion submitted. It will appear as an unclaimed listing only after verification; the owner must claim it before it becomes an active merchant.");
-        setSuggestBusinessName(""); setSuggestBusinessCity(""); setSuggestBusinessCountry("");
-        setSuggestBusinessAddress(""); setSuggestBusinessPhone(""); setSuggestBusinessWebsite(""); setSuggestBusinessMapsUrl("");
-      }
-    } catch (e:any) {
-      setAuthNotice(e?.message || "Business suggestion failed");
-    } finally { setApiBusy(false); }
+      if(result?.status==="EXISTS") setAuthNotice("This business is already in GBK Loyalty. Search for it instead.");
+      else if(result?.status==="ALREADY_SUGGESTED") setAuthNotice("This business has already been suggested and is waiting for review.");
+      else { setAuthNotice("Business suggestion submitted. It will be reviewed before publication; the owner must claim and activate the merchant profile before reward-eligible orders."); setSuggestBusinessName(""); setSuggestBusinessCity(""); setSuggestBusinessCountry(""); setSuggestBusinessAddress(""); setSuggestBusinessPhone(""); setSuggestBusinessWebsite(""); setSuggestBusinessMapsUrl(""); }
+    } catch(e:any) { setAuthNotice(e?.message||"Business suggestion failed"); } finally { setApiBusy(false); }
   };
 
   const registerMerchant = async () => {
@@ -732,8 +717,7 @@ export default function Home() {
           <button onClick={()=>setQuery("AC repair near me")}>🔧 Services</button><button onClick={()=>setQuery("agriculture products or farm service near me")}>🌾 Agriculture</button>
         </div>
         <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
-          <b>🏪 Can't find the business?</b>
-          <span>Suggest any legitimate local business. No Founder is required. The business starts as an unclaimed listing and the owner can claim it later.</span>
+          <b>🏪 Can't find the business?</b><span>Suggest any legitimate local business. No Founder is required. The business starts as an unclaimed listing and the owner can claim it later.</span>
           <button className="secondary" type="button" onClick={()=>setRole("SuggestBusiness")}>＋ Suggest a Business</button>
         </div>
       </section>
@@ -751,7 +735,7 @@ export default function Home() {
           </div>)}
         </div>
       </section>}
-      {searchResults.length === 0 && authNotice && authNotice.includes("No") && <section id="searchResults" className="roleSection"><div className="status"><span>{authNotice}</span><button className="secondary" style={{marginTop:10}} onClick={()=>setRole("SuggestBusiness")}>＋ Suggest this business</button></div></section>}
+      {searchResults.length === 0 && authNotice && authNotice.includes("No") && <section id="searchResults" className="roleSection"><div className="status"><span>{authNotice}</span></div></section>}
       {selectedMerchant && <div className="modalBackdrop">
         <div className="modal">
           <button className="modalClose" onClick={()=>setSelectedMerchant(null)}>×</button>
@@ -837,11 +821,11 @@ export default function Home() {
         </div>
       </section>
 
-      <section className={`founderWorkspace roleOnlySection ${activeWalletRole==="founder" ? "founderVisible" : ""}">
-        <div className="sectionHead"><div><span className="eyebrow">FOUNDER NETWORK</span><h2>Country Founders can build the local GBK network</h2><p>Country Founders can add customers and new merchants in their assigned country. Global Founders can add customers and new merchants globally.</p></div></div>
+      <section className="founderWorkspace roleOnlySection">
+        <div className="sectionHead"><div><span className="eyebrow">FOUNDER NETWORK</span><h2>Country Founders can build the local GBK network</h2><p>Country Founders can add customers/users and businesses in their assigned country. Global Founders can add users and businesses globally.</p></div></div>
         <div className="founderGrid">
-          <div className="founderPanel"><div className="roleIcon">👥</div><h3>Add Customer</h3><p>Add a customer/community member to your Founder network in GBK Loyalty.</p><button className="primary" onClick={()=>setRole("FounderUser")}>＋ Add Customer</button></div>
-          <div className="founderPanel"><div className="roleIcon">🏪</div><h3>Add New Merchant</h3><p>Register a new hotel, restaurant, shop, service or other legitimate merchant.</p><button className="primary" onClick={()=>setRole("FounderBusiness")}>＋ Add New Merchant</button></div>
+          <div className="founderPanel"><div className="roleIcon">👥</div><h3>Add User</h3><p>Invite customers, community members and prospective users into GBK Loyalty.</p><button className="primary" onClick={()=>setRole("FounderUser")}>＋ Add User</button></div>
+          <div className="founderPanel"><div className="roleIcon">🏪</div><h3>Add Business</h3><p>Register hotels, restaurants, shops, services and other legitimate businesses.</p><button className="primary" onClick={()=>setRole("FounderBusiness")}>＋ Add Business</button></div>
           <div className="founderPanel"><div className="roleIcon">📋</div><h3>My Network</h3><p>View businesses added, users invited, active merchants, leads and loyalty activity.</p><button className="secondary" onClick={openFounder}>Open Founder Dashboard →</button></div>
         </div>
         <div className="categoryStrip"><b>Business categories:</b>{businessCategories.map(x=><span key={x}>{x}</span>)}</div>
@@ -877,7 +861,7 @@ export default function Home() {
   <div className="walletRoleGrid">
     <article><div className="icon">👤</div><h3>Customer Wallet</h3><p>Receive eligible GBK rewards after verified purchases and use them in supported GBK services.</p></article>
     <article><div className="icon">🏪</div><h3>Merchant Wallet</h3><p>Keep GBK available for your loyalty rewards. Customer payments go directly to the merchant.</p></article>
-    <article className={activeWalletRole==="founder" ? "walletRoleActive" : ""} onClick={()=>{if(activeWalletRole==="founder") openFounder(); else connectWallet("founder");}} role="button" tabIndex={0}><div className="icon">🌍</div><h3>Founder Wallet</h3><p>Receive the qualifying Founder allocation when eligible loyalty activity is attributed to the Founder.</p><button className="secondary" type="button" onClick={(e)=>{e.stopPropagation(); if(activeWalletRole==="founder") openFounder(); else connectWallet("founder");}}>👑 Open Founder</button></article>
+    <article><div className="icon">🌍</div><h3>Founder Wallet</h3><p>Receive the qualifying Founder allocation when eligible loyalty activity is attributed to the Founder.</p></article>
     <article><div className="icon">🏢</div><h3>Platform</h3><p>Operates discovery, marketplace, loyalty, verification and reward settlement infrastructure and receives its defined platform allocation.</p></article>
   </div>
   <div className="walletFlow"><b>Customer</b><span>Find → Buy → Earn</span><b>Merchant</b><span>Serve → Fund Rewards</span><b>Founder</b><span>Connect → Qualify</span><b>Platform</b><span>Operate → Settle</span></div>
@@ -1071,14 +1055,14 @@ export default function Home() {
               <small>Supported in wallet browsers and compatible EVM wallets. Sign-in is handled by the wallet-linked account.</small>
             </div>
           </> : role==="FounderUser" ? <>
-            <p>Add a customer to your Founder network. The customer referral is saved in GBK Loyalty so you can track it later.</p>
+            <p>Add a user to your Founder network. The referral is saved in GBK Loyalty so you can track it later.</p>
             <input placeholder="User full name" value={founderUserName} onChange={e=>setFounderUserName(e.target.value)}/>
             <input placeholder="Mobile or email" value={founderUserContact} onChange={e=>setFounderUserContact(e.target.value)}/>
             <select className="modalSelect" value={founderUserCountry||(country==="Global"?"":country)} onChange={e=>setFounderUserCountry(e.target.value)}><option value="">Select country</option>{countries.filter(x=>x!=="Global").map(x=><option key={x}>{x}</option>)}</select>
             <label className="check"><input type="checkbox"/> I confirm this person has agreed to be contacted/invited.</label>
-            <button className="primary" onClick={addFounderUser} disabled={apiBusy}>{apiBusy?"Saving…":"Add Customer →"}</button>
+            <button className="primary" onClick={addFounderUser} disabled={apiBusy}>{apiBusy?"Saving…":"Save User Referral →"}</button>
           </> : role==="FounderBusiness" ? <>
-            <p>Add a new merchant to GBK Loyalty. It appears in your Founder network immediately and becomes public to customers after owner activation and funding.</p>
+            <p>Add a business referral to GBK Loyalty. It appears in your Founder network immediately and becomes public to customers after owner activation and funding.</p>
             <input placeholder="Business name" value={founderBusinessName} onChange={e=>setFounderBusinessName(e.target.value)}/>
             <select className="modalSelect" value={founderBusinessCategory} onChange={e=>setFounderBusinessCategory(e.target.value)}>{businessCategories.filter(x=>x!=="All Products & Services").map(x=><option key={x}>{x}</option>)}</select>
             <input placeholder="Owner / contact name" value={founderBusinessOwner} onChange={e=>setFounderBusinessOwner(e.target.value)}/>
@@ -1099,7 +1083,7 @@ export default function Home() {
             <select className="modalSelect" value={merchantCategory} onChange={e=>setMerchantCategory(e.target.value)}>{businessCategories.map(x=><option key={x}>{x}</option>)}</select>
             <input placeholder="City" value={merchantCity} onChange={e=>setMerchantCity(e.target.value)}/>
             <input className="modalInput" placeholder="Founder referral code (optional)" value={founderReferralCode} onChange={e=>setFounderReferralCode(e.target.value.toUpperCase())}/>
-            <small>Optional. A business owner can register directly. Founder referral is only needed when this business was personally referred by a Founder.</small>
+            <small>Optional. Anyone can list a business directly. Enter a verified Founder code only if this business was referred by that Founder.</small>
             <select className="modalSelect" value={merchantOffer} onChange={e=>setMerchantOffer(e.target.value)}>
               <option value="5%">5% loyalty</option>
               <option value="10%">10% loyalty</option>
@@ -1169,8 +1153,8 @@ export default function Home() {
                 <b>👑 Founder Network</b>
                 <span>Add users and businesses directly from your verified Founder account.</span>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,marginTop:10}}>
-                  <button className="primary" type="button" onClick={()=>setRole("FounderUser")}>👤 Add Customer</button>
-                  <button className="primary" type="button" onClick={()=>setRole("FounderBusiness")}>🏪 Add New Merchant</button>
+                  <button className="primary" type="button" onClick={()=>setRole("FounderUser")}>👤 Add User</button>
+                  <button className="primary" type="button" onClick={()=>setRole("FounderBusiness")}>🏪 Add Business</button>
                 </div>
                 <button className="secondary" type="button" style={{marginTop:10,width:"100%"}} onClick={()=>loadFounderNetwork()}>↻ Refresh My Network</button>
               </div>
