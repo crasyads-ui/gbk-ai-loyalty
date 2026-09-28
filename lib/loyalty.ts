@@ -285,6 +285,17 @@ async function refreshStoredSession(session: LoyaltySession): Promise<LoyaltySes
   }
 }
 
+export async function loyaltyReviewApi(session: LoyaltySession, action: string, payload: Record<string, unknown> = {}) {
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/loyalty-review`, {
+    method: "POST",
+    headers: authHeaders(session.access_token),
+    body: JSON.stringify({ action, ...payload }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (r.ok) return data;
+  throw new Error(data.error || "GBK Loyalty review request failed");
+}
+
 export async function loyaltyApi(session: LoyaltySession, action: string, payload: Record<string, unknown> = {}) {
   let activeSession = session;
   for (let attempt = 0; attempt < 2; attempt++) {
