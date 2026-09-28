@@ -911,7 +911,7 @@ export default function Home() {
             <input placeholder="Google Maps/share link (optional)" value={suggestBusinessMapsUrl} onChange={e=>setSuggestBusinessMapsUrl(e.target.value)}/>
             {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
             <button className="primary" type="button" onClick={suggestBusiness} disabled={apiBusy}>{apiBusy ? "Submitting…" : "Submit Business Suggestion →"}</button>
-          </> :          {role==="WalletChooser" ? <>
+          </> : role==="WalletChooser" ? <>
             <p>Connect your wallet to enter the correct GBK Loyalty account. Registered merchants open directly; new merchants can register after wallet connection.</p>
             <div className="walletChoiceGrid">
               <button className="walletChoice" onClick={async()=>{await connectWallet("customer");}}>
