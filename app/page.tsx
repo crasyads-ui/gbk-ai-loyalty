@@ -914,7 +914,20 @@ export default function Home() {
           <button className="close" onClick={()=>setRole(null)}>×</button>
           <div className="roleIcon">{role==="MerchantWallet" ? "👛" : role==="SuggestBusiness" ? "🏪" : (roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍"))}</div>
           <h2>{role==="MerchantWallet" ? "Merchant Wallet" : role==="WalletChooser" ? "Choose Your Wallet" : role==="SuggestBusiness" ? "Suggest a Business" : `${role} registration`}</h2>
-          {role==="WalletChooser" ? <>
+          {role==="SuggestBusiness" ? <>
+            <p>Help GBK Loyalty grow faster globally. Anyone can suggest a legitimate business — no Founder is required and no wallet is required to submit the suggestion.</p>
+            <div className="status"><span>🟡 Unclaimed first</span><small>The suggestion is reviewed before publication. The business owner must claim and activate the merchant profile before customers can place reward-eligible orders.</small></div>
+            <input placeholder="Business name *" value={suggestBusinessName} onChange={e=>setSuggestBusinessName(e.target.value)}/>
+            <select className="modalSelect" value={suggestBusinessCategory} onChange={e=>setSuggestBusinessCategory(e.target.value)}>{businessCategories.map(x=><option key={x}>{x}</option>)}</select>
+            <input placeholder="City *" value={suggestBusinessCity} onChange={e=>setSuggestBusinessCity(e.target.value)}/>
+            <select className="modalSelect" value={suggestBusinessCountry || (country==="Global" ? "" : country)} onChange={e=>setSuggestBusinessCountry(e.target.value)}><option value="">Select country *</option>{countries.filter(x=>x!=="Global").map(x=><option key={x}>{x}</option>)}</select>
+            <input placeholder="Address (optional)" value={suggestBusinessAddress} onChange={e=>setSuggestBusinessAddress(e.target.value)}/>
+            <input placeholder="Phone (optional)" value={suggestBusinessPhone} onChange={e=>setSuggestBusinessPhone(e.target.value)}/>
+            <input placeholder="Website (optional)" value={suggestBusinessWebsite} onChange={e=>setSuggestBusinessWebsite(e.target.value)}/>
+            <input placeholder="Google Maps/share link (optional)" value={suggestBusinessMapsUrl} onChange={e=>setSuggestBusinessMapsUrl(e.target.value)}/>
+            {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
+            <button className="primary" type="button" onClick={suggestBusiness} disabled={apiBusy}>{apiBusy ? "Submitting…" : "Submit Business Suggestion →"}</button>
+          </> :          {role==="WalletChooser" ? <>
             <p>Connect your wallet to enter the correct GBK Loyalty account. Registered merchants open directly; new merchants can register after wallet connection.</p>
             <div className="walletChoiceGrid">
               <button className="walletChoice" onClick={async()=>{await connectWallet("customer");}}>
