@@ -82,6 +82,14 @@ export default function Home() {
   const [founderBusinessWebsite,setFounderBusinessWebsite]=useState("");
   const [founderBusinessCategory,setFounderBusinessCategory]=useState(businessCategories[0]);
   const [founderBusinessOffer,setFounderBusinessOffer]=useState("10%");
+  const [suggestBusinessName,setSuggestBusinessName]=useState("");
+  const [suggestBusinessCategory,setSuggestBusinessCategory]=useState(businessCategories[0]);
+  const [suggestBusinessCity,setSuggestBusinessCity]=useState("");
+  const [suggestBusinessCountry,setSuggestBusinessCountry]=useState("");
+  const [suggestBusinessAddress,setSuggestBusinessAddress]=useState("");
+  const [suggestBusinessPhone,setSuggestBusinessPhone]=useState("");
+  const [suggestBusinessWebsite,setSuggestBusinessWebsite]=useState("");
+  const [suggestBusinessMapsUrl,setSuggestBusinessMapsUrl]=useState("");
   const [merchantStatus,setMerchantStatus]=useState<any>(null);
   const [merchantChainStatus,setMerchantChainStatus] = useState<{balanceRaw:string;allowanceRaw:string}|null>(null);
   const [merchantChainBusy,setMerchantChainBusy] = useState(false);
@@ -605,6 +613,42 @@ export default function Home() {
     }
   };
 
+  const suggestBusiness = async () => {
+    const targetCountry = suggestBusinessCountry || (country !== "Global" ? country : "");
+    if (!suggestBusinessName.trim() || !suggestBusinessCity.trim() || !targetCountry) {
+      setAuthNotice("Enter the business name, city and country.");
+      return;
+    }
+    setApiBusy(true); setAuthNotice("");
+    try {
+      let activeSession = session || getStoredSession();
+      if (!activeSession) activeSession = await signInAnonymously();
+      setSession(activeSession);
+      const result = await loyaltyApi(activeSession, "suggest_business", {
+        business_name: suggestBusinessName.trim(),
+        category: suggestBusinessCategory === "All Products & Services" ? null : suggestBusinessCategory,
+        city: suggestBusinessCity.trim(),
+        country: targetCountry,
+        address: suggestBusinessAddress.trim() || null,
+        phone: suggestBusinessPhone.trim() || null,
+        website: suggestBusinessWebsite.trim() || null,
+        maps_url: suggestBusinessMapsUrl.trim() || null,
+        source: "COMMUNITY"
+      });
+      if (result?.status === "EXISTS") {
+        setAuthNotice("This business is already in GBK Loyalty. Search for it instead.");
+      } else if (result?.status === "ALREADY_SUGGESTED") {
+        setAuthNotice("This business has already been suggested and is waiting for review.");
+      } else {
+        setAuthNotice("Business suggestion submitted. It will appear as an unclaimed listing only after verification; the owner must claim it before it becomes an active merchant.");
+        setSuggestBusinessName(""); setSuggestBusinessCity(""); setSuggestBusinessCountry("");
+        setSuggestBusinessAddress(""); setSuggestBusinessPhone(""); setSuggestBusinessWebsite(""); setSuggestBusinessMapsUrl("");
+      }
+    } catch (e:any) {
+      setAuthNotice(e?.message || "Business suggestion failed");
+    } finally { setApiBusy(false); }
+  };
+
   const registerMerchant = async () => {
     if (role !== "Merchant") return;
     setApiBusy(true);
@@ -687,6 +731,11 @@ export default function Home() {
           <button onClick={()=>setQuery("tours and travel")}>✈️ Travel</button>
           <button onClick={()=>setQuery("AC repair near me")}>🔧 Services</button><button onClick={()=>setQuery("agriculture products or farm service near me")}>🌾 Agriculture</button>
         </div>
+        <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
+          <b>🏪 Can't find the business?</b>
+          <span>Suggest any legitimate local business. No Founder is required. The business starts as an unclaimed listing and the owner can claim it later.</span>
+          <button className="secondary" type="button" onClick={()=>setRole("SuggestBusiness")}>＋ Suggest a Business</button>
+        </div>
       </section>
 
       {searchResults.length > 0 && <section id="searchResults" className="roleSection">
@@ -702,7 +751,7 @@ export default function Home() {
           </div>)}
         </div>
       </section>}
-      {searchResults.length === 0 && authNotice && authNotice.includes("No") && <section id="searchResults" className="roleSection"><div className="status"><span>{authNotice}</span></div></section>}
+      {searchResults.length === 0 && authNotice && authNotice.includes("No") && <section id="searchResults" className="roleSection"><div className="status"><span>{authNotice}</span><button className="secondary" style={{marginTop:10}} onClick={()=>setRole("SuggestBusiness")}>＋ Suggest this business</button></div></section>}
       {selectedMerchant && <div className="modalBackdrop">
         <div className="modal">
           <button className="modalClose" onClick={()=>setSelectedMerchant(null)}>×</button>
@@ -863,8 +912,8 @@ export default function Home() {
       {role && <div className="modalBackdrop" onClick={()=>setRole(null)}>
         <div className="modal" onClick={e=>e.stopPropagation()}>
           <button className="close" onClick={()=>setRole(null)}>×</button>
-          <div className="roleIcon">{role==="MerchantWallet" ? "👛" : (roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍"))}</div>
-          <h2>{role==="MerchantWallet" ? "Merchant Wallet" : role==="WalletChooser" ? "Choose Your Wallet" : `${role} registration`}</h2>
+          <div className="roleIcon">{role==="MerchantWallet" ? "👛" : role==="SuggestBusiness" ? "🏪" : (roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍"))}</div>
+          <h2>{role==="MerchantWallet" ? "Merchant Wallet" : role==="WalletChooser" ? "Choose Your Wallet" : role==="SuggestBusiness" ? "Suggest a Business" : `${role} registration`}</h2>
           {role==="WalletChooser" ? <>
             <p>Connect your wallet to enter the correct GBK Loyalty account. Registered merchants open directly; new merchants can register after wallet connection.</p>
             <div className="walletChoiceGrid">
@@ -1037,7 +1086,7 @@ export default function Home() {
             <select className="modalSelect" value={merchantCategory} onChange={e=>setMerchantCategory(e.target.value)}>{businessCategories.map(x=><option key={x}>{x}</option>)}</select>
             <input placeholder="City" value={merchantCity} onChange={e=>setMerchantCity(e.target.value)}/>
             <input className="modalInput" placeholder="Founder referral code (optional)" value={founderReferralCode} onChange={e=>setFounderReferralCode(e.target.value.toUpperCase())}/>
-            <small>Optional. Anyone can list a business directly. Enter a verified Founder code only if this business was referred by that Founder.</small>
+            <small>Optional. A business owner can register directly. Founder referral is only needed when this business was personally referred by a Founder.</small>
             <select className="modalSelect" value={merchantOffer} onChange={e=>setMerchantOffer(e.target.value)}>
               <option value="5%">5% loyalty</option>
               <option value="10%">10% loyalty</option>
