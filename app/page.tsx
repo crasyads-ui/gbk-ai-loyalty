@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, getConnectedEvmWallet, approveMerchantRewardDistributor, getGbkWalletStatus, type LoyaltySession } from "../lib/loyalty";
+import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, getConnectedEvmWallet, approveMerchantRewardDistributor, getGbkWalletStatus, loyaltyReviewApi, type LoyaltySession } from "../lib/loyalty";
 
 const businessCategories = ["All Products & Services","Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries & Supermarkets","Fashion & Apparel","Electronics","Pharmacies & Health Stores","Salons & Beauty","AC Repair","Plumbing & Electrical","Home Services","Automotive & EV","Fuel & Charging","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education & Courses","Spoken English","Healthcare & Clinics","Real Estate","Agriculture & Farm Services","Seeds & Fertilizer","Farm Equipment","Crop Advisory","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops","Wholesale & Distribution","Manufacturing","Construction","Cleaning Services","Pet Services"];
 
@@ -100,6 +100,8 @@ export default function Home() {
   const [merchantStatus,setMerchantStatus]=useState<any>(null);
   const [merchantChainStatus,setMerchantChainStatus] = useState<{balanceRaw:string;allowanceRaw:string}|null>(null);
   const [merchantChainBusy,setMerchantChainBusy] = useState(false);
+  const [reviewQueue,setReviewQueue] = useState<any[]>([]);
+  const [reviewBusy,setReviewBusy] = useState(false);
   const isIndia = country === "India";
   const holderRewardMin = 0.7;
   const holderRewardMax = 6.3;
@@ -300,6 +302,27 @@ export default function Home() {
   const loadFounderNetwork = async (s?: LoyaltySession) => {
     const active=s||session||getStoredSession(); if(!active)return;
     try{const r=await loyaltyApi(active,"founder_network",{});setFounderNetwork({users:r.users||[],businesses:r.businesses||[]});}catch{}
+  };
+  const loadReviewQueue = async () => {
+    const active=session||getStoredSession();
+    if(!active){ setAuthNotice("Connect your Founder wallet first."); return; }
+    setReviewBusy(true); setAuthNotice("");
+    try {
+      const r=await loyaltyReviewApi(active,"review_queue",{});
+      setReviewQueue(r.suggestions||[]);
+      setRole("ReviewCenter");
+    } catch(e:any) { setAuthNotice(e.message||"Review queue could not be loaded."); }
+    finally { setReviewBusy(false); }
+  };
+  const decideReview = async (id:string, decision:"APPROVE"|"REJECT") => {
+    const active=session||getStoredSession(); if(!active)return;
+    setReviewBusy(true);
+    try {
+      await loyaltyReviewApi(active,"review_decision",{suggestion_id:id,decision});
+      setReviewQueue(q=>q.filter(x=>x.id!==id));
+      setAuthNotice(decision==="APPROVE" ? "Business approved as an unclaimed listing. Owner claim is still required for activation." : "Business suggestion rejected.");
+    } catch(e:any) { setAuthNotice(e.message||"Review action failed."); }
+    finally { setReviewBusy(false); }
   };
   const openFounder = async () => {
     setRole("Founder");
@@ -1141,6 +1164,26 @@ export default function Home() {
               <button className="primary" onClick={()=>connectWallet("customer")} disabled={apiBusy}>{apiBusy ? "Connecting…" : "Connect Wallet"}</button>
               <small>Supported in wallet browsers and compatible EVM wallets. Sign-in is handled by the wallet-linked account.</small>
             </div>
+          </> : role==="ReviewCenter" ? <>
+            <p><b>Automatic-first review.</b> Clean submissions are auto-approved for the unclaimed directory workflow. Flagged submissions are shown here for manual checking. Approval does not activate payments or GBK rewards; the owner must still claim and complete merchant activation.</p>
+            {authNotice && <div className="status" style={{marginBottom:12}}><span>{authNotice}</span></div>}
+            {reviewQueue.length===0 ? <div className="offerPreview"><b>✅ No manual review cases</b><span>The automatic screening queue is clear.</span></div> :
+              <div style={{display:"grid",gap:12}}>
+                {reviewQueue.map((s:any)=><div key={s.id} className="offerPreview">
+                  <b>{s.business_name}</b>
+                  <span>{s.category} · {s.city}, {s.country}</span>
+                  {s.address && <span>📍 {s.address}</span>}
+                  {s.phone && <span>📞 {s.phone}</span>}
+                  {s.website && <span>🌐 {s.website}</span>}
+                  {s.maps_url && <span>🗺️ Maps link supplied</span>}
+                  <span>Risk score: {s.auto_review_score} · Flags: {(s.auto_review_flags||[]).join(", ") || "None"}</span>
+                  <span>Status: {s.auto_review_status} · Submitted {new Date(s.created_at).toLocaleString()}</span>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:8}}>
+                    <button className="primary" type="button" disabled={reviewBusy} onClick={()=>decideReview(s.id,"APPROVE")}>✅ Approve Unclaimed</button>
+                    <button className="secondary" type="button" disabled={reviewBusy} onClick={()=>decideReview(s.id,"REJECT")}>❌ Reject</button>
+                  </div>
+                </div>)}
+              </div>}
           </> : role==="FounderUser" ? <>
             <p>Add a user to your Founder network. The referral is saved in GBK Loyalty so you can track it later.</p>
             <input placeholder="User full name" value={founderUserName} onChange={e=>setFounderUserName(e.target.value)}/>
@@ -1234,6 +1277,13 @@ export default function Home() {
               <b>Founder referral code</b>
               <span>Share this code with businesses you personally refer to GBK Loyalty.</span>
               <strong style={{fontSize:20,letterSpacing:1}}>{founderStatus.founder_referral_code || "Generated for your Founder account"}</strong>
+            </div>}
+            {founderStatus?.founder_verified && <div className="offerPreview" style={{marginTop:12}}>
+              <b>🛡️ Business Review Center</b>
+              <span>Automatic screening handles normal submissions. Only flagged or pending cases need manual review.</span>
+              <button className="secondary" type="button" style={{marginTop:10,width:"100%"}} onClick={loadReviewQueue} disabled={reviewBusy}>
+                {reviewBusy ? "Loading review queue…" : "Open Review Queue →"}
+              </button>
             </div>}
             {founderStatus?.founder_verified && <div className="founderNetworkList">
               <div className="offerPreview" style={{marginTop:12}}>
