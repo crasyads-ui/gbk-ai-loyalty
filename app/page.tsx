@@ -432,6 +432,7 @@ export default function Home() {
       await ensureProfile(session,"founder");
       const r = await loyaltyApi(session,"founder_verify",{wallet_address:walletAddress,founder_type:founderType,founder_tier:founderTier,tx_hash:founderTxHash.trim()});
       setFounderStatus(r.founder || null);
+      await loadFounderNetwork(session);
       setAuthNotice(r.verification?.benefits_active ? "Founder verified. 50% minimum GBK reserve is currently maintained." : "Founder transaction verified. Maintain the required 50% GBK reserve to keep Founder benefits active.");
     } catch(e:any) { setAuthNotice(e.message || "Founder verification failed."); }
     finally { setApiBusy(false); }
