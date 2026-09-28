@@ -276,8 +276,8 @@ export default function Home() {
     const targetCountry=founderBusinessCountry||(country!=="Global"?country:"");
     if(!founderBusinessName.trim()||!founderBusinessCity.trim()||!targetCountry){setAuthNotice("Enter the business name, city and country.");return;}
     setApiBusy(true);setAuthNotice("");
-    try{await loyaltyApi(active,"founder_add_business",{business_name:founderBusinessName.trim(),owner_name:founderBusinessOwner.trim()||null,phone:founderBusinessContact.includes("@")?null:founderBusinessContact.trim()||null,email:founderBusinessContact.includes("@")?founderBusinessContact.trim():null,category:founderBusinessCategory,country:targetCountry,city:founderBusinessCity.trim(),address:founderBusinessAddress.trim()||null,website:founderBusinessWebsite.trim()||null,loyalty_offer_percent:Number(founderBusinessOffer.replace("%",""))});await loadFounderNetwork(active);setFounderBusinessName("");setFounderBusinessOwner("");setFounderBusinessContact("");setFounderBusinessCity("");setFounderBusinessCountry("");setFounderBusinessAddress("");setFounderBusinessWebsite("");setAuthNotice("Business referral saved. Owner activation is required before public customer search.");setRole("Founder");}
-    catch(e:any){setAuthNotice(e.message||"Business referral could not be saved.");}finally{setApiBusy(false);}
+    try{await loyaltyApi(active,"founder_add_business",{business_name:founderBusinessName.trim(),owner_name:founderBusinessOwner.trim()||null,phone:founderBusinessContact.includes("@")?null:founderBusinessContact.trim()||null,email:founderBusinessContact.includes("@")?founderBusinessContact.trim():null,category:founderBusinessCategory,country:targetCountry,city:founderBusinessCity.trim(),address:founderBusinessAddress.trim()||null,website:founderBusinessWebsite.trim()||null,loyalty_offer_percent:Number(founderBusinessOffer.replace("%",""))});await loadFounderNetwork(active);setFounderBusinessName("");setFounderBusinessOwner("");setFounderBusinessContact("");setFounderBusinessCity("");setFounderBusinessCountry("");setFounderBusinessAddress("");setFounderBusinessWebsite("");setAuthNotice("New merchant saved. Owner activation is required before public customer search.");setRole("Founder");}
+    catch(e:any){setAuthNotice(e.message||"New merchant could not be saved.");}finally{setApiBusy(false);}
   };
   const refreshMerchantChainStatus = async (address?:string) => {
     const target = String(address || merchantWallet || walletAddress || "").trim();
@@ -789,10 +789,10 @@ export default function Home() {
       </section>
 
       <section className={`founderWorkspace roleOnlySection ${activeWalletRole==="founder" ? "founderVisible" : ""}">
-        <div className="sectionHead"><div><span className="eyebrow">FOUNDER NETWORK</span><h2>Country Founders can build the local GBK network</h2><p>Country Founders can add customers/users and businesses in their assigned country. Global Founders can add users and businesses globally.</p></div></div>
+        <div className="sectionHead"><div><span className="eyebrow">FOUNDER NETWORK</span><h2>Country Founders can build the local GBK network</h2><p>Country Founders can add customers and new merchants in their assigned country. Global Founders can add customers and new merchants globally.</p></div></div>
         <div className="founderGrid">
-          <div className="founderPanel"><div className="roleIcon">👥</div><h3>Add User</h3><p>Invite customers, community members and prospective users into GBK Loyalty.</p><button className="primary" onClick={()=>setRole("FounderUser")}>＋ Add User</button></div>
-          <div className="founderPanel"><div className="roleIcon">🏪</div><h3>Add Business</h3><p>Register hotels, restaurants, shops, services and other legitimate businesses.</p><button className="primary" onClick={()=>setRole("FounderBusiness")}>＋ Add Business</button></div>
+          <div className="founderPanel"><div className="roleIcon">👥</div><h3>Add Customer</h3><p>Add a customer/community member to your Founder network in GBK Loyalty.</p><button className="primary" onClick={()=>setRole("FounderUser")}>＋ Add Customer</button></div>
+          <div className="founderPanel"><div className="roleIcon">🏪</div><h3>Add New Merchant</h3><p>Register a new hotel, restaurant, shop, service or other legitimate merchant.</p><button className="primary" onClick={()=>setRole("FounderBusiness")}>＋ Add New Merchant</button></div>
           <div className="founderPanel"><div className="roleIcon">📋</div><h3>My Network</h3><p>View businesses added, users invited, active merchants, leads and loyalty activity.</p><button className="secondary" onClick={openFounder}>Open Founder Dashboard →</button></div>
         </div>
         <div className="categoryStrip"><b>Business categories:</b>{businessCategories.map(x=><span key={x}>{x}</span>)}</div>
@@ -1009,14 +1009,14 @@ export default function Home() {
               <small>Supported in wallet browsers and compatible EVM wallets. Sign-in is handled by the wallet-linked account.</small>
             </div>
           </> : role==="FounderUser" ? <>
-            <p>Add a user to your Founder network. The referral is saved in GBK Loyalty so you can track it later.</p>
+            <p>Add a customer to your Founder network. The customer referral is saved in GBK Loyalty so you can track it later.</p>
             <input placeholder="User full name" value={founderUserName} onChange={e=>setFounderUserName(e.target.value)}/>
             <input placeholder="Mobile or email" value={founderUserContact} onChange={e=>setFounderUserContact(e.target.value)}/>
             <select className="modalSelect" value={founderUserCountry||(country==="Global"?"":country)} onChange={e=>setFounderUserCountry(e.target.value)}><option value="">Select country</option>{countries.filter(x=>x!=="Global").map(x=><option key={x}>{x}</option>)}</select>
             <label className="check"><input type="checkbox"/> I confirm this person has agreed to be contacted/invited.</label>
-            <button className="primary" onClick={addFounderUser} disabled={apiBusy}>{apiBusy?"Saving…":"Save User Referral →"}</button>
+            <button className="primary" onClick={addFounderUser} disabled={apiBusy}>{apiBusy?"Saving…":"Add Customer →"}</button>
           </> : role==="FounderBusiness" ? <>
-            <p>Add a business referral to GBK Loyalty. It appears in your Founder network immediately and becomes public to customers after owner activation and funding.</p>
+            <p>Add a new merchant to GBK Loyalty. It appears in your Founder network immediately and becomes public to customers after owner activation and funding.</p>
             <input placeholder="Business name" value={founderBusinessName} onChange={e=>setFounderBusinessName(e.target.value)}/>
             <select className="modalSelect" value={founderBusinessCategory} onChange={e=>setFounderBusinessCategory(e.target.value)}>{businessCategories.filter(x=>x!=="All Products & Services").map(x=><option key={x}>{x}</option>)}</select>
             <input placeholder="Owner / contact name" value={founderBusinessOwner} onChange={e=>setFounderBusinessOwner(e.target.value)}/>
@@ -1107,8 +1107,8 @@ export default function Home() {
                 <b>👑 Founder Network</b>
                 <span>Add users and businesses directly from your verified Founder account.</span>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,marginTop:10}}>
-                  <button className="primary" type="button" onClick={()=>setRole("FounderUser")}>👤 Add User</button>
-                  <button className="primary" type="button" onClick={()=>setRole("FounderBusiness")}>🏪 Add Business</button>
+                  <button className="primary" type="button" onClick={()=>setRole("FounderUser")}>👤 Add Customer</button>
+                  <button className="primary" type="button" onClick={()=>setRole("FounderBusiness")}>🏪 Add New Merchant</button>
                 </div>
                 <button className="secondary" type="button" style={{marginTop:10,width:"100%"}} onClick={()=>loadFounderNetwork()}>↻ Refresh My Network</button>
               </div>
