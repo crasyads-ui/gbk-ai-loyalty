@@ -38,6 +38,10 @@ export default function Home() {
   const [merchantOffer,setMerchantOffer] = useState("10%");
   const [customOffer,setCustomOffer] = useState("25");
   const [shareNotice,setShareNotice] = useState("");
+  const [suggestedBusinessId,setSuggestedBusinessId] = useState("");
+  const [claimBusiness,setClaimBusiness] = useState<any|null>(null);
+  const [claimName,setClaimName] = useState("");
+  const [claimContact,setClaimContact] = useState("");
   const [installPrompt,setInstallPrompt] = useState<any>(null);
   const [installed,setInstalled] = useState(false);
   const [paymentGateway,setPaymentGateway] = useState("DIRECT");
@@ -98,6 +102,20 @@ export default function Home() {
   const holderRewardMax = 6.3;
 
   const selectCountry = (value:string) => { setCountry(value); const next = value === "Global" ? "USD" : currencyForCountry(value); setCurrency(next); setPaymentCurrency(next); try { localStorage.setItem("gbk_loyalty_country", value); localStorage.setItem("gbk_loyalty_currency", next); } catch {} };
+
+  useEffect(() => {
+    const claimId = new URLSearchParams(window.location.search).get("claim");
+    if(!claimId)return;
+    (async()=>{
+      try{
+        let active=getStoredSession();
+        if(!active) active=await signInAnonymously();
+        setSession(active);
+        const result=await loyaltyApi(active,"get_business_suggestion",{suggestion_id:claimId});
+        if(result?.suggestion){setClaimBusiness(result.suggestion);setRole("ClaimBusiness");}
+      }catch(e:any){setAuthNotice(e?.message||"Business link could not be opened.");}
+    })();
+  }, []);
 
   useEffect(() => {
     const w = window as any;
@@ -634,6 +652,24 @@ export default function Home() {
     } catch(e:any) { setAuthNotice(e?.message||"Business suggestion failed"); } finally { setApiBusy(false); }
   };
 
+  const submitClaim = async () => {
+    if(!claimBusiness?.id || claimName.trim().length<2 || claimContact.trim().length<4){setAuthNotice("Enter the owner name and phone or email.");return;}
+    setApiBusy(true);setAuthNotice("");
+    try{
+      let active=session||getStoredSession(); if(!active) active=await signInAnonymously(); setSession(active);
+      const result=await loyaltyApi(active,"claim_business",{suggestion_id:claimBusiness.id,claimant_name:claimName.trim(),claimant_contact:claimContact.trim()});
+      setAuthNotice(result?.status==="ALREADY_PENDING"?"A claim request is already pending.":"Claim request submitted. Verification is required before the business becomes an active merchant.");
+    }catch(e:any){setAuthNotice(e?.message||"Claim request failed");}finally{setApiBusy(false);}
+  };
+
+  const shareBusinessLink = async (id:string) => {
+    const url=`${window.location.origin}/?claim=${id}`;
+    try{
+      if(navigator.share) await navigator.share({title:"Claim your GBK Loyalty business",text:"Your business has been suggested on GBK Loyalty. Claim the listing here:",url});
+      else {await navigator.clipboard.writeText(url);setShareNotice("Owner claim link copied.");}
+    }catch{}
+  };
+
   const registerMerchant = async () => {
     if (role !== "Merchant") return;
     setApiBusy(true);
@@ -896,8 +932,8 @@ export default function Home() {
       {role && <div className="modalBackdrop" onClick={()=>setRole(null)}>
         <div className="modal" onClick={e=>e.stopPropagation()}>
           <button className="close" onClick={()=>setRole(null)}>×</button>
-          <div className="roleIcon">{role==="MerchantWallet" ? "👛" : role==="SuggestBusiness" ? "🏪" : (roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍"))}</div>
-          <h2>{role==="MerchantWallet" ? "Merchant Wallet" : role==="WalletChooser" ? "Choose Your Wallet" : role==="SuggestBusiness" ? "Suggest a Business" : `${role} registration`}</h2>
+          <div className="roleIcon">{role==="MerchantWallet" ? "👛" : role==="SuggestBusiness" || role==="ClaimBusiness" ? "🏪" : (roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍"))}</div>
+          <h2>{role==="MerchantWallet" ? "Merchant Wallet" : role==="WalletChooser" ? "Choose Your Wallet" : role==="SuggestBusiness" ? "Suggest a Business" : role==="ClaimBusiness" ? "Claim This Business" : `${role} registration`}</h2>
           {role==="SuggestBusiness" ? <>
             <p>Help GBK Loyalty grow faster globally. Anyone can suggest a legitimate business — no Founder is required and no wallet is required to submit the suggestion.</p>
             <div className="status"><span>🟡 Unclaimed first</span><small>The suggestion is reviewed before publication. The business owner must claim and activate the merchant profile before customers can place reward-eligible orders.</small></div>
@@ -911,6 +947,13 @@ export default function Home() {
             <input placeholder="Google Maps/share link (optional)" value={suggestBusinessMapsUrl} onChange={e=>setSuggestBusinessMapsUrl(e.target.value)}/>
             {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
             <button className="primary" type="button" onClick={suggestBusiness} disabled={apiBusy}>{apiBusy ? "Submitting…" : "Submit Business Suggestion →"}</button>
+            {suggestedBusinessId && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
+              <b>🔗 Owner claim link ready</b>
+              <span>Send this link to the business owner so they can claim the listing.</span>
+              <button className="secondary" type="button" onClick={()=>shareBusinessLink(suggestedBusinessId)}>📤 Share / Invite Owner</button>
+              {shareNotice && <small>{shareNotice}</small>}
+            </div>}
+
           </> : role==="WalletChooser" ? <>
             <p>Connect your wallet to enter the correct GBK Loyalty account. Registered merchants open directly; new merchants can register after wallet connection.</p>
             <div className="walletChoiceGrid">
