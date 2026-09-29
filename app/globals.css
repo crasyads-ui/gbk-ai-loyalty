@@ -203,3 +203,17 @@
 .founderWorkspace.founderVisible{display:block!important}
 .walletRoleGrid article[role="button"]{cursor:pointer}
 .walletRoleGrid article.walletRoleActive{border-color:#7c3aed;box-shadow:0 10px 30px rgba(124,58,237,.12)}
+
+/* Final mobile touch polish */
+button,a,select,input{font:inherit}
+@media(max-width:520px){
+button,.walletBtn,.installBtn,.secondary,.primary,.voiceBtn,.search button,.suggestions button,.bottomNav a{min-height:44px}
+input,select,.modal input,.modalSelect{font-size:16px}
+.modalBackdrop{padding:12px;padding-top:max(12px,env(safe-area-inset-top));padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.modal{max-height:calc(100vh - 24px);padding:20px 16px;border-radius:20px}
+.bottomNav{bottom:max(7px,env(safe-area-inset-bottom));padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.bottomNav a{display:grid;place-items:center;min-width:52px;line-height:1.1}
+.resultCard,.panel,.founderPanel,.walletChoice{overflow-wrap:anywhere}
+.resultCard .primary,.resultCard .secondary{width:100%;margin-top:10px}
+.merchantWalletActions>*{min-width:0;width:100%}
+}
