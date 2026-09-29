@@ -35,6 +35,7 @@ export default function Home() {
   const [speaking,setSpeaking] = useState(false);
   const [askQuery,setAskQuery] = useState("");
   const [askAnswer,setAskAnswer] = useState("");
+  const [askAiOpen,setAskAiOpen] = useState(false);
   const [language,setLanguage] = useState("English");
   const [country,setCountry] = useState("Global");
   const [currency,setCurrency] = useState("USD");
@@ -1024,7 +1025,7 @@ export default function Home() {
         </div>
       </section>}
       {searchResults.length === 0 && authNotice && authNotice.includes("No") && <section id="searchResults" className="roleSection"><div className="status"><span>{authNotice}</span></div></section>}
-      <section className="askGbkSection">
+      {askAiOpen && <div className="askAiModalBackdrop" onClick={()=>setAskAiOpen(false)}><section className="askGbkSection askAiModal" onClick={e=>e.stopPropagation()}>
         <div className="sectionHead">
           <div><span className="eyebrow">🤖 ASK GBK AI</span><h2>Ask anything about GBK Loyalty</h2><p>Get simple guidance for Customer, Merchant, Founder and Business Owner journeys. Choose your language and ask in your own words.</p></div>
           <button className="secondary" onClick={()=>{setAskQuery("");setAskAnswer("");}}>Clear</button>
@@ -1055,7 +1056,7 @@ export default function Home() {
           </div>
           <small>GBK AI answers should follow the selected language. For payment, reward and account status, the live GBK Loyalty system remains the source of truth.</small>
         </div>
-      </section>
+      </section></div>}
 
 
       {scannerOpen && <div className="modalBackdrop" onClick={()=>setScannerOpen(false)}>
@@ -1651,7 +1652,7 @@ export default function Home() {
         </div>
       </div>}
 
-      <nav className={`bottomNav${searchFocused ? " searchFocused" : ""}`}><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : activeWalletRole==="customer" ? setRole("Customer") : activeWalletRole==="founder" ? setRole("Founder") : connectWallet("merchant")}>👛<span>Wallet</span></a><a onClick={()=>setRole("Customer")}>☻<span>Profile</span></a></nav>
+      <nav className={`bottomNav${searchFocused ? " searchFocused" : ""}`}><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : activeWalletRole==="customer" ? setRole("Customer") : activeWalletRole==="founder" ? setRole("Founder") : connectWallet("merchant")}>👛<span>Wallet</span></a><a onClick={()=>setAskAiOpen(true)}>🤖<span>Ask AI</span></a></nav>
     </main>
   );
 }
