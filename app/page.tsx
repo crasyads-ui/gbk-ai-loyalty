@@ -23,7 +23,7 @@ const currencyForCountry = (value:string) => currencyMap[value] || "USD";
 
 const roles = [
   {icon:"👤",title:"Customer",text:"Find businesses, pay normally and earn eligible GBK Loyalty rewards.",items:["Earn GBK","Hold • Use • Transfer"]},
-  {icon:"🏪",title:"Merchant",text:"Register your business, accept the lead terms, choose a loyalty offer and maintain GBK reward balance in advance.",items:["5%–20% or Custom","Automatic rewards"]},
+  {icon:"🏪",title:"Merchant",text:"Register your business, connect your merchant wallet and activate. Add GBK to the reward wallet when eligible rewards need funding.",items:["5%–20% or Custom","Automatic rewards"]},
   {icon:"🌍",title:"Founder",text:"Country or Global Founder Members can onboard businesses and receive the Founder allocation from verified loyalty sales.",items:["Add users","Add businesses","Track earnings"]},
 ];
 
@@ -103,6 +103,8 @@ export default function Home() {
   const [merchantChainBusy,setMerchantChainBusy] = useState(false);
   const [reviewQueue,setReviewQueue] = useState<any[]>([]);
   const [reviewBusy,setReviewBusy] = useState(false);
+  const [claimQueue,setClaimQueue] = useState<any[]>([]);
+  const [claimBusy,setClaimBusy] = useState(false);
   const [scannerOpen,setScannerOpen] = useState(false);
   const [scannerBusy,setScannerBusy] = useState(false);
   const scannerVideoRef = useRef<HTMLVideoElement|null>(null);
@@ -327,6 +329,27 @@ export default function Home() {
       setRole("ReviewCenter");
     } catch(e:any) { setAuthNotice(e.message||"Review queue could not be loaded."); }
     finally { setReviewBusy(false); }
+  };
+  const loadClaimQueue = async () => {
+    const active=session||getStoredSession();
+    if(!active){ setAuthNotice("Connect your Founder wallet first."); return; }
+    setClaimBusy(true); setAuthNotice("");
+    try {
+      const r=await loyaltyReviewApi(active,"claim_queue",{});
+      setClaimQueue(r.claims||[]);
+      setRole("ClaimCenter");
+    } catch(e:any) { setAuthNotice(e.message||"Claim queue could not be loaded."); }
+    finally { setClaimBusy(false); }
+  };
+  const decideClaim = async (id:string, decision:"APPROVE"|"REJECT") => {
+    const active=session||getStoredSession(); if(!active)return;
+    setClaimBusy(true);
+    try {
+      await loyaltyReviewApi(active,"claim_decision",{claim_id:id,decision});
+      setClaimQueue(q=>q.filter(x=>x.id!==id));
+      setAuthNotice(decision==="APPROVE" ? "Claim approved. The owner can now connect the Merchant Wallet and complete activation." : "Claim rejected. The listing is available for further review.");
+    } catch(e:any) { setAuthNotice(e.message||"Claim action failed."); }
+    finally { setClaimBusy(false); }
   };
   const decideReview = async (id:string, decision:"APPROVE"|"REJECT") => {
     const active=session||getStoredSession(); if(!active)return;
@@ -1074,7 +1097,7 @@ export default function Home() {
       </section>
 
       <section className="merchant">
-        <div><span className="eyebrow">FOR BUSINESSES</span><h2>Activate loyalty. Receive eligible leads.</h2><p>Register any legitimate product or service business, accept the commercial terms, choose 5%–20% or a custom percentage, connect your wallet and maintain enough GBK reward balance for eligible orders.</p></div>
+        <div><span className="eyebrow">FOR BUSINESSES</span><h2>Activate loyalty. Receive eligible leads.</h2><p>Register any legitimate product or service business, accept the commercial terms, choose 5%–20% or a custom percentage, connect your wallet and activate. GBK funding is added when eligible rewards need it.</p></div>
         <button onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Connecting…" : "Connect / Register Merchant →"}</button>
       </section>
 
@@ -1180,7 +1203,7 @@ export default function Home() {
             <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
             {merchantStatus?.merchant?.invitation_status !== "ACCEPTED" && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
               <b>Merchant activation</b>
-              <span>Accept the GBK Loyalty terms to activate this business for customer search and orders. Activation verifies the connected merchant wallet and uses its current GBK balance as the reward funding allowance.</span>
+              <span>Accept the GBK Loyalty terms to activate this business for customer search and orders. Activation verifies the connected merchant wallet. A GBK balance is not required just to activate; the connected wallet is used when reward funding is needed.</span>
               <button className="primary" disabled={apiBusy} onClick={async()=>{
                 if(!session || !merchantStatus?.merchant?.id) return;
                 setApiBusy(true); setAuthNotice("");
@@ -1258,6 +1281,23 @@ export default function Home() {
               <button className="primary" onClick={()=>connectWallet("customer")} disabled={apiBusy}>{apiBusy ? "Connecting…" : "Connect Wallet"}</button>
               <small>Supported in wallet browsers and compatible EVM wallets. Sign-in is handled by the wallet-linked account.</small>
             </div>
+          </> : role==="ClaimCenter" ? <>
+            <p><b>Business Claims</b> — verify owner or authorized representative claims before merchant activation.</p>
+            {authNotice && <div className="status" style={{marginBottom:12}}><span>{authNotice}</span></div>}
+            {claimQueue.length===0 ? <div className="offerPreview"><b>✅ No pending claims</b><span>New owner claims will appear here after submission.</span></div> :
+              <div style={{display:"grid",gap:12}}>
+                {claimQueue.map((c:any)=><div key={c.id} className="offerPreview">
+                  <b>{c.suggestion?.business_name || "Business claim"}</b>
+                  <span>{[c.suggestion?.category,c.suggestion?.city,c.suggestion?.country].filter(Boolean).join(" · ")}</span>
+                  <span>👤 Claimant: {c.claimant_name}</span>
+                  <span>📞 Contact: {c.claimant_contact}</span>
+                  <span>Submitted: {new Date(c.created_at).toLocaleString()}</span>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:8}}>
+                    <button className="primary" type="button" disabled={claimBusy} onClick={()=>decideClaim(c.id,"APPROVE")}>✅ Approve Claim</button>
+                    <button className="secondary" type="button" disabled={claimBusy} onClick={()=>decideClaim(c.id,"REJECT")}>❌ Reject</button>
+                  </div>
+                </div>)}
+              </div>}
           </> : role==="ReviewCenter" ? <>
             <p><b>Automatic-first review.</b> Clean submissions are auto-approved for the unclaimed directory workflow. Flagged submissions are shown here for manual checking. Approval does not activate payments or GBK rewards; the owner must still claim and complete merchant activation.</p>
             {authNotice && <div className="status" style={{marginBottom:12}}><span>{authNotice}</span></div>}
@@ -1299,7 +1339,7 @@ export default function Home() {
             <label className="check"><input type="checkbox"/> Business owner has agreed to the listing and GBK Loyalty terms.</label>
             <button className="primary" onClick={addFounderBusiness} disabled={apiBusy}>{apiBusy?"Saving…":"Save Business Referral →"}</button>
           </> : role==="Merchant" ? <>
-            <p>Start your merchant setup. You will confirm your loyalty and lead terms before activation.</p>
+            <p>Start your merchant setup. Connect your merchant wallet, choose your loyalty offer and activate. A GBK balance is not required just to activate.</p>
             <input placeholder="Business name" value={merchantBusinessName} onChange={e=>setMerchantBusinessName(e.target.value)}/>
             <input placeholder="Owner name" value={merchantOwnerName} onChange={e=>setMerchantOwnerName(e.target.value)}/>
             <input placeholder="Phone (optional)" value={merchantPhone} onChange={e=>setMerchantPhone(e.target.value)}/>
@@ -1377,6 +1417,9 @@ export default function Home() {
               <span>Automatic screening handles normal submissions. Only flagged or pending cases need manual review.</span>
               <button className="secondary" type="button" style={{marginTop:10,width:"100%"}} onClick={loadReviewQueue} disabled={reviewBusy}>
                 {reviewBusy ? "Loading review queue…" : "Open Review Queue →"}
+              </button>
+              <button className="secondary" type="button" style={{marginTop:8,width:"100%"}} onClick={loadClaimQueue} disabled={claimBusy}>
+                {claimBusy ? "Loading claim requests…" : "Open Business Claims →"}
               </button>
             </div>}
             {founderStatus?.founder_verified && <div className="founderNetworkList">
