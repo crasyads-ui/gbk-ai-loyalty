@@ -1027,6 +1027,18 @@ export default function Home() {
               {shareNotice && <small>{shareNotice}</small>}
             </div>}
 
+          </> : role==="ClaimBusiness" ? <>
+            <p>Claim this business as the owner or an authorized representative.</p>
+            {claimBusiness && <div className="offerPreview" style={{marginBottom:12}}>
+              <b>{claimBusiness.business_name}</b>
+              <span>{[claimBusiness.category,claimBusiness.city,claimBusiness.country].filter(Boolean).join(" • ")}</span>
+              <span>After your claim is submitted, GBK Loyalty will verify the business before merchant activation.</span>
+            </div>}
+            <input placeholder="Owner / authorized representative name *" value={claimName} onChange={e=>setClaimName(e.target.value)}/>
+            <input placeholder="Phone or email *" value={claimContact} onChange={e=>setClaimContact(e.target.value)}/>
+            {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
+            <button className="primary" type="button" onClick={submitClaim} disabled={apiBusy}>{apiBusy ? "Submitting claim…" : "Submit Claim →"}</button>
+          
           </> : role==="WalletChooser" ? <>
             <p>Connect your wallet to enter the correct GBK Loyalty account. Registered merchants open directly; new merchants can register after wallet connection.</p>
             <div className="walletChoiceGrid">
