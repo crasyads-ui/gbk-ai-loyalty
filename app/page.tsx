@@ -46,6 +46,7 @@ export default function Home() {
   const [claimBusiness,setClaimBusiness] = useState<any|null>(null);
   const [claimName,setClaimName] = useState("");
   const [claimContact,setClaimContact] = useState("");
+  const [claimSubmitted,setClaimSubmitted] = useState(false);
   const [installPrompt,setInstallPrompt] = useState<any>(null);
   const [installed,setInstalled] = useState(false);
   const [paymentGateway,setPaymentGateway] = useState("DIRECT");
@@ -839,6 +840,7 @@ export default function Home() {
     try{
       let active=session||getStoredSession(); if(!active) active=await signInAnonymously(); setSession(active);
       const result=await loyaltyApi(active,"claim_business",{suggestion_id:claimBusiness.id,claimant_name:claimName.trim(),claimant_contact:claimContact.trim()});
+      setClaimSubmitted(result?.status !== "ALREADY_PENDING");
       setAuthNotice(result?.status==="ALREADY_PENDING"?"A claim request is already pending.":"Claim request submitted. Verification is required before the business becomes an active merchant.");
     }catch(e:any){setAuthNotice(e?.message||"Claim request failed");}finally{setApiBusy(false);}
   };
@@ -1209,17 +1211,47 @@ export default function Home() {
             </div>}
 
           </> : role==="ClaimBusiness" ? <>
-            <p>Claim this business as the owner or an authorized representative.</p>
-            {claimBusiness && <div className="offerPreview" style={{marginBottom:12}}>
-              <b>{claimBusiness.business_name}</b>
-              <span>{[claimBusiness.category,claimBusiness.city,claimBusiness.country].filter(Boolean).join(" • ")}</span>
-              <span>After your claim is submitted, GBK Loyalty will verify the business before merchant activation.</span>
+            <p><b>This is an unclaimed business listing.</b> If you are the owner or an authorized representative, you can claim it and manage the business after verification.</p>
+            {claimBusiness && <div className="offerPreview" style={{display:"grid",gap:8,marginBottom:12}}>
+              <b>🏪 {claimBusiness.business_name}</b>
+              <span>📍 {[claimBusiness.category,claimBusiness.city,claimBusiness.country].filter(Boolean).join(" • ")}</span>
+              <div className="status"><span>🟡 UNCLAIMED BUSINESS</span><small>This listing helps customers discover the business. It is not yet a verified GBK Loyalty merchant and is not reward-active.</small></div>
             </div>}
-            <input placeholder="Owner / authorized representative name *" value={claimName} onChange={e=>setClaimName(e.target.value)}/>
-            <input placeholder="Phone or email *" value={claimContact} onChange={e=>setClaimContact(e.target.value)}/>
-            {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
-            <button className="primary" type="button" onClick={submitClaim} disabled={apiBusy}>{apiBusy ? "Submitting claim…" : "Submit Claim →"}</button>
-          
+            <div className="offerPreview" style={{display:"grid",gap:8}}>
+              <b>✨ What you get after verification</b>
+              <span>✅ Manage your business information</span>
+              <span>📲 Add your UPI/payment details</span>
+              <span>🎁 Create GBK customer offers</span>
+              <span>📊 View customer orders and eligible rewards</span>
+              <span>👥 Participate in the GBK Loyalty network</span>
+              <span>🔗 Promote your business to GBK customers</span>
+            </div>
+            <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
+              <b>🔄 How it works</b>
+              <span><b>1. Claim</b> — tell us who you are.</span>
+              <span><b>2. Verify</b> — GBK reviews the owner/authorized representative claim.</span>
+              <span><b>3. Complete profile</b> — update business and payment information.</span>
+              <span><b>4. Connect wallet</b> — connect the merchant GBK wallet.</span>
+              <span><b>5. Activate</b> — accept the merchant terms and become a verified merchant.</span>
+            </div>
+            <div className="status" style={{marginTop:12}}>
+              <span>💡 No claim? No problem.</span>
+              <small>The business can remain visible as an unclaimed listing. The owner can claim it later.</small>
+            </div>
+            <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
+              <b>Business status</b>
+              <span>🟡 Unclaimed → 🔵 Claim Pending → 🟢 Verified Merchant</span>
+              <small>Only a verified merchant can activate reward-eligible loyalty orders.</small>
+            </div>
+            {!claimSubmitted ? <>
+              <input placeholder="Owner / authorized representative name *" value={claimName} onChange={e=>setClaimName(e.target.value)}/>
+              <input placeholder="Phone or email *" value={claimContact} onChange={e=>setClaimContact(e.target.value)}/>
+              {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
+              <button className="primary" type="button" onClick={submitClaim} disabled={apiBusy}>{apiBusy ? "Submitting claim…" : "👉 Claim This Business — Submit →"}</button>
+            </> : <div className="status" style={{marginTop:12}}>
+              <span>🔵 CLAIM PENDING</span>
+              <small>Your claim has been submitted. GBK will verify the owner/authorized representative before merchant activation.</small>
+            </div>}
           </> : role==="WalletChooser" ? <>
             <p>Connect your wallet to enter the correct GBK Loyalty account. Registered merchants open directly; new merchants can register after wallet connection.</p>
             <div className="walletChoiceGrid">
