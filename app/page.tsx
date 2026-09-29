@@ -595,7 +595,7 @@ export default function Home() {
         const controls = await reader.decodeFromConstraints({video:{facingMode:{ideal:"environment"}}}, scannerVideoRef.current, (result) => {
           if (cancelled || !result) return;
           const value = result.getText();
-          try { controls?.stop?.(); } catch {}
+          try { scannerControlsRef.current?.stop?.(); } catch {}
           openScannedBusiness(value);
         });
         if (cancelled) { try { controls.stop(); } catch {} }
@@ -607,6 +607,28 @@ export default function Home() {
     const timer = window.setTimeout(start,120);
     return () => { cancelled=true; window.clearTimeout(timer); try { scannerControlsRef.current?.stop?.(); } catch {} scannerControlsRef.current=null; };
   }, [scannerOpen]);
+
+  const scanQrImage = async (file: File) => {
+    if (!file) return;
+    setScannerBusy(true);
+    setAuthNotice("");
+    try {
+      const reader = new BrowserQRCodeReader();
+      const dataUrl = await new Promise<string>((resolve,reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result || ""));
+        fr.onerror = () => reject(new Error("Could not read the image."));
+        fr.readAsDataURL(file);
+      });
+      const result = await reader.decodeFromImageUrl(dataUrl);
+      if (!result) throw new Error("No QR code found in this image.");
+      openScannedBusiness(result.getText());
+    } catch (e:any) {
+      setAuthNotice(e?.message || "No GBK Loyalty QR code was found. Try a clearer image.");
+    } finally {
+      setScannerBusy(false);
+    }
+  };
 
   const spokenSummary = (results:any[]) => {
     if (!results.length) {
@@ -933,7 +955,12 @@ export default function Home() {
             <video ref={scannerVideoRef} autoPlay muted playsInline style={{width:"100%",display:"block",aspectRatio:"1/1",objectFit:"cover"}} />
             <div style={{position:"absolute",inset:"18%",border:"3px solid #fff",borderRadius:18,pointerEvents:"none"}} />
           </div>
-          <div className="status" style={{marginTop:12}}><span>{scannerBusy ? "📷 Starting camera / scanning…" : "🟢 Camera ready — point at the merchant QR"}</span></div>
+          <div className="status" style={{marginTop:12}}><span>{scannerBusy ? "📷 Scanning…" : "🟢 Camera ready — point at the merchant QR"}</span></div>
+          <label className="secondary" style={{display:"block",textAlign:"center",cursor:"pointer",marginTop:10}}>
+            🖼️ Upload QR Image
+            <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const file=e.target.files?.[0]; if(file) scanQrImage(file); e.currentTarget.value="";}} disabled={scannerBusy}/>
+          </label>
+          <small style={{display:"block",textAlign:"center",marginTop:8}}>Already have a screenshot or QR photo? Upload it here.</small>
           {authNotice && <div className="notice" style={{marginTop:10}}>{authNotice}</div>}
           <button className="secondary" onClick={()=>setScannerOpen(false)}>Cancel</button>
         </div>
