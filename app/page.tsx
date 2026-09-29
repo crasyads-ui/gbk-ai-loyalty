@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { BrowserQRCodeReader } from "@zxing/browser";
 import QRCode from "qrcode";
 import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, getConnectedEvmWallet, approveMerchantRewardDistributor, getGbkWalletStatus, loyaltyReviewApi, type LoyaltySession } from "../lib/loyalty";
 
@@ -102,7 +103,20 @@ export default function Home() {
   const [merchantChainBusy,setMerchantChainBusy] = useState(false);
   const [reviewQueue,setReviewQueue] = useState<any[]>([]);
   const [reviewBusy,setReviewBusy] = useState(false);
+  const [scannerOpen,setScannerOpen] = useState(false);
+  const [scannerBusy,setScannerBusy] = useState(false);
+  const scannerVideoRef = useRef<HTMLVideoElement|null>(null);
+  const scannerControlsRef = useRef<any>(null);
   const isIndia = country === "India";
+  const visibleSearchResults = (() => {
+    const byKey = new Map<string, any>();
+    for (const item of searchResults) {
+      const key = [String(item.business_name||"").trim().toLowerCase(), String(item.city||"").trim().toLowerCase(), String(item.country||"").trim().toLowerCase()].join("|");
+      const existing = byKey.get(key);
+      if (!existing || (existing.unclaimed && !item.unclaimed)) byKey.set(key,item);
+    }
+    return Array.from(byKey.values());
+  })();
   const holderRewardMin = 0.7;
   const holderRewardMax = 6.3;
 
@@ -525,6 +539,52 @@ export default function Home() {
       synth.speak(utter);
     } catch {}
   };
+  const openScannedBusiness = async (text:string) => {
+    try {
+      const parsed = new URL(text);
+      const merchantId = parsed.searchParams.get("merchant");
+      if (!merchantId) throw new Error("This QR is not a GBK Loyalty merchant QR.");
+      setScannerBusy(true);
+      let active = session || getStoredSession();
+      if (!active) active = await signInAnonymously();
+      setSession(active);
+      const result = await loyaltyApi(active,"get_merchant",{merchant_id:merchantId});
+      if (!result?.merchant) throw new Error("Merchant not found or not active.");
+      setSelectedMerchant(result.merchant);
+      setScannerOpen(false);
+      setAuthNotice("Merchant found. Enter your purchase amount to continue.");
+    } catch (e:any) {
+      setAuthNotice(e?.message || "Could not open this GBK Loyalty QR.");
+    } finally { setScannerBusy(false); }
+  };
+  useEffect(() => {
+    if (!scannerOpen) {
+      try { scannerControlsRef.current?.stop?.(); } catch {}
+      scannerControlsRef.current = null;
+      return;
+    }
+    let cancelled = false;
+    const start = async () => {
+      if (!scannerVideoRef.current) return;
+      setScannerBusy(true);
+      try {
+        const reader = new BrowserQRCodeReader();
+        const controls = await reader.decodeFromConstraints({video:{facingMode:{ideal:"environment"}}}, scannerVideoRef.current, (result) => {
+          if (cancelled || !result) return;
+          const value = result.getText();
+          try { controls?.stop?.(); } catch {}
+          openScannedBusiness(value);
+        });
+        if (cancelled) { try { controls.stop(); } catch {} }
+        else scannerControlsRef.current = controls;
+      } catch (e:any) {
+        if (!cancelled) setAuthNotice("Camera access is required. Allow camera permission and try again.");
+      } finally { if (!cancelled) setScannerBusy(false); }
+    };
+    const timer = window.setTimeout(start,120);
+    return () => { cancelled=true; window.clearTimeout(timer); try { scannerControlsRef.current?.stop?.(); } catch {} scannerControlsRef.current=null; };
+  }, [scannerOpen]);
+
   const spokenSummary = (results:any[]) => {
     if (!results.length) {
       speakText(language === "తెలుగు" ? "మీ అభ్యర్థనకు సరిపడే GBK AI Loyalty వ్యాపారాలు ప్రస్తుతం కనిపించలేదు." :
@@ -814,15 +874,16 @@ export default function Home() {
           <button onClick={()=>setQuery("AC repair near me")}>🔧 Services</button><button onClick={()=>setQuery("agriculture products or farm service near me")}>🌾 Agriculture</button>
         </div>
         <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
-          <b>🏪 Can't find the business?</b><span>Suggest any legitimate local business. No Founder is required. The business starts as an unclaimed listing and the owner can claim it later.</span>
-          <button className="secondary" type="button" onClick={()=>setRole("SuggestBusiness")}>＋ Suggest a Business</button>
+          <b>📷 Customer QR Scanner</b><span>Scan a participating merchant QR with your phone camera to open the business directly.</span>
+          <button className="primary" type="button" onClick={()=>{setScannerOpen(true);setAuthNotice("");}}>📷 Scan Merchant QR</button>
+          <button className="secondary" type="button" onClick={()=>setRole("SuggestBusiness")}>＋ Add a Business</button>
         </div>
       </section>
 
       {searchResults.length > 0 && <section id="searchResults" className="roleSection">
-        <div className="sectionHead"><div><span className="eyebrow">BUSINESSES & LOCAL LISTINGS</span><h2>Choose a business</h2><p>Active merchants can accept eligible purchases. Community listings are shown as unclaimed until the owner claims and activates them.</p></div><button className="secondary voiceReadBtn" onClick={()=>spokenSummary(searchResults)}>{speaking ? "🔊 Speaking…" : "🔊 Read results aloud"}</button></div>
+        <div className="sectionHead"><div><span className="eyebrow">BUSINESSES & LOCAL LISTINGS</span><h2>Choose a business</h2><p>Active merchants are shown once. Community listings appear only when no active merchant exists for the same business.</p></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button className="secondary" onClick={()=>{setScannerOpen(true);setAuthNotice("");}}>📷 Scan QR</button><button className="secondary voiceReadBtn" onClick={()=>spokenSummary(visibleSearchResults)}>{speaking ? "🔊 Speaking…" : "🔊 Read results aloud"}</button></div></div>
         <div className="roleGrid">
-          {searchResults.map((m:any)=><div className="roleCard" key={m.id + (m.listing_type || "MERCHANT")}>
+          {visibleSearchResults.map((m:any)=><div className="roleCard" key={m.id + (m.listing_type || "MERCHANT")}>
             <div className="roleIcon">🏪</div>
             <h3>{m.business_name}</h3>
             <p>{[m.category,m.city,m.country].filter(Boolean).join(" • ")}</p>
@@ -839,6 +900,21 @@ export default function Home() {
         </div>
       </section>}
       {searchResults.length === 0 && authNotice && authNotice.includes("No") && <section id="searchResults" className="roleSection"><div className="status"><span>{authNotice}</span></div></section>}
+      {scannerOpen && <div className="modalBackdrop" onClick={()=>setScannerOpen(false)}>
+        <div className="modal" onClick={e=>e.stopPropagation()}>
+          <button className="close" onClick={()=>setScannerOpen(false)}>×</button>
+          <div className="roleIcon">📷</div>
+          <h2>Scan Merchant QR</h2>
+          <p>Point your camera at the GBK Loyalty QR displayed by the merchant.</p>
+          <div style={{background:"#111",borderRadius:18,overflow:"hidden",position:"relative",minHeight:280}}>
+            <video ref={scannerVideoRef} autoPlay muted playsInline style={{width:"100%",display:"block",aspectRatio:"1/1",objectFit:"cover"}} />
+            <div style={{position:"absolute",inset:"18%",border:"3px solid #fff",borderRadius:18,pointerEvents:"none"}} />
+          </div>
+          <div className="status" style={{marginTop:12}}><span>{scannerBusy ? "📷 Starting camera / scanning…" : "🟢 Camera ready — point at the merchant QR"}</span></div>
+          {authNotice && <div className="notice" style={{marginTop:10}}>{authNotice}</div>}
+          <button className="secondary" onClick={()=>setScannerOpen(false)}>Cancel</button>
+        </div>
+      </div>}
       {selectedMerchant && <div className="modalBackdrop">
         <div className="modal">
           <button className="modalClose" onClick={()=>setSelectedMerchant(null)}>×</button>
@@ -917,7 +993,7 @@ export default function Home() {
         <div className="panel">
           <span className="eyebrow">MERCHANT-FUNDED LOYALTY</span>
           <h2>One offer. Automatic distribution.</h2>
-          <p>The merchant agrees to the loyalty offer and maintains GBK in advance. The merchant does not manually approve every reward.</p>
+          <p>The merchant activates first. GBK funding is added to the connected merchant wallet when needed for eligible rewards; the merchant does not manually approve every reward.</p>
           <div className="formula"><span>Customer</span><strong>60%</strong><span>Founder</span><strong>20%</strong><span>Platform</span><strong>20%</strong></div>
           <small>Example: 10% merchant offer → 6% customer + 2% Founder + 2% platform.</small>
         </div>
@@ -926,7 +1002,7 @@ export default function Home() {
           <h2>GBK AI provides leads + orders</h2>
           <p>GBK AI searches eligible registered businesses for the customer request and can automatically create and route the order/request to the selected merchant. The merchant controls the actual product/service, price and fulfilment.</p>
           <div className="status">🟢 Merchant active <span>Eligible for GBK AI leads + orders</span></div>
-          <div className="status paused">⏸ Reward balance low <span>Top up GBK to receive new reward-eligible orders</span></div>
+          <div className="status paused">⏸ Reward balance low <span>Top up GBK when an eligible reward needs additional funding; merchant visibility remains active.</span></div>
         </div>
       </section>
 
@@ -943,12 +1019,12 @@ export default function Home() {
       <section className="merchantRules roleOnlySection">
         <div><span className="eyebrow">MERCHANT TERMS</span><h2>Simple rules before activation</h2></div>
         <div className="ruleGrid">
-          <div><b>01 · 100% order balance</b><p>Before an eligible order proceeds, the merchant must have 100% of the GBK value required for that order’s selected loyalty percentage. No partial funding.</p></div>
+          <div><b>01 · Activate first</b><p>A verified merchant can activate without a GBK balance. The connected merchant wallet is used for reward funding when an eligible reward is due.</p></div>
           <div><b>02 · Choose loyalty</b><p>Merchant selects 5%, 10%, 15%, 20% or a custom loyalty percentage.</p></div>
           <div><b>03 · Automatic split</b><p>The selected merchant offer is allocated 60% to the customer, 20% to the Founder/referrer and 20% to the GBK platform.</p></div>
           <div><b>04 · Lead commission</b><p>Merchant can accept a separate lead commission before receiving eligible leads.</p></div>
           <div><b>05 · Verified transaction</b><p>No reward is released merely because an order was sent or a payment button was clicked. Payment/order completion must be verified.</p></div>
-          <div><b>06 · Insufficient balance</b><p>If the full required GBK balance is unavailable, the reward-eligible order is paused until the merchant funds enough GBK.</p></div>
+          <div><b>06 · Low reward balance</b><p>If the connected wallet does not have enough GBK for an eligible reward, the merchant stays visible and active while that reward waits for sufficient funding.</p></div>
         </div>
       </section>
 
@@ -973,7 +1049,7 @@ export default function Home() {
     <article><div className="icon">🌍</div><h3>Founder Wallet</h3><p>Receive the qualifying Founder allocation when eligible loyalty activity is attributed to the Founder.</p></article>
     <article><div className="icon">🏢</div><h3>Platform</h3><p>Operates discovery, marketplace, loyalty, verification and reward settlement infrastructure and receives its defined platform allocation.</p></article>
   </div>
-  <div className="walletFlow"><b>Customer</b><span>Find → Buy → Earn</span><b>Merchant</b><span>Serve → Fund Rewards</span><b>Founder</b><span>Connect → Qualify</span><b>Platform</b><span>Operate → Settle</span></div>
+  <div className="walletFlow"><b>Customer</b><span>Scan → Pay → Earn</span><b>Merchant</b><span>Serve → Fund Rewards</span><b>Founder</b><span>Connect → Qualify</span><b>Platform</b><span>Operate → Settle</span></div>
 </section>
 
 <section className="how">
