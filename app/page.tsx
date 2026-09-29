@@ -697,7 +697,7 @@ export default function Home() {
         // Direct/Cash merchants do not use an online gateway. Keep the order active
         // so the merchant can verify the payment manually.
         if (m?.payment_provider === "DIRECT" || m?.payment_method === "CASH") {
-          setAuthNotice("Order sent to the merchant. Pay the merchant directly; the merchant must verify the payment before your GBK reward can be released.");
+          setAuthNotice(`Order ${paid?.payment?.order_reference||created?.order_reference||created?.order?.order_reference||""} created. Pay the merchant directly; once the payment provider confirms the matching order reference, your GBK reward is released automatically.`);
           setSelectedMerchant(null);
           return;
         }
@@ -722,7 +722,7 @@ export default function Home() {
               handler:async(response:any)=>{
                 try{
                   const verified=await loyaltyApi(activeSession,"payment_verify",{order_id:paid.payment.gbk_order_id,payment_id:response.razorpay_payment_id,signature:response.razorpay_signature});
-                  setAuthNotice(verified?.settlement?.status==="REWARD_PREPARED" ? "Payment verified and GBK reward prepared." : "Payment verified. Reward settlement is waiting for merchant completion or funding.");
+                  setAuthNotice(verified?.settlement?.status==="SETTLED" ? "Payment verified. GBK reward released automatically." : verified?.settlement?.status==="REWARD_PREPARED" ? "Payment verified and GBK reward prepared." : "Payment verified. Automatic reward settlement is waiting for merchant GBK funding or blockchain settlement.");
                 }catch(e:any){setAuthNotice(e.message||"Payment verification failed.");}
                 resolve();
               },
