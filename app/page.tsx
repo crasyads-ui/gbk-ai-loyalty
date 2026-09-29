@@ -66,6 +66,7 @@ export default function Home() {
   const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
   const [orderAmount,setOrderAmount] = useState("");
   const [currentOrderReference,setCurrentOrderReference] = useState("");
+  const [upiPayment,setUpiPayment] = useState<any|null>(null);
   const [merchantBusinessName,setMerchantBusinessName]=useState("");
   const [founderReferralCode,setFounderReferralCode]=useState("");
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
@@ -723,6 +724,7 @@ export default function Home() {
         if (m?.payment_provider === "DIRECT" || m?.payment_method === "CASH") {
           const ref = paid?.payment?.order_reference||created?.order_reference||created?.order?.order_reference||"";
           setCurrentOrderReference(ref);
+          setUpiPayment(paid?.payment||null);
           setAuthNotice(`ORDER CREATED • ${ref}. Pay the merchant directly. After verified payment confirmation for this order, your GBK reward is released automatically.`);
           return;
         }
@@ -731,6 +733,7 @@ export default function Home() {
       if (paid?.payment?.provider === "DIRECT") {
         const ref = paid?.payment?.order_reference||created?.order_reference||created?.order?.order_reference||"";
         setCurrentOrderReference(ref);
+        setUpiPayment(paid?.payment||null);
         setAuthNotice(`ORDER CREATED • ${ref}. Pay the merchant directly. After verified payment confirmation for this order, your GBK reward is released automatically.`);
         return;
       }
@@ -987,11 +990,21 @@ export default function Home() {
             <input className="modalInput" inputMode="decimal" type="number" min="0.01" step="0.01" value={orderAmount} onChange={e=>setOrderAmount(e.target.value)} placeholder={country==="India" ? "Enter purchase amount in INR" : "Enter purchase amount in local currency"} />
           </label>
           {authNotice && <div className="notice" style={{margin:"12px 0"}}>{authNotice}</div>}
+          {upiPayment?.upi_links && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
+            <b>📲 Pay ₹{upiPayment.amount_major} by UPI</b>
+            <small>{upiPayment.upi_id ? `Merchant UPI: ${upiPayment.upi_id}` : "Merchant UPI payment details are not configured."}</small>
+            {upiPayment.upi_links.phonepe && <a className="primary" href={upiPayment.upi_links.phonepe}>🟣 Pay with PhonePe</a>}
+            {upiPayment.upi_links.googlepay && <a className="primary" href={upiPayment.upi_links.googlepay}>🟢 Pay with Google Pay</a>}
+            {upiPayment.upi_links.paytm && <a className="primary" href={upiPayment.upi_links.paytm}>🔵 Pay with Paytm</a>}
+            {upiPayment.upi_links.bhim && <a className="secondary" href={upiPayment.upi_links.bhim}>🏦 Pay with BHIM</a>}
+            {upiPayment.upi_links.generic && <a className="secondary" href={upiPayment.upi_links.generic}>📱 Open UPI / Other app</a>}
+            <small>Payment app opening is not payment verification. GBK reward is released only after verified payment confirmation.</small>
+          </div>}
           <small>{selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH"
             ? "Pay the merchant directly. The merchant will verify the payment before any GBK reward is released."
             : "Continue to the merchant's configured payment method."}</small>
           <button className="primary" disabled={apiBusy || !orderAmount || !!currentOrderReference} onClick={()=>createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : currentOrderReference ? "✓ Order Created — Use This Order" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Continue → Send to Merchant" : "Continue & Pay")}</button>
-          <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");setCurrentOrderReference("");setAuthNotice("");}}>Cancel</button>
+          <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");setCurrentOrderReference("");setUpiPayment(null);setAuthNotice("");}}>Cancel</button>
         </div>
       </div>}
       <section className="holderGrowth">
@@ -1412,7 +1425,7 @@ export default function Home() {
                 <option value="LOCAL_CURRENCY">Local currency / bank / UPI</option>
               </select>
               <input className="modalInput" value={paymentCurrency} onChange={e=>setPaymentCurrency(e.target.value.toUpperCase())} placeholder="Currency code e.g. INR, AED, USD" maxLength={3}/>
-              {paymentMethod !== "CASH" && <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder={paymentMethod==="USDT" ? "USDT wallet/payment details (optional)" : "UPI, bank or payment details (optional)"}/>}
+              {paymentMethod !== "CASH" && <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder={paymentMethod==="USDT" ? "USDT wallet/payment details (optional)" : "Merchant UPI ID, bank or payment details (e.g. merchant@upi)"}/>}
               {paymentMethod === "CASH" && <small>Cash payments are recorded and verified by the merchant before any GBK reward is released.</small>}
               <div className="walletRequiredBox">
                 <b>Merchant GBK wallet — required</b>
