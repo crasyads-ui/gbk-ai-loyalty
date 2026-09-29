@@ -273,6 +273,9 @@ export default function Home() {
 
         if (lookup?.merchant) {
           setActiveWalletRole("merchant");
+          const savedUpiId = String(lookup.merchant?.payment_details?.upi_id || lookup.merchant?.payment_details?.details || "").trim();
+          setMerchantUpiId(savedUpiId);
+          setMerchantUpiEditing(false);
           setMerchantStatus({merchant: lookup.merchant});
           try {
             localStorage.setItem("gbk_loyalty_merchant_wallet", address);
