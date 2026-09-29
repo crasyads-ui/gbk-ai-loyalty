@@ -22,7 +22,7 @@ const currencyForCountry = (value:string) => currencyMap[value] || "USD";
 
 const roles = [
   {icon:"👤",title:"Customer",text:"Find businesses, pay normally and earn eligible GBK Loyalty rewards.",items:["Earn GBK","Hold • Use • Transfer"]},
-  {icon:"🏪",title:"Merchant",text:"Register your business, accept the lead terms, choose a loyalty offer and maintain GBK reward balance in advance.",items:["5%–20% or Custom","Automatic rewards"]},
+  {icon:"🏪",title:"Merchant",text:"Register and verify your business, choose a loyalty offer and display your GBK Loyalty QR. Add GBK reward balance when you are ready to issue rewards.",items:["5%–20% or Custom","QR + rewards"]},
   {icon:"🌍",title:"Founder",text:"Country or Global Founder Members can onboard businesses and receive the Founder allocation from verified loyalty sales.",items:["Add users","Add businesses","Track earnings"]},
 ];
 
@@ -709,7 +709,7 @@ export default function Home() {
       });
       if(result?.status==="EXISTS") setAuthNotice("This business is already in GBK Loyalty. Search for it instead.");
       else if(result?.status==="ALREADY_SUGGESTED") setAuthNotice("This business has already been suggested and is waiting for review.");
-      else { setAuthNotice("Business suggestion submitted. It will be reviewed before publication; the owner must claim and activate the merchant profile before reward-eligible orders."); setSuggestBusinessName(""); setSuggestBusinessCity(""); setSuggestBusinessCountry(""); setSuggestBusinessAddress(""); setSuggestBusinessPhone(""); setSuggestBusinessWebsite(""); setSuggestBusinessMapsUrl(""); }
+      else { setSuggestedBusinessId(result?.id || result?.suggestion?.id || ""); setAuthNotice("Business added. It will be reviewed and can appear as an unclaimed listing. The owner can claim and verify it later."); setSuggestBusinessName(""); setSuggestBusinessCity(""); setSuggestBusinessCountry(""); setSuggestBusinessAddress(""); setSuggestBusinessPhone(""); setSuggestBusinessWebsite(""); setSuggestBusinessMapsUrl(""); }
     } catch(e:any) { setAuthNotice(e?.message||"Business suggestion failed"); } finally { setApiBusy(false); }
   };
 
@@ -814,8 +814,8 @@ export default function Home() {
           <button onClick={()=>setQuery("AC repair near me")}>🔧 Services</button><button onClick={()=>setQuery("agriculture products or farm service near me")}>🌾 Agriculture</button>
         </div>
         <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
-          <b>🏪 Can't find the business?</b><span>Suggest any legitimate local business. No Founder is required. The business starts as an unclaimed listing and the owner can claim it later.</span>
-          <button className="secondary" type="button" onClick={()=>setRole("SuggestBusiness")}>＋ Suggest a Business</button>
+          <b>🏪 Add a Business</b><span>Know a good local business? Anyone can add a legitimate business to the GBK Loyalty network. No Founder account and no wallet are required.</span>
+          <button className="primary" type="button" onClick={()=>setRole("SuggestBusiness")}>＋ Add a Business</button>
         </div>
       </section>
 
@@ -917,7 +917,7 @@ export default function Home() {
         <div className="panel">
           <span className="eyebrow">MERCHANT-FUNDED LOYALTY</span>
           <h2>One offer. Automatic distribution.</h2>
-          <p>The merchant agrees to the loyalty offer and maintains GBK in advance. The merchant does not manually approve every reward.</p>
+          <p>The merchant agrees to the loyalty offer and becomes active after business verification. GBK reward balance is added when the merchant is ready to fund customer rewards.</p>
           <div className="formula"><span>Customer</span><strong>60%</strong><span>Founder</span><strong>20%</strong><span>Platform</span><strong>20%</strong></div>
           <small>Example: 10% merchant offer → 6% customer + 2% Founder + 2% platform.</small>
         </div>
@@ -926,7 +926,7 @@ export default function Home() {
           <h2>GBK AI provides leads + orders</h2>
           <p>GBK AI searches eligible registered businesses for the customer request and can automatically create and route the order/request to the selected merchant. The merchant controls the actual product/service, price and fulfilment.</p>
           <div className="status">🟢 Merchant active <span>Eligible for GBK AI leads + orders</span></div>
-          <div className="status paused">⏸ Reward balance low <span>Top up GBK to receive new reward-eligible orders</span></div>
+          <div className="status paused">⏸ Reward funding low <span>Merchant stays visible and active; reward processing pauses until enough GBK is available.</span></div>
         </div>
       </section>
 
@@ -943,12 +943,12 @@ export default function Home() {
       <section className="merchantRules roleOnlySection">
         <div><span className="eyebrow">MERCHANT TERMS</span><h2>Simple rules before activation</h2></div>
         <div className="ruleGrid">
-          <div><b>01 · 100% order balance</b><p>Before an eligible order proceeds, the merchant must have 100% of the GBK value required for that order’s selected loyalty percentage. No partial funding.</p></div>
+          <div><b>01 · Activate first</b><p>Business verification and merchant activation do not require a pre-funded GBK balance. The merchant can add reward funding after activation.</p></div>
           <div><b>02 · Choose loyalty</b><p>Merchant selects 5%, 10%, 15%, 20% or a custom loyalty percentage.</p></div>
           <div><b>03 · Automatic split</b><p>The selected merchant offer is allocated 60% to the customer, 20% to the Founder/referrer and 20% to the GBK platform.</p></div>
           <div><b>04 · Lead commission</b><p>Merchant can accept a separate lead commission before receiving eligible leads.</p></div>
           <div><b>05 · Verified transaction</b><p>No reward is released merely because an order was sent or a payment button was clicked. Payment/order completion must be verified.</p></div>
-          <div><b>06 · Insufficient balance</b><p>If the full required GBK balance is unavailable, the reward-eligible order is paused until the merchant funds enough GBK.</p></div>
+          <div><b>06 · Low reward balance</b><p>If the required GBK reward balance is unavailable, the merchant remains visible/active, but reward processing pauses until enough GBK is funded.</p></div>
         </div>
       </section>
 
@@ -998,7 +998,7 @@ export default function Home() {
       </section>
 
       <section className="merchant">
-        <div><span className="eyebrow">FOR BUSINESSES</span><h2>Activate loyalty. Receive eligible leads.</h2><p>Register any legitimate product or service business, accept the commercial terms, choose 5%–20% or a custom percentage, connect your wallet and maintain enough GBK reward balance for eligible orders.</p></div>
+        <div><span className="eyebrow">FOR BUSINESSES</span><h2>Activate loyalty. Receive eligible leads.</h2><p>Register any legitimate product or service business, complete verification, choose 5%–20% or a custom percentage, connect your wallet and display your Loyalty QR. GBK reward balance is needed when rewards are issued—not simply to become visible.</p></div>
         <button onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Connecting…" : "Connect / Register Merchant →"}</button>
       </section>
 
@@ -1211,7 +1211,7 @@ export default function Home() {
             <label className="check"><input type="checkbox"/> Business owner has agreed to the listing and GBK Loyalty terms.</label>
             <button className="primary" onClick={addFounderBusiness} disabled={apiBusy}>{apiBusy?"Saving…":"Save Business Referral →"}</button>
           </> : role==="Merchant" ? <>
-            <p>Start your merchant setup. You will confirm your loyalty and lead terms before activation.</p>
+            <p>Start your merchant setup. Verify your business, choose your loyalty offer and activate your QR. You can add GBK reward funding after activation.</p>
             <input placeholder="Business name" value={merchantBusinessName} onChange={e=>setMerchantBusinessName(e.target.value)}/>
             <input placeholder="Owner name" value={merchantOwnerName} onChange={e=>setMerchantOwnerName(e.target.value)}/>
             <input placeholder="Phone (optional)" value={merchantPhone} onChange={e=>setMerchantPhone(e.target.value)}/>
