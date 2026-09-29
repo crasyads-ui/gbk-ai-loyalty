@@ -65,6 +65,7 @@ export default function Home() {
   const [searchResults,setSearchResults] = useState<any[]>([]);
   const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
   const [orderAmount,setOrderAmount] = useState("");
+  const [currentOrderReference,setCurrentOrderReference] = useState("");
   const [merchantBusinessName,setMerchantBusinessName]=useState("");
   const [founderReferralCode,setFounderReferralCode]=useState("");
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
@@ -699,6 +700,7 @@ export default function Home() {
   const createOrderFor = async (m:any) => {
     const amount=String(orderAmount||"").trim();
     if(!amount || !Number.isFinite(Number(amount)) || Number(amount)<=0){ setAuthNotice("Enter the purchase/order amount first."); return; }
+    if (currentOrderReference) { setAuthNotice(`ORDER ALREADY CREATED • ${currentOrderReference}. Please use this order instead of creating another one.`); return; }
     setApiBusy(true);
     try {
       let activeSession:any=null;
@@ -720,6 +722,7 @@ export default function Home() {
         // so the merchant can verify the payment manually.
         if (m?.payment_provider === "DIRECT" || m?.payment_method === "CASH") {
           const ref = paid?.payment?.order_reference||created?.order_reference||created?.order?.order_reference||"";
+          setCurrentOrderReference(ref);
           setAuthNotice(`ORDER CREATED • ${ref}. Pay the merchant directly. After verified payment confirmation for this order, your GBK reward is released automatically.`);
           return;
         }
@@ -727,6 +730,7 @@ export default function Home() {
       }
       if (paid?.payment?.provider === "DIRECT") {
         const ref = paid?.payment?.order_reference||created?.order_reference||created?.order?.order_reference||"";
+        setCurrentOrderReference(ref);
         setAuthNotice(`ORDER CREATED • ${ref}. Pay the merchant directly. After verified payment confirmation for this order, your GBK reward is released automatically.`);
         return;
       }
@@ -986,8 +990,8 @@ export default function Home() {
           <small>{selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH"
             ? "Pay the merchant directly. The merchant will verify the payment before any GBK reward is released."
             : "Continue to the merchant's configured payment method."}</small>
-          <button className="primary" disabled={apiBusy || !orderAmount} onClick={()=>createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Continue → Send to Merchant" : "Continue & Pay")}</button>
-          <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");}}>Cancel</button>
+          <button className="primary" disabled={apiBusy || !orderAmount || !!currentOrderReference} onClick={()=>createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : currentOrderReference ? "✓ Order Created — Use This Order" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Continue → Send to Merchant" : "Continue & Pay")}</button>
+          <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");setCurrentOrderReference("");setAuthNotice("");}}>Cancel</button>
         </div>
       </div>}
       <section className="holderGrowth">
