@@ -16,7 +16,7 @@ const offers = [
   ["🔧","Local Services","Up to 20% GBK","Use and earn"],
 ];
 
-const languages = ["English","हिन्दी","తెలుగు","বাংলা","தமிழ்","मराठी","Español","العربية","Français","Português"];
+const languages = ["English","हिन्दी","తెలుగు","தமிழ்","ಕನ್ನಡ","മലയാളം","বাংলা","मराठी","العربية","Español","中文","Français","Português"];
 const countries = ["Global","India","United Arab Emirates","United States","United Kingdom","Singapore","Australia","Canada","Saudi Arabia","Malaysia","Germany","France","Italy","Spain","Portugal","Netherlands","Belgium","Switzerland","Austria","Sweden","Norway","Denmark","Finland","Ireland","New Zealand","Japan","South Korea","China","Hong Kong","Thailand","Indonesia","Philippines","Vietnam","Bangladesh","Sri Lanka","Nepal","Pakistan","South Africa","Nigeria","Kenya","Egypt","Turkey","Brazil","Mexico","Argentina","Colombia","Chile","Peru"];
 const currencyMap: Record<string,string> = {India:"INR", "United Arab Emirates":"AED", "United States":"USD", "United Kingdom":"GBP", Singapore:"SGD", Australia:"AUD", Canada:"CAD", "Saudi Arabia":"SAR", Malaysia:"MYR", Germany:"EUR", France:"EUR", Italy:"EUR", Spain:"EUR", Portugal:"EUR", Netherlands:"EUR", Belgium:"EUR", Switzerland:"CHF", Austria:"EUR", Sweden:"SEK", Norway:"NOK", Denmark:"DKK", Finland:"EUR", Ireland:"EUR", "New Zealand":"NZD", Japan:"JPY", "South Korea":"KRW", China:"CNY", "Hong Kong":"HKD", Thailand:"THB", Indonesia:"IDR", Philippines:"PHP", Vietnam:"VND", Bangladesh:"BDT", "Sri Lanka":"LKR", Nepal:"NPR", Pakistan:"PKR", "South Africa":"ZAR", Nigeria:"NGN", Kenya:"KES", Egypt:"EGP", Turkey:"TRY", Brazil:"BRL", Mexico:"MXN", Argentina:"ARS", Colombia:"COP", Chile:"CLP", Peru:"PEN"};
 const currencyForCountry = (value:string) => currencyMap[value] || "USD";
@@ -33,6 +33,8 @@ export default function Home() {
   const [voiceListening,setVoiceListening] = useState(false);
   const [voiceSupported,setVoiceSupported] = useState(false);
   const [speaking,setSpeaking] = useState(false);
+  const [askQuery,setAskQuery] = useState("");
+  const [askAnswer,setAskAnswer] = useState("");
   const [language,setLanguage] = useState("English");
   const [country,setCountry] = useState("Global");
   const [currency,setCurrency] = useState("USD");
@@ -931,6 +933,36 @@ export default function Home() {
     }
   };
 
+  const askGbkAi = (question:string) => {
+    const q = question.trim();
+    if (!q) return;
+    setAskQuery(q);
+    const key = q.toLowerCase();
+    const answers:Record<string,string> = {
+      "English":"GBK Loyalty connects customers, merchants, Founders and business owners. Customers discover businesses, pay normally and receive eligible GBK rewards after verified purchases. Merchants can register or claim a business, verify ownership, add payment details, create offers and fund eligible rewards. Founders can build their network and participate in applicable Founder benefits. Unclaimed businesses can be claimed by the owner or an authorized representative and become reward-active only after verification and activation.",
+      "हिन्दी":"GBK Loyalty ग्राहकों, व्यापारियों, Founders और व्यवसाय मालिकों को जोड़ता है। ग्राहक व्यवसाय खोजते हैं, सामान्य तरीके से भुगतान करते हैं और सत्यापित खरीद के बाद पात्र GBK रिवॉर्ड प्राप्त करते हैं। व्यापारी अपना व्यवसाय रजिस्टर या क्लेम कर सकते हैं, स्वामित्व सत्यापित कर सकते हैं, भुगतान विवरण जोड़ सकते हैं और ऑफर बना सकते हैं। Unclaimed business का मालिक उसे क्लेम करके सत्यापन और activation पूरा कर सकता है।",
+      "తెలుగు":"GBK Loyalty కస్టమర్లు, వ్యాపారులు, Founders మరియు బిజినెస్ ఓనర్లను కలుపుతుంది. కస్టమర్లు బిజినెస్‌ను కనుగొని సాధారణంగా చెల్లించి, పేమెంట్/ఆర్డర్ ధృవీకరించిన తర్వాత అర్హత ఉన్న GBK రివార్డ్ పొందుతారు. వ్యాపారులు బిజినెస్‌ను రిజిస్టర్ లేదా క్లెయిమ్ చేసి, యజమాన్యాన్ని ధృవీకరించి, UPI వివరాలు జోడించి ఆఫర్లు సృష్టించవచ్చు. Unclaimed business ను యజమాని క్లెయిమ్ చేసి verification మరియు activation పూర్తి చేయవచ్చు.",
+      "தமிழ்":"GBK Loyalty வாடிக்கையாளர்கள், வணிகர்கள், Founders மற்றும் வணிக உரிமையாளர்களை இணைக்கிறது. வாடிக்கையாளர்கள் வணிகத்தை கண்டுபிடித்து வழக்கம்போல் பணம் செலுத்தி, சரிபார்க்கப்பட்ட வாங்குதலுக்குப் பிறகு தகுதியான GBK rewards பெறலாம். வணிகர்கள் பதிவு செய்யலாம் அல்லது வணிகத்தை claim செய்யலாம், உரிமையை சரிபார்த்து UPI விவரங்களைச் சேர்த்து offers உருவாக்கலாம். Unclaimed business-ஐ உரிமையாளர் claim செய்து verification மற்றும் activation முடிக்கலாம்.",
+      "ಕನ್ನಡ":"GBK Loyalty ಗ್ರಾಹಕರು, ವ್ಯಾಪಾರಿಗಳು, Founders ಮತ್ತು ವ್ಯವಹಾರ ಮಾಲೀಕರನ್ನು ಸಂಪರ್ಕಿಸುತ್ತದೆ. ಗ್ರಾಹಕರು ವ್ಯವಹಾರವನ್ನು ಹುಡುಕಿ ಸಾಮಾನ್ಯವಾಗಿ ಪಾವತಿಸಿ, ಪರಿಶೀಲಿಸಿದ ಖರೀದಿಯ ನಂತರ ಅರ್ಹ GBK rewards ಪಡೆಯುತ್ತಾರೆ. ವ್ಯಾಪಾರಿಗಳು ನೋಂದಣಿ ಅಥವಾ business claim ಮಾಡಿ, ಮಾಲೀಕತ್ವ ಪರಿಶೀಲಿಸಿ, UPI ವಿವರಗಳನ್ನು ಸೇರಿಸಿ offers ರಚಿಸಬಹುದು. Unclaimed business ಅನ್ನು ಮಾಲೀಕರು claim ಮಾಡಿ verification ಮತ್ತು activation ಪೂರ್ಣಗೊಳಿಸಬಹುದು.",
+      "മലയാളം":"GBK Loyalty ഉപഭോക്താക്കളെയും വ്യാപാരികളെയും Founders-നെയും ബിസിനസ് ഉടമകളെയും ബന്ധിപ്പിക്കുന്നു. ഉപഭോക്താക്കൾ ബിസിനസ് കണ്ടെത്തി സാധാരണയായി പണം നൽകി, സ്ഥിരീകരിച്ച വാങ്ങലിന് ശേഷം അർഹമായ GBK rewards നേടാം. വ്യാപാരികൾ രജിസ്റ്റർ ചെയ്യുകയോ ബിസിനസ് claim ചെയ്യുകയോ ചെയ്ത് ഉടമസ്ഥാവകാശം പരിശോധിച്ച് UPI വിവരങ്ങൾ ചേർത്ത് offers സൃഷ്ടിക്കാം. Unclaimed business ഉടമയ്ക്ക് claim ചെയ്ത് verification, activation പൂർത്തിയാക്കാം.",
+      "বাংলা":"GBK Loyalty গ্রাহক, মার্চেন্ট, Founder এবং ব্যবসার মালিকদের সংযুক্ত করে। গ্রাহকরা ব্যবসা খুঁজে স্বাভাবিকভাবে পেমেন্ট করেন এবং যাচাইকৃত কেনাকাটার পরে যোগ্য GBK reward পান। মার্চেন্টরা ব্যবসা রেজিস্টার বা claim করতে পারেন, মালিকানা যাচাই করে UPI তথ্য ও offer যোগ করতে পারেন। Unclaimed business-এর মালিক claim করে verification ও activation সম্পন্ন করতে পারেন.",
+      "मराठी":"GBK Loyalty ग्राहक, व्यापारी, Founders आणि व्यवसाय मालकांना जोडते. ग्राहक व्यवसाय शोधतात, नेहमीप्रमाणे पेमेंट करतात आणि पडताळलेल्या खरेदीनंतर पात्र GBK rewards मिळवतात. व्यापारी व्यवसाय register किंवा claim करून मालकी पडताळू शकतात, UPI माहिती जोडू शकतात आणि offers तयार करू शकतात. Unclaimed business चा मालक claim करून verification आणि activation पूर्ण करू शकतो.",
+      "العربية":"يربط GBK Loyalty بين العملاء والتجار وFounders وأصحاب الأعمال. يمكن للعميل اكتشاف النشاط التجاري والدفع بالطريقة المعتادة والحصول على مكافآت GBK المؤهلة بعد التحقق من عملية الشراء. يمكن للتاجر تسجيل النشاط أو المطالبة به والتحقق من الملكية وإضافة بيانات الدفع وإنشاء العروض. ويمكن لمالك النشاط غير المطالب به تقديم مطالبة ثم إكمال التحقق والتفعيل.",
+      "Español":"GBK Loyalty conecta a clientes, comercios, Founders y propietarios de negocios. Los clientes descubren negocios, pagan normalmente y reciben recompensas GBK elegibles después de verificar la compra. Los comercios pueden registrarse o reclamar un negocio, verificar la propiedad, añadir datos de pago y crear ofertas. Un negocio no reclamado puede ser reclamado por su propietario y activarse después de la verificación.",
+      "中文":"GBK Loyalty 连接客户、商户、Founder 和企业主。客户可以发现商户，正常付款，并在购买完成验证后获得符合条件的 GBK 奖励。商户可以注册或认领企业、完成所有权验证、添加支付信息并创建优惠。未认领的企业可以由企业主或授权代表认领，并在验证和激活后成为可参与奖励的商户。",
+      "Français":"GBK Loyalty relie les clients, les commerçants, les Founders et les propriétaires d’entreprise. Les clients découvrent les commerces, paient normalement et reçoivent les récompenses GBK éligibles après vérification de l’achat. Les commerçants peuvent s’inscrire ou revendiquer une entreprise, vérifier leur propriété, ajouter leurs informations de paiement et créer des offres. Une entreprise non revendiquée peut être revendiquée par son propriétaire puis activée après vérification.",
+      "Português":"O GBK Loyalty conecta clientes, comerciantes, Founders e proprietários de empresas. Os clientes encontram empresas, pagam normalmente e recebem recompensas GBK elegíveis após a verificação da compra. Os comerciantes podem cadastrar ou reivindicar uma empresa, verificar a propriedade, adicionar dados de pagamento e criar ofertas. Uma empresa não reivindicada pode ser reivindicada pelo proprietário e ativada após a verificação."
+    };
+    const langAnswer=answers[language] || answers.English;
+    let prefix="";
+    if(key.includes("claim") || key.includes("unclaimed") || key.includes("owner")) prefix=language==="English"?"To claim a business: open the Unclaimed listing → Claim This Business → submit owner/contact details → wait for verification → connect the Merchant Wallet → accept terms and activate.":langAnswer;
+    else if(key.includes("merchant") || key.includes("shop") || key.includes("business")) prefix=language==="English"?"Merchant path: register or claim the business → verify ownership → complete the merchant profile → add UPI/payment details → connect the GBK wallet → choose the loyalty offer → activate.":langAnswer;
+    else if(key.includes("founder")) prefix=language==="English"?"Founder path: connect the Founder wallet → complete Founder verification → add users or businesses to the network → track eligible activity and applicable Founder benefits.":langAnswer;
+    else if(key.includes("customer") || key.includes("earn") || key.includes("reward")) prefix=language==="English"?"Customer path: choose country/city → find a participating merchant → scan the merchant QR or open the business → enter the purchase amount → pay → wait for verified payment/order confirmation → receive the eligible GBK reward.":langAnswer;
+    else prefix=langAnswer;
+    setAskAnswer(prefix);
+  };
+
   const selectedOffer = merchantOffer === "custom" ? Number(customOffer || 0) : Number(merchantOffer.replace("%",""));
   const customerShare = selectedOffer * 0.6;
   const founderShare = selectedOffer * 0.2;
@@ -992,6 +1024,40 @@ export default function Home() {
         </div>
       </section>}
       {searchResults.length === 0 && authNotice && authNotice.includes("No") && <section id="searchResults" className="roleSection"><div className="status"><span>{authNotice}</span></div></section>}
+      <section className="askGbkSection">
+        <div className="sectionHead">
+          <div><span className="eyebrow">🤖 ASK GBK AI</span><h2>Ask anything about GBK Loyalty</h2><p>Get simple guidance for Customer, Merchant, Founder and Business Owner journeys. Choose your language and ask in your own words.</p></div>
+          <button className="secondary" onClick={()=>{setAskQuery("");setAskAnswer("");}}>Clear</button>
+        </div>
+        <div className="askAiPanel">
+          <div className="askAiTop">
+            <span>🗣️ Answer language</span>
+            <select value={language} onChange={e=>{setLanguage(e.target.value);if(askQuery) setTimeout(()=>askGbkAi(askQuery),0);}} aria-label="Ask GBK AI language">{languages.map(x=><option key={x}>{x}</option>)}</select>
+          </div>
+          <div className="askAiPromptGrid">
+            <button onClick={()=>askGbkAi("How does GBK Loyalty work?")}>🌐 How does GBK Loyalty work?</button>
+            <button onClick={()=>askGbkAi("I am a customer. How do I earn GBK?")}>👤 How does a customer earn GBK?</button>
+            <button onClick={()=>askGbkAi("How can I become a merchant?")}>🏪 How can I become a merchant?</button>
+            <button onClick={()=>askGbkAi("What is Founder membership?")}>👑 What is Founder membership?</button>
+            <button onClick={()=>askGbkAi("How do I claim my unclaimed business?")}>🏢 How do I claim my business?</button>
+            <button onClick={()=>askGbkAi("How do I create a loyalty offer?")}>🎁 How do I create an offer?</button>
+          </div>
+          <div className="askAiInput">
+            <input value={askQuery} onChange={e=>setAskQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")askGbkAi(askQuery)}} placeholder="Ask GBK AI anything about Loyalty…" />
+            <button className="primary" onClick={()=>askGbkAi(askQuery)} disabled={!askQuery.trim()}>🤖 Ask GBK AI</button>
+          </div>
+          {askAnswer && <div className="askAiAnswer"><b>🤖 GBK AI</b><p>{askAnswer}</p></div>}
+          <div className="askAiRoles">
+            <div><b>👤 Customer</b><span>Find → Scan → Pay → Earn</span></div>
+            <div><b>🏪 Merchant</b><span>Register/Claim → Verify → Activate</span></div>
+            <div><b>👑 Founder</b><span>Connect → Build → Qualify</span></div>
+            <div><b>🌐 Business Owner</b><span>Claim → Verify → Activate</span></div>
+          </div>
+          <small>GBK AI answers should follow the selected language. For payment, reward and account status, the live GBK Loyalty system remains the source of truth.</small>
+        </div>
+      </section>
+
+
       {scannerOpen && <div className="modalBackdrop" onClick={()=>setScannerOpen(false)}>
         <div className="modal" onClick={e=>e.stopPropagation()}>
           <button className="close" onClick={()=>setScannerOpen(false)}>×</button>
