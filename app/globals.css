@@ -217,3 +217,17 @@ input,select,.modal input,.modalSelect{font-size:16px}
 .resultCard .primary,.resultCard .secondary{width:100%;margin-top:10px}
 .merchantWalletActions>*{min-width:0;width:100%}
 }
+
+/* Ask GBK AI is a bottom-navigation destination on mobile */
+.askAiModalBackdrop{position:fixed;inset:0;background:rgba(25,16,40,.58);z-index:45;display:grid;place-items:end center;padding:12px}
+.askAiModal{width:min(720px,100%);max-height:min(82vh,760px);overflow:auto;background:#fff;border:1px solid #e7def1;border-radius:24px;padding:20px;box-shadow:0 24px 70px rgba(0,0,0,.25)}
+.askAiModal .sectionHead{margin:0 0 12px;align-items:center}.askAiModal .askAiPanel{max-width:none}
+@media(max-width:520px){
+ .askAiModalBackdrop{padding:8px 8px max(8px,env(safe-area-inset-bottom))}
+ .askAiModal{max-height:84vh;border-radius:22px;padding:14px}
+ .askAiModal .askAiPromptGrid{display:grid;grid-template-columns:1fr;gap:7px}
+ .askAiModal .askAiPromptGrid button{width:100%;text-align:left;min-height:44px}
+ .askAiModal .askAiInput{display:grid!important;grid-template-columns:1fr;gap:8px}
+ .askAiModal .askAiInput button{width:100%}
+ .bottomNav a:last-child{color:#7c3aed;font-weight:900}
+}
