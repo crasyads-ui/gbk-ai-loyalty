@@ -54,6 +54,8 @@ export default function Home() {
   const [paymentCurrency,setPaymentCurrency] = useState("INR");
   const [paymentDetails,setPaymentDetails] = useState("");
   const [merchantWallet,setMerchantWallet] = useState("");
+  const [merchantUpiId,setMerchantUpiId] = useState("");
+  const [merchantUpiEditing,setMerchantUpiEditing] = useState(false);
   const [session,setSession] = useState<LoyaltySession|null>(null);
   const [activeWalletRole,setActiveWalletRole] = useState<"customer"|"merchant"|"founder"|null>(null);
   const [authMode,setAuthMode] = useState<"login"|"signup">("login");
@@ -422,6 +424,9 @@ export default function Home() {
       const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:knownMerchantWallet});
       const merchant = lookup?.merchant || (await loyaltyApi(s,"my_data",{}))?.merchants?.[0];
       if (!merchant) { setRole("Merchant"); setAuthNotice("No merchant is registered for this wallet. Please complete merchant registration once."); return; }
+      const savedUpiId = String(merchant?.payment_details?.upi_id || merchant?.payment_details?.details || "").trim();
+      setMerchantUpiId(savedUpiId);
+      setMerchantUpiEditing(false);
       setMerchantStatus({merchant});
       const [live,dataWithOrders] = await Promise.all([
         loyaltyApi(s,"merchant_fund_status",{merchant_id:merchant.id}),
@@ -843,6 +848,36 @@ export default function Home() {
     }catch{}
   };
 
+  const saveMerchantUpi = async () => {
+    const merchantId = String(merchantStatus?.merchant?.id || "");
+    const upi = String(merchantUpiId || "").trim();
+    if (!merchantId) { setAuthNotice("Merchant account not found. Refresh the Merchant Wallet."); return; }
+    if (!/^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/.test(upi)) {
+      setAuthNotice("Enter a valid UPI ID, for example merchant@upi.");
+      return;
+    }
+    const active = session || getStoredSession();
+    if (!active) { setAuthNotice("Connect the merchant wallet first."); return; }
+    setApiBusy(true); setAuthNotice("");
+    try {
+      const result = await loyaltyApi(active, "merchant_payment_update", {
+        merchant_id: merchantId,
+        upi_id: upi,
+        payment_currency: "INR"
+      });
+      if (result?.merchant) {
+        setMerchantStatus((prev:any) => ({...(prev || {}), merchant: result.merchant}));
+      }
+      setMerchantUpiId(upi);
+      setMerchantUpiEditing(false);
+      setAuthNotice("UPI payment details saved. Customers can now use PhonePe, Google Pay, Paytm, BHIM or another UPI app.");
+    } catch (e:any) {
+      setAuthNotice(e?.message || "UPI payment details could not be saved.");
+    } finally {
+      setApiBusy(false);
+    }
+  };
+
   const registerMerchant = async () => {
     if (role !== "Merchant") return;
     setApiBusy(true);
@@ -1204,6 +1239,32 @@ export default function Home() {
             <div className="offerPreview" style={{display:"grid",gap:6}}>
               <b>Merchant: {merchantStatus?.merchant?.business_name || "—"}</b>
               <span>Wallet: {walletAddress ? walletAddress.slice(0,6)+"…"+walletAddress.slice(-4) : (merchantStatus?.merchant?.profile_id ? "Connected" : "Not connected")}</span>
+            </div>
+            <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
+              <b>📲 Merchant UPI Payment</b>
+              {!merchantUpiEditing ? <>
+                <span>{merchantUpiId ? <>UPI ID: <strong>{merchantUpiId}</strong></> : "No UPI ID configured yet."}</span>
+                <button className="secondary" type="button" onClick={()=>setMerchantUpiEditing(true)}>✏️ {merchantUpiId ? "Edit UPI ID" : "Add UPI ID"}</button>
+              </> : <>
+                <small>Customers can pay this merchant through supported UPI apps. One UPI ID works for PhonePe, Google Pay, Paytm, BHIM and other UPI apps.</small>
+                <input
+                  className="modalInput"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  value={merchantUpiId}
+                  onChange={e=>setMerchantUpiId(e.target.value)}
+                  placeholder="merchant@upi"
+                />
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <button className="primary" type="button" onClick={saveMerchantUpi} disabled={apiBusy}>{apiBusy ? "Saving…" : "💾 Save UPI ID"}</button>
+                  <button className="secondary" type="button" onClick={()=>{
+                    const saved=String(merchantStatus?.merchant?.payment_details?.upi_id || merchantStatus?.merchant?.payment_details?.details || "").trim();
+                    setMerchantUpiId(saved); setMerchantUpiEditing(false);
+                  }} disabled={apiBusy}>Cancel</button>
+                </div>
+                <small>UPI payments use INR. GBK reward release still requires verified payment confirmation.</small>
+              </>}
             </div>
             <div className="merchantWalletLive">
               <div className="merchantWalletPrimary">
