@@ -152,7 +152,7 @@ export default function Home() {
         if(!active) active=await signInAnonymously();
         setSession(active);
         const result=await loyaltyApi(active,"get_business_suggestion",{suggestion_id:claimId});
-        if(result?.suggestion){setClaimBusiness(result.suggestion);setRole("ClaimBusiness");}
+        if(result?.suggestion){setClaimBusiness(result.suggestion);setClaimSubmitted(false);setRole("ClaimBusiness");}
       }catch(e:any){setAuthNotice(e?.message||"Business link could not be opened.");}
     })();
   }, []);
@@ -983,7 +983,7 @@ export default function Home() {
             {m.unclaimed ? <>
               <div><span className="roleTag">Unclaimed business</span><span className="roleTag">Not reward-active</span></div>
               <p style={{fontSize:13}}>This is a community-suggested listing. The owner can claim it and complete verification.</p>
-              <button className="primary" onClick={()=>{setClaimBusiness(m);setClaimName("");setClaimContact("");setRole("ClaimBusiness");}}>Claim this business →</button>
+              <button className="primary" onClick={()=>{setClaimBusiness(m);setClaimName("");setClaimContact("");setClaimSubmitted(false);setRole("ClaimBusiness");}}>Claim this business →</button>
             </> : <>
               <div><span className="roleTag">{Math.round(Number(m.loyalty_offer_bps||0)/100)}% GBK Loyalty</span><span className="roleTag">Active merchant</span></div>
               <button className="primary" onClick={()=>setSelectedMerchant(m)}>Earn GBK →</button>
