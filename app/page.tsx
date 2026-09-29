@@ -697,15 +697,15 @@ export default function Home() {
         // Direct/Cash merchants do not use an online gateway. Keep the order active
         // so the merchant can verify the payment manually.
         if (m?.payment_provider === "DIRECT" || m?.payment_method === "CASH") {
-          setAuthNotice(`Order ${paid?.payment?.order_reference||created?.order_reference||created?.order?.order_reference||""} created. Pay the merchant directly; once the payment provider confirms the matching order reference, your GBK reward is released automatically.`);
-          setSelectedMerchant(null);
+          const ref = paid?.payment?.order_reference||created?.order_reference||created?.order?.order_reference||"";
+          setAuthNotice(`ORDER CREATED • ${ref}. Pay the merchant directly. After verified payment confirmation for this order, your GBK reward is released automatically.`);
           return;
         }
         throw e;
       }
       if (paid?.payment?.provider === "DIRECT") {
-        setAuthNotice("Order sent to the merchant. Pay the merchant directly; the merchant must verify the payment before your GBK reward can be released.");
-        setSelectedMerchant(null);
+        const ref = paid?.payment?.order_reference||created?.order_reference||created?.order?.order_reference||"";
+        setAuthNotice(`ORDER CREATED • ${ref}. Pay the merchant directly. After verified payment confirmation for this order, your GBK reward is released automatically.`);
         return;
       }
       if (paid?.payment?.provider === "RAZORPAY") {
