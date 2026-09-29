@@ -1131,7 +1131,7 @@ export default function Home() {
                        o.reward_settlement_status==="AWAITING_MERCHANT_APPROVAL" ? "🟠 Merchant wallet approval required" :
                        o.reward_settlement_status==="BLOCKCHAIN_SETTLEMENT_FAILED" ? "🔴 Blockchain settlement failed" :
                        o.reward_settlement_status==="BLOCKCHAIN_SETTLEMENT_PENDING" ? "🟡 Blockchain settlement pending" :
-                       o.reward_settlement_status==="BELOW_MINIMUM_REWARD" ? "⚪ Below $0.30 minimum — no GBK transfer" :
+                       o.reward_settlement_status==="BELOW_MINIMUM_REWARD" ? "⚪ Below $0.10 minimum — no GBK transfer" :
                        "⚪ Reward pending"}
                     </span>}
                     {o.reward_settlement_status==="AWAITING_MERCHANT_APPROVAL" && o.reward_required_raw && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={()=>approveRewardForOrder(o)}>
