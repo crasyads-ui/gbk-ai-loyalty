@@ -820,15 +820,21 @@ export default function Home() {
       </section>
 
       {searchResults.length > 0 && <section id="searchResults" className="roleSection">
-        <div className="sectionHead"><div><span className="eyebrow">PARTICIPATING BUSINESSES</span><h2>Choose a business</h2><p>Pick a participating business and earn GBK on eligible purchases.</p></div><button className="secondary voiceReadBtn" onClick={()=>spokenSummary(searchResults)}>{speaking ? "🔊 Speaking…" : "🔊 Read results aloud"}</button></div>
+        <div className="sectionHead"><div><span className="eyebrow">BUSINESSES & LOCAL LISTINGS</span><h2>Choose a business</h2><p>Active merchants can accept eligible purchases. Community listings are shown as unclaimed until the owner claims and activates them.</p></div><button className="secondary voiceReadBtn" onClick={()=>spokenSummary(searchResults)}>{speaking ? "🔊 Speaking…" : "🔊 Read results aloud"}</button></div>
         <div className="roleGrid">
-          {searchResults.map((m:any)=><div className="roleCard" key={m.id}>
+          {searchResults.map((m:any)=><div className="roleCard" key={m.id + (m.listing_type || "MERCHANT")}>
             <div className="roleIcon">🏪</div>
             <h3>{m.business_name}</h3>
             <p>{[m.category,m.city,m.country].filter(Boolean).join(" • ")}</p>
             {m.description && <p>{m.description}</p>}
-            <div><span className="roleTag">{Math.round(Number(m.loyalty_offer_bps||0)/100)}% GBK Loyalty</span><span className="roleTag">Active merchant</span></div>
-            <button className="primary" onClick={()=>setSelectedMerchant(m)}>Earn GBK →</button>
+            {m.unclaimed ? <>
+              <div><span className="roleTag">Unclaimed business</span><span className="roleTag">Not reward-active</span></div>
+              <p style={{fontSize:13}}>This is a community-suggested listing. The owner can claim it and complete verification.</p>
+              <button className="primary" onClick={()=>{setClaimBusiness(m);setClaimName("");setClaimContact("");setRole("ClaimBusiness");}}>Claim this business →</button>
+            </> : <>
+              <div><span className="roleTag">{Math.round(Number(m.loyalty_offer_bps||0)/100)}% GBK Loyalty</span><span className="roleTag">Active merchant</span></div>
+              <button className="primary" onClick={()=>setSelectedMerchant(m)}>Earn GBK →</button>
+            </>}
           </div>)}
         </div>
       </section>}
