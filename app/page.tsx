@@ -920,16 +920,28 @@ export default function Home() {
       if (!session) setSession(active);
       const result = await loyaltyApi(active,"direct_payment_verify",{order_id:orderId,payment_transaction_id:txId});
       const settlement=result?.settlement;
+      const customerRaw=String(settlement?.calculation?.customer_raw||"0");
+      const rewardGbk=customerRaw!=="0" ? (Number(customerRaw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : "";
       setAuthNotice(
         settlement?.status==="SETTLED"
           ? "Payment verified. GBK reward released successfully."
-          : settlement?.status==="AWAITING_MERCHANT_APPROVAL"
-            ? "Payment verified. Merchant wallet approval is required once to release the GBK reward."
-            : settlement?.status==="BELOW_MINIMUM_REWARD"
-              ? "Payment verified. This order is below the minimum on-chain reward amount."
-              : "Payment verified. GBK reward settlement is processing."
+          : settlement?.status==="REWARD_PENDING"
+            ? "Payment verified. Your GBK reward is reserved and pending merchant GBK funding."
+            : settlement?.status==="AWAITING_MERCHANT_APPROVAL"
+              ? "Payment verified. Merchant wallet approval is required once to release the GBK reward."
+              : settlement?.status==="BELOW_MINIMUM_REWARD"
+                ? "Payment verified. This order is below the minimum on-chain reward amount."
+                : "Payment verified. GBK reward settlement is processing."
       );
-      if (settlement?.status==="SETTLED") { setPaymentUtr(""); setPaymentSuccess({orderReference:result?.order?.order_reference||currentOrderReference,txHash:settlement?.tx_hash||""}); }
+      if (settlement?.status==="SETTLED" || settlement?.status==="REWARD_PENDING" || settlement?.status==="AWAITING_MERCHANT_APPROVAL") {
+        setPaymentUtr("");
+        setPaymentSuccess({
+          status:settlement?.status,
+          orderReference:result?.order?.order_reference||currentOrderReference,
+          txHash:settlement?.tx_hash||"",
+          rewardGbk
+        });
+      }
     } catch(e:any) { setAuthNotice(e.message || "Payment verification failed."); }
     finally { setApiBusy(false); }
   };
@@ -1415,11 +1427,16 @@ export default function Home() {
             <small>Payment app opening is not payment verification. GBK reward is released only after verified payment confirmation.</small>
           </div>}
           {paymentSuccess ? <div className="offerPreview" style={{display:"grid",gap:10,margin:"12px 0",textAlign:"center",padding:"20px",border:"2px solid #22c55e"}}>
-            <div style={{fontSize:52}}>✅</div>
-            <b style={{fontSize:22}}>GBK Reward Received Successfully</b>
-            <div>Payment verified and the eligible GBK reward has been released.</div>
+            <div style={{fontSize:52}}>{paymentSuccess.status==="SETTLED" ? "✅" : "⏳"}</div>
+            <b style={{fontSize:22}}>{paymentSuccess.status==="SETTLED" ? "Payment Successful" : "GBK Reward Pending"}</b>
+            {paymentSuccess.rewardGbk && <div style={{fontSize:28,fontWeight:800}}>+{paymentSuccess.rewardGbk} GBK</div>}
+            <div>{paymentSuccess.status==="SETTLED"
+              ? "Payment verified and the GBK reward has been released successfully."
+              : "Payment verified. Your eligible GBK reward is reserved and will be released automatically after the merchant adds sufficient GBK funding."}</div>
             <small>GBK Order: {paymentSuccess.orderReference}</small>
+            {paymentSuccess.status!=="SETTLED" && <small>Merchant action: Add GBK balance to complete the reward settlement.</small>}
             {paymentSuccess.txHash && <small>Reward transaction: {paymentSuccess.txHash.slice(0,10)}…{paymentSuccess.txHash.slice(-8)}</small>}
+            <button className="primary" type="button" onClick={()=>{setPaymentSuccess(null);setUpiPayment(null);setCurrentOrderReference("");setOrderAmount("");}}>Done ✓</button>
           </div> : upiPayment?.upi_links && upiPayment?.gbk_order_id && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>✅ After payment: verify your UTR</b>
             <input className="modalInput" inputMode="text" value={paymentUtr} onChange={e=>setPaymentUtr(e.target.value)} placeholder="Enter UPI Transaction ID / UTR"/>
