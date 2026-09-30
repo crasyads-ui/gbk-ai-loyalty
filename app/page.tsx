@@ -1197,7 +1197,7 @@ export default function Home() {
           {currentOrderReference && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0",border:"2px solid rgba(99,45,255,.25)"}}>
             <b>🧾 GBK Order Created</b>
             <strong style={{fontSize:18}}>{currentOrderReference}</strong>
-            <small>Pay the merchant using your preferred UPI app. The merchant verifies the payment transaction against this GBK Order ID before the GBK reward is released.</small>
+            <small>Pay the merchant using your preferred UPI app. Your payment confirmation is matched to this GBK Order ID before the GBK reward is released.</small>
           </div>}
           {upiPayment?.upi_links && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>📲 Pay ₹{upiPayment.amount_major} by UPI</b>
@@ -1210,9 +1210,9 @@ export default function Home() {
             <small>Payment app opening is not payment verification. GBK reward is released only after verified payment confirmation.</small>
           </div>}
           <small>{selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH"
-            ? "Pay the merchant directly. The merchant will verify the payment before any GBK reward is released."
+            ? "Pay the merchant directly. Payment confirmation must match this GBK Order ID before any GBK reward is released."
             : "Continue to the merchant's configured payment method."}</small>
-          <button className="primary" disabled={apiBusy || !orderAmount || !!currentOrderReference} onClick={()=>createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : currentOrderReference ? "✓ Order Created — Use This Order" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Continue → Send to Merchant" : "Continue & Pay")}</button>
+          <button className="primary" disabled={apiBusy || !orderAmount || !!currentOrderReference} onClick={()=>createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : currentOrderReference ? "✓ Order Created — Continue Payment" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Create GBK Order → Pay" : "Continue & Pay")}</button>
           <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");setCurrentOrderReference("");setUpiPayment(null);setAuthNotice("");}}>Cancel</button>
         </div>
       </div>}
