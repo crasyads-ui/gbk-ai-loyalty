@@ -987,6 +987,57 @@ export default function Home() {
     }
   };
 
+  const downloadStoreSticker = async (merchant:any) => {
+    if (!merchantQr) {
+      setAuthNotice("Generate the Business QR first.");
+      return;
+    }
+    try {
+      const esc = (value:any) => String(value ?? "")
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+      const businessName = esc(merchant?.business_name || "GBK Loyalty Merchant");
+      const category = esc(merchant?.category || "Business");
+      const city = esc(merchant?.city || "");
+      const countryName = esc(merchant?.country || "");
+      const offer = Math.round(Number(merchant?.loyalty_offer_bps || 0) / 100);
+      const qrX = 200, qrY = 365, qrSize = 800;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <rect width="1200" height="1600" rx="48" fill="#ffffff"/>
+  <rect x="40" y="40" width="1120" height="1520" rx="40" fill="#ffffff" stroke="#6d28d9" stroke-width="6"/>
+  <circle cx="600" cy="145" r="58" fill="#6d28d9"/>
+  <text x="600" y="163" text-anchor="middle" font-family="Arial,sans-serif" font-size="48" font-weight="800" fill="#ffffff">GBK</text>
+  <text x="600" y="245" text-anchor="middle" font-family="Arial,sans-serif" font-size="38" font-weight="800" fill="#171717">GBK LOYALTY PARTNER</text>
+  <text x="600" y="292" text-anchor="middle" font-family="Arial,sans-serif" font-size="26" fill="#555555">Shop Local • Earn Global</text>
+  <text x="600" y="345" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" font-weight="800" fill="#171717">SCAN TO PAY &amp; EARN GBK</text>
+  <rect x="170" y="335" width="860" height="860" rx="28" fill="#ffffff"/>
+  <image href="${merchantQr}" x="${qrX}" y="${qrY}" width="${qrSize}" height="${qrSize}" preserveAspectRatio="none"/>
+  <circle cx="600" cy="765" r="72" fill="#ffffff" stroke="#6d28d9" stroke-width="8"/>
+  <circle cx="600" cy="765" r="56" fill="#6d28d9"/>
+  <text x="600" y="782" text-anchor="middle" font-family="Arial,sans-serif" font-size="38" font-weight="800" fill="#ffffff">GBK</text>
+  <text x="600" y="1260" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="800" fill="#171717">${businessName}</text>
+  <text x="600" y="1302" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#555555">${category}${city ? " • " + city : ""}${countryName ? " • " + countryName : ""}</text>
+  <rect x="290" y="1340" width="620" height="76" rx="38" fill="#f3e8ff"/>
+  <text x="600" y="1390" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" font-weight="800" fill="#6d28d9">${offer}% GBK LOYALTY REWARD</text>
+  <text x="600" y="1465" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#171717">Scan • Enter Amount • Pay • Earn GBK</text>
+  <text x="600" y="1510" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" fill="#555555">loyalty.gbkai.com</text>
+  <text x="600" y="1542" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#777777">Open the web app • No Play Store required</text>
+</svg>`;
+      const blob = new Blob([svg], {type:"image/svg+xml;charset=utf-8"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `gbk-loyalty-${String(merchant?.business_name || "store").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"").toLowerCase()}-store-sticker.svg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      setShareNotice("GBK branded store sticker downloaded.");
+    } catch (e:any) {
+      setAuthNotice(e?.message || "Store sticker could not be created.");
+    }
+  };
+
   const suggestBusiness = async () => {
     const targetCountry = suggestBusinessCountry || (country !== "Global" ? country : "");
     if (!suggestBusinessName.trim() || !suggestBusinessCity.trim() || !targetCountry) { setAuthNotice("Enter the business name, city and country."); return; }
@@ -1307,7 +1358,7 @@ export default function Home() {
           <div className="offerPreview" style={{display:"grid",gap:8,margin:"14px 0",textAlign:"center"}}>
             <b>📱 Scan to open this business</b>
             {merchantQr ? <img src={merchantQr} alt={`GBK Loyalty QR for ${selectedMerchant.business_name}`} style={{width:220,height:220,maxWidth:"100%",margin:"0 auto",background:"#fff",padding:10,borderRadius:16}}/> : <button className="secondary" type="button" onClick={()=>openMerchantQr(selectedMerchant)} disabled={qrBusy}>{qrBusy?"Creating QR…":"Generate Business QR"}</button>}
-            {merchantQr && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><button className="secondary" type="button" onClick={downloadMerchantQr}>⬇️ Download Business QR</button><button className="secondary" type="button" onClick={downloadInstallQr}>📱 Download Install QR</button><button className="secondary" type="button" onClick={()=>shareMerchantQr(selectedMerchant)}>📤 Share</button><button className="secondary" type="button" onClick={install}>📲 Install Web App</button></div>}
+            {merchantQr && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><button className="secondary" type="button" onClick={downloadMerchantQr}>⬇️ Download Business QR</button><button className="secondary" type="button" onClick={()=>downloadStoreSticker(selectedMerchant)}>🏪 Download Store Sticker</button><button className="secondary" type="button" onClick={downloadInstallQr}>📱 Download Install QR</button><button className="secondary" type="button" onClick={()=>shareMerchantQr(selectedMerchant)}>📤 Share</button><button className="secondary" type="button" onClick={install}>📲 Install Web App</button></div>}
             {shareNotice && <small>{shareNotice}</small>}
           </div>
           <label style={{display:"grid",gap:6,margin:"14px 0"}}>
