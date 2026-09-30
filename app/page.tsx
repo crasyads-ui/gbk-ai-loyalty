@@ -1630,7 +1630,19 @@ export default function Home() {
             </div>
             <label className="check"><input type="checkbox"/> I accept that GBK provides leads and loyalty benefits; the merchant controls the product/service and its business policy.</label>
           </> : role==="Founder" ? <>
-            <p>Founder registration is required before Founder benefits are available in GBK Loyalty. Connect the same wallet used for your verified Founder membership.</p>
+            {founderStatus?.founder_verified ? <>
+            <div className="status" style={{marginBottom:12}}>
+              <span>🟢 VERIFIED FOUNDER — Loyalty connected</span>
+              <small>Same verified Founder wallet recognized. Founder registration is not required again.</small>
+            </div>
+            <div className="offerPreview" style={{display:"grid",gap:8}}>
+              <b>👑 Founder Dashboard</b>
+              <span>{founderStatus.founder_type === "global" ? "Global Founder" : "Country Founder"} · {founderStatus.founder_tier || "Verified membership"}</span>
+              <span>Wallet: {walletAddress ? `${walletAddress.slice(0,8)}…${walletAddress.slice(-6)}` : "Connected"}</span>
+              <span>Founder benefits: {founderStatus.founder_benefits_active ? "Active" : "Verified — holding requirement may need attention"}</span>
+            </div>
+          </> : <>
+            <p>Founder registration is required only when this wallet has not yet been verified in the Founder membership system.</p>
             <div className="walletRequiredBox">
               <b>Founder wallet — required</b>
               <small>Your wallet is used to match the verified Founder membership. No private key or seed phrase is requested.</small>
@@ -1643,7 +1655,7 @@ export default function Home() {
             </div>
             <input className="modalInput" value={founderTxHash} onChange={e=>setFounderTxHash(e.target.value)} placeholder="BSC transaction hash from Founder membership"/>
             <a className="secondary" href="https://founder.gbkai.com" target="_blank" rel="noreferrer">Open Founder Membership Portal ↗</a>
-            {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
+          </>            {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
             {founderStatus?.founder_verified && <div className="offerPreview" style={{marginTop:12}}>
               <b>Founder referral code</b>
               <span>Share this code with businesses you personally refer to GBK Loyalty.</span>
