@@ -951,7 +951,7 @@ export default function Home() {
     setQrBusy(true); setMerchantQr("");
     try{
       const url=`${window.location.origin}/?merchant=${merchant.id}`;
-      const data=await QRCode.toDataURL(url,{width:320,margin:2,errorCorrectionLevel:"M"});
+      const data=await QRCode.toDataURL(url,{width:640,margin:4,errorCorrectionLevel:"H"});
       setMerchantQr(data);
     }catch(e:any){setAuthNotice(e?.message||"QR code could not be created.");}
     finally{setQrBusy(false);}
@@ -1012,9 +1012,9 @@ export default function Home() {
   <text x="600" y="345" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" font-weight="800" fill="#171717">SCAN TO PAY &amp; EARN GBK</text>
   <rect x="170" y="335" width="860" height="860" rx="28" fill="#ffffff"/>
   <image href="${merchantQr}" x="${qrX}" y="${qrY}" width="${qrSize}" height="${qrSize}" preserveAspectRatio="none"/>
-  <circle cx="600" cy="765" r="72" fill="#ffffff" stroke="#6d28d9" stroke-width="8"/>
-  <circle cx="600" cy="765" r="56" fill="#6d28d9"/>
-  <text x="600" y="782" text-anchor="middle" font-family="Arial,sans-serif" font-size="38" font-weight="800" fill="#ffffff">GBK</text>
+  <circle cx="600" cy="765" r="44" fill="#ffffff" stroke="#6d28d9" stroke-width="6"/>
+  <circle cx="600" cy="765" r="33" fill="#6d28d9"/>
+  <text x="600" y="777" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="800" fill="#ffffff">GBK</text>
   <text x="600" y="1260" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="800" fill="#171717">${businessName}</text>
   <text x="600" y="1302" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#555555">${category}${city ? " • " + city : ""}${countryName ? " • " + countryName : ""}</text>
   <rect x="290" y="1340" width="620" height="76" rx="38" fill="#f3e8ff"/>
