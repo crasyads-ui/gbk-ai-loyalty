@@ -79,6 +79,7 @@ export default function Home() {
   const [currentOrderReference,setCurrentOrderReference] = useState("");
   const [upiPayment,setUpiPayment] = useState<any|null>(null);
   const [paymentUtr,setPaymentUtr] = useState("");
+  const [paymentSuccess,setPaymentSuccess] = useState<any>(null);
   const [merchantBusinessName,setMerchantBusinessName]=useState("");
   const [founderReferralCode,setFounderReferralCode]=useState("");
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
@@ -906,6 +907,7 @@ export default function Home() {
 
   const verifyCustomerDirectPayment = async () => {
     const txId = paymentUtr.trim();
+    setPaymentSuccess(null);
     const orderId = String(upiPayment?.gbk_order_id || "").trim();
     if (!orderId) { setAuthNotice("GBK Order ID is missing. Please create the order again."); return; }
     if (!txId) { setAuthNotice("Enter the UPI transaction ID / UTR after completing the payment."); return; }
@@ -924,7 +926,7 @@ export default function Home() {
               ? "Payment verified. This order is below the minimum on-chain reward amount."
               : "Payment verified. GBK reward settlement is processing."
       );
-      if (settlement?.status==="SETTLED") setPaymentUtr("");
+      if (settlement?.status==="SETTLED") { setPaymentUtr(""); setPaymentSuccess({orderReference:result?.order?.order_reference||currentOrderReference,txHash:settlement?.tx_hash||""}); }
     } catch(e:any) { setAuthNotice(e.message || "Payment verification failed."); }
     finally { setApiBusy(false); }
   };
@@ -1309,7 +1311,13 @@ export default function Home() {
             {upiPayment.upi_links.generic && <a className="secondary" href={upiPayment.upi_links.generic}>📱 Open UPI / Other app</a>}
             <small>Payment app opening is not payment verification. GBK reward is released only after verified payment confirmation.</small>
           </div>}
-          {upiPayment?.upi_links && upiPayment?.gbk_order_id && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
+          {paymentSuccess ? <div className="offerPreview" style={{display:"grid",gap:10,margin:"12px 0",textAlign:"center",padding:"20px",border:"2px solid #22c55e"}}>
+            <div style={{fontSize:52}}>✅</div>
+            <b style={{fontSize:22}}>GBK Reward Received Successfully</b>
+            <div>Payment verified and the eligible GBK reward has been released.</div>
+            <small>GBK Order: {paymentSuccess.orderReference}</small>
+            {paymentSuccess.txHash && <small>Reward transaction: {paymentSuccess.txHash.slice(0,10)}…{paymentSuccess.txHash.slice(-8)}</small>}
+          </div> : upiPayment?.upi_links && upiPayment?.gbk_order_id && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>✅ After payment: verify your UTR</b>
             <input className="modalInput" inputMode="text" value={paymentUtr} onChange={e=>setPaymentUtr(e.target.value)} placeholder="Enter UPI Transaction ID / UTR"/>
             <button className="primary" type="button" onClick={verifyCustomerDirectPayment} disabled={apiBusy || !paymentUtr.trim()}>
@@ -1321,7 +1329,7 @@ export default function Home() {
             ? "Pay the merchant directly. Payment confirmation must match this GBK Order ID before any GBK reward is released."
             : "Continue to the merchant's configured payment method."}</small>
           <button className="primary" disabled={apiBusy || !orderAmount} onClick={()=>currentOrderReference ? continueCurrentPayment() : createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : currentOrderReference ? "Continue to Payment ↓" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Create GBK Order → Pay" : "Continue & Pay")}</button>
-          <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");setCurrentOrderReference("");setUpiPayment(null);setPaymentUtr("");setAuthNotice("");}}>Cancel</button>
+          <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");setCurrentOrderReference("");setUpiPayment(null);setPaymentUtr("");setPaymentSuccess(null);setAuthNotice("");}}>Cancel</button>
         </div>
       </div>}
       <section className="holderGrowth">
