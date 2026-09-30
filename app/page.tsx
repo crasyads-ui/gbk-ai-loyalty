@@ -1,3 +1,4 @@
+// Production sync: ensure latest Founder wallet recognition is deployed.
 "use client";
 
 import { useEffect, useRef, useState } from "react";
