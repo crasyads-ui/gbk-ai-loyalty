@@ -1489,18 +1489,20 @@ export default function Home() {
                 finally { setApiBusy(false); }
               }} disabled={apiBusy}>{apiBusy ? "Approving…" : "Approve GBK rewards once"}</button>}
             </div>
-            <div className={Number(merchantChainStatus?.balanceRaw || merchantStatus?.live_gbk_balance_raw || 0) > 0 ? "status" : "status paused"}>
-              {Number(merchantChainStatus?.balanceRaw || merchantStatus?.live_gbk_balance_raw || 0) > 0
-                ? "🟢 Merchant active & funded"
-                : "⏸ Reward balance low"}
-              <span>{Number(merchantChainStatus?.balanceRaw || merchantStatus?.live_gbk_balance_raw || 0) > 0
-                ? "Live GBK balance is available. Each eligible order is checked against the live balance before reward settlement."
-                : "Top up GBK in the connected merchant wallet; the system will re-check the live balance."}</span>
+            <div className={merchantStatus?.merchant?.invitation_status==="ACCEPTED" ? "status" : "status paused"}>
+              {merchantStatus?.merchant?.invitation_status==="ACCEPTED"
+                ? "🟢 Merchant Active"
+                : "⏳ Merchant activation pending"}
+              <span>{merchantStatus?.merchant?.invitation_status==="ACCEPTED"
+                ? (Number(merchantChainStatus?.balanceRaw || merchantStatus?.live_gbk_balance_raw || 0) > 0
+                  ? "Merchant is active and reward funding is ready."
+                  : "Merchant is active. Add GBK to the connected wallet before eligible rewards are settled.")
+                : "Accept the merchant terms to activate the business. GBK funding is not required just to become active."}</span>
             </div>
             <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
             {merchantStatus?.merchant?.invitation_status !== "ACCEPTED" && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
               <b>Merchant activation</b>
-              <span>Accept the GBK Loyalty terms to activate this business for customer search and orders. Activation verifies the connected merchant wallet. A GBK balance is not required just to activate; the connected wallet is used when reward funding is needed.</span>
+              <span>Connect the merchant wallet, accept the GBK Loyalty terms, and the business becomes ACTIVE immediately. GBK funding is only needed when rewards are ready to settle.</span>
               <button className="primary" disabled={apiBusy} onClick={async()=>{
                 if(!session || !merchantStatus?.merchant?.id) return;
                 setApiBusy(true); setAuthNotice("");
