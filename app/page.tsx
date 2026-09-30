@@ -765,26 +765,43 @@ export default function Home() {
       setAuthNotice("Voice search could not start. Please try again.");
     }
   };
-  const continueCurrentPayment = () => {
+  const continueCurrentPayment = async () => {
     if (!currentOrderReference || !selectedMerchant) return;
-    let paymentDetails:any = selectedMerchant?.payment_details ?? "";
-    if (typeof paymentDetails === "string") {
-      try { paymentDetails = JSON.parse(paymentDetails); } catch {}
+    setApiBusy(true);
+    try {
+      let merchant:any = selectedMerchant;
+      try {
+        const active = session || getStoredSession() || await signInAnonymously();
+        if (!session) setSession(active);
+        const fresh = await loyaltyApi(active,"get_merchant",{merchant_id:selectedMerchant.id});
+        if (fresh?.merchant) {
+          merchant = fresh.merchant;
+          setSelectedMerchant(merchant);
+        }
+      } catch {}
+      let paymentDetails:any = merchant?.payment_details ?? "";
+      if (typeof paymentDetails === "string") {
+        try { paymentDetails = JSON.parse(paymentDetails); } catch {}
+      }
+      const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
+      const upiId = typeof details === "string" ? details.trim() : "";
+      if (!upiId) { setAuthNotice("Merchant UPI payment details are not configured."); return; }
+      const amountMajor = Number(orderAmount || 0).toFixed(2);
+      const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor,cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tn:currentOrderReference});
+      const links = {
+        generic:"upi://pay?"+params.toString(),
+        phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
+        googlepay:"gpay://upi/pay?"+params.toString(),
+        paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
+        bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
+      };
+      setUpiPayment({provider:"DIRECT",method:merchant.payment_method||"LOCAL_CURRENCY",currency:String(merchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:merchant.business_name||"GBK Merchant",gbk_order_id:upiPayment?.gbk_order_id||null,order_reference:currentOrderReference,amount_major:amountMajor,upi_id:upiId,upi_links:links});
+      setAuthNotice("Payment options are ready. Choose your UPI app below.");
+    } catch(e:any) {
+      setAuthNotice(e?.message||"Payment options could not be loaded.");
+    } finally {
+      setApiBusy(false);
     }
-    const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
-    const upiId = typeof details === "string" ? details.trim() : "";
-    if (!upiId) { setAuthNotice("Merchant UPI payment details are not configured."); return; }
-    const amountMajor = Number(orderAmount || 0).toFixed(2);
-    const params = new URLSearchParams({pa:upiId,pn:selectedMerchant.business_name||"GBK Merchant",am:amountMajor,cu:String(selectedMerchant.payment_currency||currency||"INR").toUpperCase(),tn:currentOrderReference});
-    const links = {
-      generic:"upi://pay?"+params.toString(),
-      phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
-      googlepay:"gpay://upi/pay?"+params.toString(),
-      paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
-      bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
-    };
-    setUpiPayment({provider:"DIRECT",method:selectedMerchant.payment_method||"LOCAL_CURRENCY",currency:String(selectedMerchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:selectedMerchant.business_name||"GBK Merchant",order_reference:currentOrderReference,amount_major:amountMajor,upi_id:upiId,upi_links:links});
-    setAuthNotice("Payment options are ready. Choose your UPI app below.");
   };
 
   const createOrderFor = async (m:any) => {
