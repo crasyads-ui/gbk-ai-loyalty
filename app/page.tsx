@@ -1502,7 +1502,7 @@ export default function Home() {
             <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
             {merchantStatus?.merchant?.invitation_status !== "ACCEPTED" && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
               <b>Merchant activation</b>
-              <span>Connect the merchant wallet, accept the GBK Loyalty terms, and the business becomes ACTIVE immediately. GBK funding is only needed when rewards are ready to settle.</span>
+              <span>Connect the merchant wallet, add a payment method (UPI or bank/local payment), accept the GBK Loyalty terms, and the business becomes ACTIVE. GBK funding is only needed when rewards are ready to settle.</span>
               <button className="primary" disabled={apiBusy} onClick={async()=>{
                 if(!session || !merchantStatus?.merchant?.id) return;
                 setApiBusy(true); setAuthNotice("");
