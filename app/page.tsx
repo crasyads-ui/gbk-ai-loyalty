@@ -1182,6 +1182,11 @@ export default function Home() {
             <input className="modalInput" inputMode="decimal" type="number" min="0.01" step="0.01" value={orderAmount} onChange={e=>setOrderAmount(e.target.value)} placeholder={country==="India" ? "Enter purchase amount in INR" : "Enter purchase amount in local currency"} />
           </label>
           {authNotice && <div className="notice" style={{margin:"12px 0"}}>{authNotice}</div>}
+          {currentOrderReference && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0",border:"2px solid rgba(99,45,255,.25)"}}>
+            <b>🧾 GBK Order Created</b>
+            <strong style={{fontSize:18}}>{currentOrderReference}</strong>
+            <small>Pay the merchant using your preferred UPI app. The merchant verifies the payment transaction against this GBK Order ID before the GBK reward is released.</small>
+          </div>}
           {upiPayment?.upi_links && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>📲 Pay ₹{upiPayment.amount_major} by UPI</b>
             <small>{upiPayment.upi_id ? `Merchant UPI: ${upiPayment.upi_id}` : "Merchant UPI payment details are not configured."}</small>
@@ -1534,14 +1539,16 @@ export default function Home() {
                     {o.reward_settlement_tx_hash && <a href={"https://bscscan.com/tx/"+o.reward_settlement_tx_hash} target="_blank" rel="noreferrer" style={{display:"block",marginTop:6}}>View GBK settlement transaction ↗</a>}
                     {o.merchant?.payment_provider==="DIRECT" && o.payment_status!=="VERIFIED" && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={async()=>{
                       if(!session)return;
+                      const txId=window.prompt("Enter the verified UPI transaction ID / UTR for this GBK Order.");
+                      if(!txId?.trim()) return;
                       setApiBusy(true);
                       try{
-                        await loyaltyApi(session,"direct_payment_verify",{order_id:o.id});
+                        await loyaltyApi(session,"direct_payment_verify",{order_id:o.id,payment_transaction_id:txId.trim()});
                         await loyaltyApi(session,"merchant_order_update",{order_id:o.id,status:"COMPLETED"});
-                        setAuthNotice("Payment verified and order completed. Releasing the GBK reward…");
+                        setAuthNotice("Payment transaction matched to the GBK Order. Releasing the GBK reward…");
                         await openMerchantWallet();
                       }catch(e:any){setAuthNotice(e.message||"Payment verification failed");}finally{setApiBusy(false);}
-                    }}>Verify direct payment</button>}
+                    }}>Verify UPI transaction & release reward</button>}
                     {["PENDING","ACCEPTED"].includes(o.merchant_response_status || "PENDING") && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={async()=>{
                       if(!session)return;
                       setApiBusy(true);
