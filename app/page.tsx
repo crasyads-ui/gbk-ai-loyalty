@@ -1410,9 +1410,9 @@ export default function Home() {
                 <small>{merchantChainStatus?.allowanceRaw && merchantChainStatus.allowanceRaw !== "0" ? "Distributor approval is active." : "One-time approval is required before reward settlement."}</small>
               </div>
               <div className="merchantWalletMetric">
-                <span>Database balance</span>
-                <b>{merchantStatus?.merchant?.gbk_balance_raw != null ? (Number(merchantStatus.merchant.gbk_balance_raw)/1e8).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : (merchantStatus?.live_gbk_balance_raw ? (Number(merchantStatus.live_gbk_balance_raw)/1e8).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : "0")} GBK</b>
-                <small>Database funding balance recorded for this merchant. Live on-chain balance above is used for current funding checks.</small>
+                <span>Recorded funding balance</span>
+                <b>{merchantStatus?.merchant?.gbk_balance_raw != null ? (Number(merchantStatus.merchant.gbk_balance_raw)/1e8).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : "0"} GBK</b>
+                <small>Historical database funding record only. <strong>Current reward eligibility uses the live on-chain GBK balance above.</strong></small>
               </div>
             </div>
             <div className="merchantWalletActions">
