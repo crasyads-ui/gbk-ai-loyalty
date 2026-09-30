@@ -791,7 +791,7 @@ export default function Home() {
       const links = {
         generic:"upi://pay?"+params.toString(),
         phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
-        googlepay:"gpay://upi/pay?"+params.toString(),
+        googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end",
         paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
         bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
       };
@@ -839,7 +839,7 @@ export default function Home() {
           const links = upiId ? {
             generic: upiUrl,
             phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
-            googlepay:"gpay://upi/pay?"+params.toString(),
+            googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end",
             paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
             bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
           } : null;
@@ -865,7 +865,7 @@ export default function Home() {
         const links = upiId && params ? {
           generic:"upi://pay?"+params.toString(),
           phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
-          googlepay:"gpay://upi/pay?"+params.toString(),
+          googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end",
           paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
           bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
         } : null;
