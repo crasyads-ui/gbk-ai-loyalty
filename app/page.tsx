@@ -1124,7 +1124,7 @@ export default function Home() {
       {searchResults.length === 0 && authNotice && authNotice.includes("No") && <section id="searchResults" className="roleSection"><div className="status"><span>{authNotice}</span></div></section>}
       {askAiOpen && <div className="askAiModalBackdrop" onClick={()=>setAskAiOpen(false)}><section className="askGbkSection askAiModal" onClick={e=>e.stopPropagation()}>
         <div className="sectionHead">
-          <div><span className="eyebrow">🤖 ASK GBK AI</span><h2>Ask anything about GBK Loyalty</h2><p>Get simple guidance for Customer, Merchant, Founder and Business Owner journeys. Choose your language and ask in your own words.</p></div>
+          <div><span className="eyebrow">🤖 ASK GBK AI</span><h2>Ask anything about GBK Loyalty</h2><p>Get simple step-by-step guidance for customers and business owners. Ask how to register, claim a business, activate, or find a service. Active businesses can receive customer leads and orders from GBK AI.</p></div>
           <button className="secondary" onClick={()=>{setAskQuery("");setAskAnswer("");}}>Clear</button>
         </div>
         <div className="askAiPanel">
@@ -1276,8 +1276,9 @@ export default function Home() {
         <div className="panel">
           <span className="eyebrow">LEAD MODEL</span>
           <h2>GBK AI provides leads + orders</h2>
-          <p>GBK AI searches eligible registered businesses for the customer request and can automatically create and route the order/request to the selected merchant. The merchant controls the actual product/service, price and fulfilment.</p>
+          <p>GBK AI searches <b>active registered businesses</b> for each customer request and can automatically create and route the lead/order to the selected merchant. The merchant controls the actual product/service, price and fulfilment.</p>
           <div className="status">🟢 Merchant active <span>Eligible for GBK AI leads + orders</span></div>
+           <div className="status">📈 More active businesses <span>More registrations = more customer choices and more opportunities to receive relevant GBK AI leads.</span></div>
           <div className="status paused">⏸ Reward balance low <span>Top up GBK when an eligible reward needs additional funding; merchant visibility remains active.</span></div>
         </div>
       </section>
