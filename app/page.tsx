@@ -317,10 +317,29 @@ export default function Home() {
 
       setActiveWalletRole(targetRole);
       try { localStorage.setItem("gbk_loyalty_active_role", targetRole); } catch {}
-      setRole(targetRole === "founder" ? "Founder" : "Customer");
-      setAuthNotice(targetRole === "founder"
-        ? "Founder wallet connected successfully."
-        : "Customer wallet connected successfully.");
+
+      if (targetRole === "founder") {
+        // Load the verified Founder status before opening the Founder dashboard.
+        // Without this, the dashboard opens with founderStatus=null and hides
+        // the referral code and Founder Network until a second verification.
+        try {
+          const founderResult = await loyaltyApi(s, "founder_status", {});
+          setFounderStatus(founderResult?.founder || null);
+          if (founderResult?.founder?.founder_verified) {
+            await loadFounderNetwork(s);
+          } else {
+            setFounderNetwork({users:[], businesses:[]});
+          }
+        } catch {
+          setFounderStatus(null);
+          setFounderNetwork({users:[], businesses:[]});
+        }
+        setRole("Founder");
+        setAuthNotice("Founder wallet connected successfully.");
+      } else {
+        setRole("Customer");
+        setAuthNotice("Customer wallet connected successfully.");
+      }
     } catch(e:any) {
       setAuthNotice(e.message || "Wallet connection failed.");
     } finally { setApiBusy(false); }
