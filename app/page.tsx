@@ -785,9 +785,25 @@ export default function Home() {
         // so the merchant can verify the payment manually.
         if (m?.payment_provider === "DIRECT" || m?.payment_method === "CASH") {
           const ref = paid?.payment?.order_reference||created?.order_reference||created?.order?.order_reference||"";
+          const details = m?.payment_details?.upi_id ?? m?.payment_details?.details ?? m?.payment_details ?? "";
+          const upiId = String(details || "").trim();
+          const amountMajor = Number(amount).toFixed(2);
+          const params = new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:ref});
+          const upiUrl = upiId ? "upi://pay?" + params.toString() : "";
+          const links = upiId ? {
+            generic: upiUrl,
+            phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
+            googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end",
+            paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
+            bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
+          } : null;
           setCurrentOrderReference(ref);
-          setUpiPayment(paid?.payment||null);
-          setAuthNotice(`ORDER CREATED • ${ref}. Pay the merchant directly. After verified payment confirmation for this order, your GBK reward is released automatically.`);
+          setUpiPayment({
+            provider:"DIRECT",method:m?.payment_method||"LOCAL_CURRENCY",currency:orderCurrency,
+            merchant_name:m?.business_name||"GBK Merchant",gbk_order_id:created?.order?.id,
+            order_reference:ref,amount_major:amountMajor,upi_id:upiId||null,upi_links:links
+          });
+          setAuthNotice(`ORDER CREATED • ${ref}. Continue with the payment buttons below.`);
           return;
         }
         throw e;
