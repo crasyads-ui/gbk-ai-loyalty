@@ -1576,9 +1576,17 @@ export default function Home() {
                       if(!txId?.trim()) return;
                       setApiBusy(true);
                       try{
-                        await loyaltyApi(session,"direct_payment_verify",{order_id:o.id,payment_transaction_id:txId.trim()});
-                        await loyaltyApi(session,"merchant_order_update",{order_id:o.id,status:"COMPLETED"});
-                        setAuthNotice("Payment transaction matched to the GBK Order. Releasing the GBK reward…");
+                        const result=await loyaltyApi(session,"direct_payment_verify",{order_id:o.id,payment_transaction_id:txId.trim()});
+                        const settlement=result?.settlement;
+                        setAuthNotice(
+                          settlement?.status==="SETTLED"
+                            ? "Payment verified. GBK reward released successfully."
+                            : settlement?.status==="AWAITING_MERCHANT_APPROVAL"
+                              ? "Payment verified. Merchant wallet approval is required once to release the GBK reward."
+                              : settlement?.status==="BELOW_MINIMUM_REWARD"
+                                ? "Payment verified. This order is below the minimum on-chain reward amount."
+                                : "Payment verified. GBK reward settlement is processing."
+                        );
                         await openMerchantWallet();
                       }catch(e:any){setAuthNotice(e.message||"Payment verification failed");}finally{setApiBusy(false);}
                     }}>Verify UPI transaction & release reward</button>}
