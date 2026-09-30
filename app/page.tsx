@@ -69,6 +69,10 @@ export default function Home() {
   const [authNotice,setAuthNotice] = useState("");
   const [apiBusy,setApiBusy] = useState(false);
   const [searchResults,setSearchResults] = useState<any[]>([]);
+  const [directoryResults,setDirectoryResults] = useState<any[]>([]);
+  const [directoryCounts,setDirectoryCounts] = useState({active:0,unclaimed:0,total:0});
+  const [directoryTab,setDirectoryTab] = useState<"ALL"|"ACTIVE"|"UNCLAIMED">("ALL");
+  const [directoryLoading,setDirectoryLoading] = useState(false);
   const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
   const [orderAmount,setOrderAmount] = useState("");
   const [currentOrderReference,setCurrentOrderReference] = useState("");
@@ -691,6 +695,21 @@ export default function Home() {
       "I found matching businesses for you.";
     speakText(prefix + " " + names.join(", ") + ".");
   };
+  const loadBusinessDirectory = async () => {
+    setDirectoryLoading(true);
+    try {
+      let activeSession=session||getStoredSession();
+      if(!activeSession){ activeSession=await signInAnonymously(); setSession(activeSession); }
+      const r=await loyaltyApi(activeSession,"directory",{country});
+      setDirectoryResults(r.results||[]);
+      setDirectoryCounts(r.counts||{active:0,unclaimed:0,total:(r.results||[]).length});
+    } catch(e:any) {
+      setAuthNotice(e.message||"Business Directory could not be loaded");
+    } finally { setDirectoryLoading(false); }
+  };
+
+  useEffect(() => { loadBusinessDirectory(); }, [country]);
+
   const doSearch = async (requestedQuery?:string) => {
     const q=String(requestedQuery ?? query).trim(); if(q.length<2){setAuthNotice("Please enter what you need.");return;}
     if (q !== query) setQuery(q);
@@ -1032,6 +1051,42 @@ export default function Home() {
           <b>📷 Customer QR Scanner</b><span>Scan a participating merchant QR with your phone camera to open the business directly.</span>
           <button className="primary" type="button" onClick={()=>{setScannerOpen(true);setAuthNotice("");}}>📷 Scan Merchant QR</button>
           <button className="secondary" type="button" onClick={()=>setRole("SuggestBusiness")}>＋ Add a Business</button>
+        </div>
+      </section>
+
+      <section id="businessDirectory" className="roleSection">
+        <div className="sectionHead">
+          <div>
+            <span className="eyebrow">🌍 GBK BUSINESS DIRECTORY</span>
+            <h2>Find Local Businesses</h2>
+            <p>Real businesses can be discovered before they activate GBK Loyalty. 🟡 Unclaimed listings are visible for owners to claim; only 🟢 Active merchants can offer GBK Loyalty rewards.</p>
+          </div>
+          <button className="secondary" type="button" onClick={loadBusinessDirectory} disabled={directoryLoading}>{directoryLoading ? "Refreshing…" : "↻ Refresh Directory"}</button>
+        </div>
+        <div className="directoryStats">
+          <button className={directoryTab==="ALL" ? "primary" : "secondary"} type="button" onClick={()=>setDirectoryTab("ALL")}>All {directoryCounts.total}</button>
+          <button className={directoryTab==="ACTIVE" ? "primary" : "secondary"} type="button" onClick={()=>setDirectoryTab("ACTIVE")}>🟢 Active {directoryCounts.active}</button>
+          <button className={directoryTab==="UNCLAIMED" ? "primary" : "secondary"} type="button" onClick={()=>setDirectoryTab("UNCLAIMED")}>🟡 Unclaimed {directoryCounts.unclaimed}</button>
+        </div>
+        {directoryLoading && <div className="status"><span>Loading Business Directory…</span></div>}
+        {!directoryLoading && directoryResults.length===0 && <div className="offerPreview"><b>No directory listings found</b><span>Approved business listings will appear here.</span></div>}
+        <div className="roleGrid">
+          {directoryResults.filter((m:any)=>directoryTab==="ALL" || (directoryTab==="UNCLAIMED" ? m.unclaimed : !m.unclaimed)).slice(0,50).map((m:any)=>
+            <div className="roleCard" key={"directory-"+m.id+(m.listing_type||"")}>
+              <div className="roleIcon">🏪</div>
+              <h3>{m.business_name}</h3>
+              <p>{[m.category,m.city,m.country].filter(Boolean).join(" • ")}</p>
+              {m.address && <p>{m.address}</p>}
+              {m.unclaimed ? <>
+                <div><span className="roleTag">🟡 Unclaimed</span><span className="roleTag">Not reward-active</span></div>
+                <p style={{fontSize:13}}>Real business listing. Owner can claim and complete verification and GBK Loyalty activation.</p>
+                <button className="primary" type="button" onClick={()=>{setClaimBusiness(m);setClaimName("");setClaimContact("");setClaimSubmitted(false);setRole("ClaimBusiness");}}>Claim this business →</button>
+              </> : <>
+                <div><span className="roleTag">🟢 Active merchant</span><span className="roleTag">{Math.round(Number(m.loyalty_offer_bps||0)/100)}% GBK Loyalty</span></div>
+                <button className="primary" type="button" onClick={()=>setSelectedMerchant(m)}>Earn GBK →</button>
+              </>}
+            </div>
+          )}
         </div>
       </section>
 
