@@ -760,6 +760,24 @@ export default function Home() {
       setAuthNotice("Voice search could not start. Please try again.");
     }
   };
+  const continueCurrentPayment = () => {
+    if (!currentOrderReference || !selectedMerchant) return;
+    const details = selectedMerchant?.payment_details?.upi_id ?? selectedMerchant?.payment_details?.details ?? selectedMerchant?.payment_details ?? "";
+    const upiId = String(details || "").trim();
+    if (!upiId) { setAuthNotice("Merchant UPI payment details are not configured."); return; }
+    const amountMajor = Number(orderAmount || 0).toFixed(2);
+    const params = new URLSearchParams({pa:upiId,pn:selectedMerchant.business_name||"GBK Merchant",am:amountMajor,cu:String(selectedMerchant.payment_currency||currency||"INR").toUpperCase(),tn:currentOrderReference});
+    const links = {
+      generic:"upi://pay?"+params.toString(),
+      phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
+      googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end",
+      paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
+      bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
+    };
+    setUpiPayment({provider:"DIRECT",method:selectedMerchant.payment_method||"LOCAL_CURRENCY",currency:String(selectedMerchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:selectedMerchant.business_name||"GBK Merchant",order_reference:currentOrderReference,amount_major:amountMajor,upi_id:upiId,upi_links:links});
+    setAuthNotice("Payment options are ready. Choose your UPI app below.");
+  };
+
   const createOrderFor = async (m:any) => {
     const amount=String(orderAmount||"").trim();
     if(!amount || !Number.isFinite(Number(amount)) || Number(amount)<=0){ setAuthNotice("Enter the purchase/order amount first."); return; }
@@ -1228,7 +1246,7 @@ export default function Home() {
           <small>{selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH"
             ? "Pay the merchant directly. Payment confirmation must match this GBK Order ID before any GBK reward is released."
             : "Continue to the merchant's configured payment method."}</small>
-          <button className="primary" disabled={apiBusy || !orderAmount || !!currentOrderReference} onClick={()=>createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : currentOrderReference ? "✓ Order Created — Continue Payment" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Create GBK Order → Pay" : "Continue & Pay")}</button>
+          <button className="primary" disabled={apiBusy || !orderAmount} onClick={()=>currentOrderReference ? continueCurrentPayment() : createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : currentOrderReference ? "Continue to Payment ↓" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Create GBK Order → Pay" : "Continue & Pay")}</button>
           <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");setCurrentOrderReference("");setUpiPayment(null);setAuthNotice("");}}>Cancel</button>
         </div>
       </div>}
