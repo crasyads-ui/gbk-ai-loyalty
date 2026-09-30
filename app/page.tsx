@@ -36,6 +36,8 @@ export default function Home() {
   const [speaking,setSpeaking] = useState(false);
   const [askQuery,setAskQuery] = useState("");
   const [askAnswer,setAskAnswer] = useState("");
+  const [askResults,setAskResults] = useState<any[]>([]);
+  const [askBusy,setAskBusy] = useState(false);
   const [askAiOpen,setAskAiOpen] = useState(false);
   const [language,setLanguage] = useState("English");
   const [country,setCountry] = useState("Global");
@@ -1178,10 +1180,23 @@ export default function Home() {
     }
   };
 
-  const askGbkAi = (question:string) => {
+  const askGbkAi = async (question:string) => {
     const q = question.trim();
     if (!q) return;
     setAskQuery(q);
+    setAskBusy(true);
+    setAskAnswer("");
+    try {
+      let activeSession = session || getStoredSession();
+      if (!activeSession) { activeSession = await signInAnonymously(); setSession(activeSession); }
+      const search = await loyaltyApi(activeSession, "search", { query: q, country });
+      const matches = (search?.results || []).filter((x:any) => !x?.unclaimed);
+      setAskResults(matches);
+    } catch {
+      setAskResults([]);
+    } finally {
+      setAskBusy(false);
+    }
     const key = q.toLowerCase();
     const answers:Record<string,string> = {
       "English":"GBK Loyalty connects customers, merchants, Founders and business owners. Customers discover businesses, pay normally and receive eligible GBK rewards after verified purchases. Merchants can register or claim a business, verify ownership, add payment details, create offers and fund eligible rewards. Founders can build their network and participate in applicable Founder benefits. Unclaimed businesses can be claimed by the owner or an authorized representative and become reward-active only after verification and activation.",
@@ -1233,7 +1248,7 @@ export default function Home() {
         <div className="eyebrow">GBK LOYALTY • GLOBAL</div>
         <h1>Buy normally. Get GBK rewards.</h1>
         <p>Find participating businesses, buy normally, and receive eligible GBK rewards after the order is verified.</p>
-        <div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder={language==="తెలుగు" ? "మీకు ఏమి కావాలి?" : language==="हिन्दी" ? "आज आपको क्या चाहिए?" : "What do you need today?"}/><button className="voiceBtn" onMouseDown={()=>setSearchFocused(true)} onClick={startVoiceSearch} disabled={apiBusy || voiceListening} aria-label="Speak your request">{voiceListening ? "🎙️ Listening" : "🎤 Speak"}</button><button onMouseDown={()=>setSearchFocused(true)} onClick={()=>doSearch()} disabled={apiBusy}>{apiBusy ? "Searching…" : "Find businesses"}</button></div>
+        <div className="search"><span>⌕</span><input id="searchInput" value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder={language==="తెలుగు" ? "మీకు ఏమి కావాలి?" : language==="हिन्दी" ? "आज आपको क्या चाहिए?" : "What do you need today?"}/><button className="voiceBtn" onMouseDown={()=>setSearchFocused(true)} onClick={startVoiceSearch} disabled={apiBusy || voiceListening} aria-label="Speak your request">{voiceListening ? "🎙️ Listening" : "🎤 Speak"}</button><button onMouseDown={()=>setSearchFocused(true)} onClick={()=>doSearch()} disabled={apiBusy}>{apiBusy ? "Searching…" : "Find businesses"}</button></div>
 <div className="voiceStatus">{voiceSupported ? (voiceListening ? "🎙️ GBK AI is listening in " + language : "🎤 Speak in your selected language") : "⌨️ Type your request or use your device voice input"}</div>
         <div className="askHint"><span>Hotels • Restaurants • Shopping • Services • Travel</span></div>
         <div className="suggestions">
@@ -1298,7 +1313,7 @@ export default function Home() {
       {askAiOpen && <div className="askAiModalBackdrop" onClick={()=>setAskAiOpen(false)}><section className="askGbkSection askAiModal" onClick={e=>e.stopPropagation()}>
         <div className="sectionHead">
           <div><span className="eyebrow">🤖 ASK GBK AI</span><h2>Ask anything about GBK Loyalty</h2><p>Get simple step-by-step guidance for customers and business owners. Ask how to register, claim a business, activate, or find a service. Active businesses can receive customer leads and orders from GBK AI.</p></div>
-          <button className="secondary" onClick={()=>{setAskQuery("");setAskAnswer("");}}>Clear</button>
+          <button className="secondary" onClick={()=>{setAskQuery("");setAskAnswer("");setAskResults([]);}}>Clear</button>
         </div>
         <div className="askAiPanel">
           <div className="askAiTop">
@@ -1314,10 +1329,14 @@ export default function Home() {
             <button onClick={()=>askGbkAi("How do I create a loyalty offer?")}>🎁 How do I create an offer?</button>
           </div>
           <div className="askAiInput">
-            <input value={askQuery} onChange={e=>setAskQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")askGbkAi(askQuery)}} placeholder="Ask GBK AI anything about Loyalty…" />
-            <button className="primary" onClick={()=>askGbkAi(askQuery)} disabled={!askQuery.trim()}>🤖 Ask GBK AI</button>
+            <input value={askQuery} onChange={e=>setAskQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")askGbkAi(askQuery)}} placeholder="Try: restaurants in Nagpur, plumber in Vizag, hotel in Hyderabad…" />
+            <button className="primary" onClick={()=>askGbkAi(askQuery)} disabled={!askQuery.trim() || askBusy}>{askBusy ? "Searching…" : "🤖 Ask GBK AI"}</button>
+            <button className="secondary" onClick={()=>{setAskAiOpen(false);setQuery(askQuery);setSearchFocused(true);setTimeout(()=>document.getElementById("searchInput")?.focus(),50);}}>🏪 Direct Store Search</button>
           </div>
           {askAnswer && <div className="askAiAnswer"><b>🤖 GBK AI</b><p>{askAnswer}</p></div>}
+          {askBusy && <div className="status"><span>🔎 Finding active GBK businesses…</span></div>}
+          {askResults.length > 0 && <div className="askAiResults"><b>🏪 Active businesses found</b>{askResults.slice(0,8).map((m:any)=><div key={m.id} className="askAiResultCard"><div><strong>{m.business_name}</strong><small>{[m.category,m.city,m.country].filter(Boolean).join(" • ")}</small>{m.loyalty_offer_percent ? <small>GBK Loyalty: {m.loyalty_offer_percent}%</small> : null}</div><button className="primary" onClick={()=>{setAskAiOpen(false);setSelectedMerchant(m);}}>Open & Pay</button></div>)}</div>}
+          {!askBusy && askResults.length === 0 && askQuery.trim() && <div className="askAiAnswer"><b>🏪 Business search</b><p>No active GBK business matched this request yet. Try another city/category, or use Direct Store Search.</p></div>}
           <div className="askAiRoles">
             <div><b>👤 Customer</b><span>Find → Scan → Pay → Earn</span></div>
             <div><b>🏪 Merchant</b><span>Register/Claim → Verify → Activate</span></div>
