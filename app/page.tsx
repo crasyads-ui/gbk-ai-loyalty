@@ -78,6 +78,7 @@ export default function Home() {
   const [orderAmount,setOrderAmount] = useState("");
   const [currentOrderReference,setCurrentOrderReference] = useState("");
   const [upiPayment,setUpiPayment] = useState<any|null>(null);
+  const [paymentUtr,setPaymentUtr] = useState("");
   const [merchantBusinessName,setMerchantBusinessName]=useState("");
   const [founderReferralCode,setFounderReferralCode]=useState("");
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
@@ -282,7 +283,9 @@ export default function Home() {
 
         if (lookup?.merchant) {
           setActiveWalletRole("merchant");
-          const savedUpiId = String(lookup.merchant?.payment_details?.upi_id || lookup.merchant?.payment_details?.details || "").trim();
+          let merchantPaymentDetails:any = lookup.merchant?.payment_details ?? "";
+          if (typeof merchantPaymentDetails === "string") { try { merchantPaymentDetails = JSON.parse(merchantPaymentDetails); } catch {} }
+          const savedUpiId = String(merchantPaymentDetails?.upi_id ?? merchantPaymentDetails?.details ?? merchantPaymentDetails?.vpa ?? merchantPaymentDetails?.upi ?? "").trim();
           setMerchantUpiId(savedUpiId);
           setMerchantUpiEditing(false);
           setMerchantStatus({merchant: lookup.merchant});
@@ -466,7 +469,9 @@ export default function Home() {
       const lookup = await loyaltyApi(s,"merchant_wallet_lookup",{wallet_address:knownMerchantWallet});
       const merchant = lookup?.merchant || (await loyaltyApi(s,"my_data",{}))?.merchants?.[0];
       if (!merchant) { setRole("Merchant"); setAuthNotice("No merchant is registered for this wallet. Please complete merchant registration once."); return; }
-      const savedUpiId = String(merchant?.payment_details?.upi_id || merchant?.payment_details?.details || "").trim();
+      let merchantPaymentDetails:any = merchant?.payment_details ?? "";
+      if (typeof merchantPaymentDetails === "string") { try { merchantPaymentDetails = JSON.parse(merchantPaymentDetails); } catch {} }
+      const savedUpiId = String(merchantPaymentDetails?.upi_id ?? merchantPaymentDetails?.details ?? merchantPaymentDetails?.vpa ?? merchantPaymentDetails?.upi ?? "").trim();
       setMerchantUpiId(savedUpiId);
       setMerchantUpiEditing(false);
       setMerchantStatus({merchant});
@@ -806,16 +811,18 @@ export default function Home() {
         // Direct/Cash merchants do not use an online gateway. Keep the order active
         // so the merchant can verify the payment manually.
         if (m?.payment_provider === "DIRECT" || m?.payment_method === "CASH") {
-          const ref = paid?.payment?.order_reference||created?.order_reference||created?.order?.order_reference||"";
-          const details = m?.payment_details?.upi_id ?? m?.payment_details?.details ?? m?.payment_details ?? "";
-          const upiId = String(details || "").trim();
+          const ref = created?.order?.order_reference||created?.order_reference||"";
+          let paymentDetails:any = m?.payment_details ?? "";
+          if (typeof paymentDetails === "string") { try { paymentDetails = JSON.parse(paymentDetails); } catch {} }
+          const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
+          const upiId = typeof details === "string" ? details.trim() : "";
           const amountMajor = Number(amount).toFixed(2);
           const params = new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:ref});
           const upiUrl = upiId ? "upi://pay?" + params.toString() : "";
           const links = upiId ? {
             generic: upiUrl,
             phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
-            googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end",
+            googlepay:"gpay://upi/pay?"+params.toString(),
             paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
             bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
           } : null;
@@ -832,9 +839,22 @@ export default function Home() {
       }
       if (paid?.payment?.provider === "DIRECT") {
         const ref = paid?.payment?.order_reference||created?.order_reference||created?.order?.order_reference||"";
+        let paymentDetails:any = m?.payment_details ?? "";
+        if (typeof paymentDetails === "string") { try { paymentDetails = JSON.parse(paymentDetails); } catch {} }
+        const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
+        const upiId = typeof details === "string" ? details.trim() : "";
+        const amountMajor = Number(amount).toFixed(2);
+        const params = upiId ? new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:ref}) : null;
+        const links = upiId && params ? {
+          generic:"upi://pay?"+params.toString(),
+          phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
+          googlepay:"gpay://upi/pay?"+params.toString(),
+          paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
+          bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
+        } : null;
         setCurrentOrderReference(ref);
-        setUpiPayment(paid?.payment||null);
-        setAuthNotice(`ORDER CREATED • ${ref}. Pay the merchant directly. After verified payment confirmation for this order, your GBK reward is released automatically.`);
+        setUpiPayment({...paid.payment,gbk_order_id:created?.order?.id,order_reference:ref,amount_major:amountMajor,upi_id:upiId||null,upi_links:links});
+        setAuthNotice(upiId ? `ORDER CREATED • ${ref}. Choose your UPI app below, then verify the payment with the UTR.` : `ORDER CREATED • ${ref}. Merchant UPI payment details are not configured.`);
         return;
       }
       if (paid?.payment?.provider === "RAZORPAY") {
@@ -865,6 +885,31 @@ export default function Home() {
         });
       }
     } catch(e:any){setAuthNotice(e.message||"Payment setup failed");} finally {setApiBusy(false);}
+  };
+
+  const verifyCustomerDirectPayment = async () => {
+    const txId = paymentUtr.trim();
+    const orderId = String(upiPayment?.gbk_order_id || "").trim();
+    if (!orderId) { setAuthNotice("GBK Order ID is missing. Please create the order again."); return; }
+    if (!txId) { setAuthNotice("Enter the UPI transaction ID / UTR after completing the payment."); return; }
+    setApiBusy(true); setAuthNotice("");
+    try {
+      const active = session || getStoredSession() || await signInAnonymously();
+      if (!session) setSession(active);
+      const result = await loyaltyApi(active,"direct_payment_verify",{order_id:orderId,payment_transaction_id:txId});
+      const settlement=result?.settlement;
+      setAuthNotice(
+        settlement?.status==="SETTLED"
+          ? "Payment verified. GBK reward released successfully."
+          : settlement?.status==="AWAITING_MERCHANT_APPROVAL"
+            ? "Payment verified. Merchant wallet approval is required once to release the GBK reward."
+            : settlement?.status==="BELOW_MINIMUM_REWARD"
+              ? "Payment verified. This order is below the minimum on-chain reward amount."
+              : "Payment verified. GBK reward settlement is processing."
+      );
+      if (settlement?.status==="SETTLED") setPaymentUtr("");
+    } catch(e:any) { setAuthNotice(e.message || "Payment verification failed."); }
+    finally { setApiBusy(false); }
   };
 
   const shareBusiness = async (businessName:string, businessUrl?:string) => {
@@ -1247,11 +1292,19 @@ export default function Home() {
             {upiPayment.upi_links.generic && <a className="secondary" href={upiPayment.upi_links.generic}>📱 Open UPI / Other app</a>}
             <small>Payment app opening is not payment verification. GBK reward is released only after verified payment confirmation.</small>
           </div>}
+          {upiPayment?.upi_links && upiPayment?.gbk_order_id && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
+            <b>✅ After payment: verify your UTR</b>
+            <input className="modalInput" inputMode="text" value={paymentUtr} onChange={e=>setPaymentUtr(e.target.value)} placeholder="Enter UPI Transaction ID / UTR"/>
+            <button className="primary" type="button" onClick={verifyCustomerDirectPayment} disabled={apiBusy || !paymentUtr.trim()}>
+              {apiBusy ? "Verifying payment…" : "Verify Payment & Receive GBK Reward →"}
+            </button>
+            <small>Enter the transaction ID shown by your UPI app. The GBK reward is released only after the payment is verified against this GBK Order.</small>
+          </div>}
           <small>{selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH"
             ? "Pay the merchant directly. Payment confirmation must match this GBK Order ID before any GBK reward is released."
             : "Continue to the merchant's configured payment method."}</small>
           <button className="primary" disabled={apiBusy || !orderAmount} onClick={()=>currentOrderReference ? continueCurrentPayment() : createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : currentOrderReference ? "Continue to Payment ↓" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Create GBK Order → Pay" : "Continue & Pay")}</button>
-          <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");setCurrentOrderReference("");setUpiPayment(null);setAuthNotice("");}}>Cancel</button>
+          <button className="secondary" onClick={()=>{setSelectedMerchant(null);setOrderAmount("");setCurrentOrderReference("");setUpiPayment(null);setPaymentUtr("");setAuthNotice("");}}>Cancel</button>
         </div>
       </div>}
       <section className="holderGrowth">
