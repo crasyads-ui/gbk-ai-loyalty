@@ -1303,7 +1303,7 @@ export default function Home() {
             <b>📲 Pay ₹{upiPayment.amount_major} by UPI</b>
             <small>{upiPayment.upi_id ? `Merchant UPI: ${upiPayment.upi_id}` : "Merchant UPI payment details are not configured."}</small>
             {upiPayment.upi_links.phonepe && <a className="primary" href={upiPayment.upi_links.phonepe}>🟣 Pay with PhonePe</a>}
-            {upiPayment.upi_links.googlepay && <a className="primary" href={upiPayment.upi_links.googlepay}>🟢 Pay with Google Pay</a>}
+            {upiPayment.upi_links.googlepay && <button className="primary" type="button" onClick={()=>{ const url=upiPayment.upi_links.googlepay; try { window.location.href=url; } catch {} setTimeout(()=>{ try { if(document.visibilityState==="visible" && upiPayment.upi_links.generic) window.location.href=upiPayment.upi_links.generic; } catch {} },1200); }}>🟢 Pay with Google Pay</button>}
             {upiPayment.upi_links.paytm && <a className="primary" href={upiPayment.upi_links.paytm}>🔵 Pay with Paytm</a>}
             {upiPayment.upi_links.bhim && <a className="secondary" href={upiPayment.upi_links.bhim}>🏦 Pay with BHIM</a>}
             {upiPayment.upi_links.generic && <a className="secondary" href={upiPayment.upi_links.generic}>📱 Open UPI / Other app</a>}
