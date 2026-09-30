@@ -1080,25 +1080,23 @@ export default function Home() {
         <div className="sectionHead">
           <div>
             <span className="eyebrow">🌍 GBK BUSINESS DIRECTORY</span>
-            <h2>Find Local Businesses</h2>
-            <p>Only 🟢 Active merchants are shown here. Customers can discover businesses that are ready for GBK Loyalty rewards.</p>
+            <h2>Unclaimed Businesses</h2>
+            <p>Browse all approved unclaimed business listings. Owners can claim their business and complete GBK Loyalty activation.</p>
           </div>
           <button className="secondary" type="button" onClick={loadBusinessDirectory} disabled={directoryLoading}>{directoryLoading ? "Refreshing…" : "↻ Refresh Directory"}</button>
         </div>
-        <div className="directoryStats">
-          <button className="primary" type="button">🟢 Active {directoryCounts.active}</button>
-        </div>
         {directoryLoading && <div className="status"><span>Loading Business Directory…</span></div>}
-        {!directoryLoading && directoryResults.length===0 && <div className="offerPreview"><b>No directory listings found</b><span>Approved business listings will appear here.</span></div>}
+        {!directoryLoading && directoryResults.length===0 && <div className="offerPreview"><b>No unclaimed businesses found</b><span>Approved unclaimed business listings will appear here.</span></div>}
         <div className="roleGrid">
-          {directoryResults.filter((m:any)=>m.active && !m.unclaimed).slice(0,50).map((m:any)=>
-            <div className="roleCard" key={"directory-"+m.id+(m.listing_type||"")}>
+          {directoryResults.filter((m:any)=>m.unclaimed).map((m:any)=>
+            <div className="roleCard" key={"directory-"+m.id}>
               <div className="roleIcon">🏪</div>
               <h3>{m.business_name}</h3>
               <p>{[m.category,m.city,m.country].filter(Boolean).join(" • ")}</p>
               {m.address && <p>{m.address}</p>}
-              <div><span className="roleTag">🟢 Active merchant</span><span className="roleTag">{Math.round(Number(m.loyalty_offer_bps||0)/100)}% GBK Loyalty</span></div>
-              <button className="primary" type="button" onClick={()=>setSelectedMerchant(m)}>Earn GBK →</button>
+              <div><span className="roleTag">Unclaimed business</span><span className="roleTag">Not reward-active</span></div>
+              <p style={{fontSize:13}}>This business is listed but has not completed owner claim and merchant activation.</p>
+              <button className="primary" type="button" onClick={()=>{setClaimBusiness(m);setClaimName("");setClaimContact("");setClaimSubmitted(false);setRole("ClaimBusiness");}}>Claim this business →</button>
             </div>
           )}
         </div>
