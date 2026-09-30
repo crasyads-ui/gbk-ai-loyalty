@@ -1655,7 +1655,8 @@ export default function Home() {
             </div>
             <input className="modalInput" value={founderTxHash} onChange={e=>setFounderTxHash(e.target.value)} placeholder="BSC transaction hash from Founder membership"/>
             <a className="secondary" href="https://founder.gbkai.com" target="_blank" rel="noreferrer">Open Founder Membership Portal ↗</a>
-          </>            {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
+          </>} 
+            {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
             {founderStatus?.founder_verified && <div className="offerPreview" style={{marginTop:12}}>
               <b>Founder referral code</b>
               <span>Share this code with businesses you personally refer to GBK Loyalty.</span>
