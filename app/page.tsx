@@ -60,6 +60,8 @@ export default function Home() {
   const [merchantWallet,setMerchantWallet] = useState("");
   const [merchantUpiId,setMerchantUpiId] = useState("");
   const [merchantUpiEditing,setMerchantUpiEditing] = useState(false);
+  const [merchantOfferEditing,setMerchantOfferEditing] = useState(false);
+  const [merchantOfferEdit,setMerchantOfferEdit] = useState("10");
   const [session,setSession] = useState<LoyaltySession|null>(null);
   const [activeWalletRole,setActiveWalletRole] = useState<"customer"|"merchant"|"founder"|null>(null);
   const [authMode,setAuthMode] = useState<"login"|"signup">("login");
@@ -934,6 +936,27 @@ export default function Home() {
     }
   };
 
+  const saveMerchantOffer = async () => {
+    const merchantId = String(merchantStatus?.merchant?.id || "");
+    const offer = Number(merchantOfferEdit);
+    const active = session || getStoredSession();
+    if (!merchantId) { setAuthNotice("Merchant account not found. Refresh the Merchant Wallet."); return; }
+    if (!Number.isFinite(offer) || offer < 1 || offer > 50) { setAuthNotice("Enter a loyalty offer from 1% to 50%."); return; }
+    if (!active) { setAuthNotice("Connect the merchant wallet first."); return; }
+    const current = Number(merchantStatus?.merchant?.loyalty_offer_bps || 0) / 100;
+    if (offer === current) { setMerchantOfferEditing(false); return; }
+    if (!window.confirm(`Change GBK Loyalty from ${current}% to ${offer}%?`)) return;
+    setApiBusy(true); setAuthNotice("");
+    try {
+      const result = await loyaltyApi(active, "merchant_offer_update", { merchant_id: merchantId, loyalty_offer_percent: offer });
+      if (result?.merchant) setMerchantStatus((prev:any) => ({...(prev || {}), merchant: result.merchant}));
+      setMerchantOfferEditing(false);
+      setAuthNotice(`GBK Loyalty offer updated from ${current}% to ${offer}%.`);
+    } catch (e:any) {
+      setAuthNotice(e?.message || "GBK Loyalty offer could not be updated.");
+    } finally { setApiBusy(false); }
+  };
+
   const registerMerchant = async () => {
     if (role !== "Merchant") return;
     setApiBusy(true);
@@ -1422,6 +1445,23 @@ export default function Home() {
             <div className="offerPreview" style={{display:"grid",gap:6}}>
               <b>Merchant: {merchantStatus?.merchant?.business_name || "—"}</b>
               <span>Wallet: {walletAddress ? walletAddress.slice(0,6)+"…"+walletAddress.slice(-4) : (merchantStatus?.merchant?.profile_id ? "Connected" : "Not connected")}</span>
+            </div>
+            <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
+              <b>🎁 GBK Loyalty Offer</b>
+              {!merchantOfferEditing ? <>
+                <span>Current offer: <strong>{(Number(merchantStatus?.merchant?.loyalty_offer_bps || 0)/100).toFixed(merchantStatus?.merchant?.loyalty_offer_bps % 100 ? 2 : 0)}%</strong></span>
+                <button className="secondary" type="button" onClick={()=>{
+                  setMerchantOfferEdit(String(Number(merchantStatus?.merchant?.loyalty_offer_bps || 0)/100));
+                  setMerchantOfferEditing(true);
+                }}>✏️ Edit Loyalty %</button>
+              </> : <>
+                <small>Change the loyalty percentage from 1% to 50%. Existing completed orders keep their original offer.</small>
+                <input className="modalInput" type="number" min="1" max="50" step="0.1" value={merchantOfferEdit} onChange={e=>setMerchantOfferEdit(e.target.value)} placeholder="Loyalty percentage"/>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <button className="primary" type="button" onClick={saveMerchantOffer} disabled={apiBusy}>{apiBusy ? "Saving…" : "Save New %"} </button>
+                  <button className="secondary" type="button" onClick={()=>setMerchantOfferEditing(false)} disabled={apiBusy}>Cancel</button>
+                </div>
+              </>}
             </div>
             <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
               <b>📲 Merchant UPI Payment</b>
