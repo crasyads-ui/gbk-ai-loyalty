@@ -71,7 +71,6 @@ export default function Home() {
   const [searchResults,setSearchResults] = useState<any[]>([]);
   const [directoryResults,setDirectoryResults] = useState<any[]>([]);
   const [directoryCounts,setDirectoryCounts] = useState({active:0,unclaimed:0,total:0});
-  const [directoryTab,setDirectoryTab] = useState<"ALL"|"ACTIVE"|"UNCLAIMED">("ALL");
   const [directoryLoading,setDirectoryLoading] = useState(false);
   const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
   const [orderAmount,setOrderAmount] = useState("");
@@ -1059,32 +1058,24 @@ export default function Home() {
           <div>
             <span className="eyebrow">🌍 GBK BUSINESS DIRECTORY</span>
             <h2>Find Local Businesses</h2>
-            <p>Real businesses can be discovered before they activate GBK Loyalty. 🟡 Unclaimed listings are visible for owners to claim; only 🟢 Active merchants can offer GBK Loyalty rewards.</p>
+            <p>Only 🟢 Active merchants are shown here. Customers can discover businesses that are ready for GBK Loyalty rewards.</p>
           </div>
           <button className="secondary" type="button" onClick={loadBusinessDirectory} disabled={directoryLoading}>{directoryLoading ? "Refreshing…" : "↻ Refresh Directory"}</button>
         </div>
         <div className="directoryStats">
-          <button className={directoryTab==="ALL" ? "primary" : "secondary"} type="button" onClick={()=>setDirectoryTab("ALL")}>All {directoryCounts.total}</button>
-          <button className={directoryTab==="ACTIVE" ? "primary" : "secondary"} type="button" onClick={()=>setDirectoryTab("ACTIVE")}>🟢 Active {directoryCounts.active}</button>
-          <button className={directoryTab==="UNCLAIMED" ? "primary" : "secondary"} type="button" onClick={()=>setDirectoryTab("UNCLAIMED")}>🟡 Unclaimed {directoryCounts.unclaimed}</button>
+          <button className="primary" type="button">🟢 Active {directoryCounts.active}</button>
         </div>
         {directoryLoading && <div className="status"><span>Loading Business Directory…</span></div>}
         {!directoryLoading && directoryResults.length===0 && <div className="offerPreview"><b>No directory listings found</b><span>Approved business listings will appear here.</span></div>}
         <div className="roleGrid">
-          {directoryResults.filter((m:any)=>directoryTab==="ALL" || (directoryTab==="UNCLAIMED" ? m.unclaimed : !m.unclaimed)).slice(0,50).map((m:any)=>
+          {directoryResults.filter((m:any)=>m.active && !m.unclaimed).slice(0,50).map((m:any)=>
             <div className="roleCard" key={"directory-"+m.id+(m.listing_type||"")}>
               <div className="roleIcon">🏪</div>
               <h3>{m.business_name}</h3>
               <p>{[m.category,m.city,m.country].filter(Boolean).join(" • ")}</p>
               {m.address && <p>{m.address}</p>}
-              {m.unclaimed ? <>
-                <div><span className="roleTag">🟡 Unclaimed</span><span className="roleTag">Not reward-active</span></div>
-                <p style={{fontSize:13}}>Real business listing. Owner can claim and complete verification and GBK Loyalty activation.</p>
-                <button className="primary" type="button" onClick={()=>{setClaimBusiness(m);setClaimName("");setClaimContact("");setClaimSubmitted(false);setRole("ClaimBusiness");}}>Claim this business →</button>
-              </> : <>
-                <div><span className="roleTag">🟢 Active merchant</span><span className="roleTag">{Math.round(Number(m.loyalty_offer_bps||0)/100)}% GBK Loyalty</span></div>
-                <button className="primary" type="button" onClick={()=>setSelectedMerchant(m)}>Earn GBK →</button>
-              </>}
+              <div><span className="roleTag">🟢 Active merchant</span><span className="roleTag">{Math.round(Number(m.loyalty_offer_bps||0)/100)}% GBK Loyalty</span></div>
+              <button className="primary" type="button" onClick={()=>setSelectedMerchant(m)}>Earn GBK →</button>
             </div>
           )}
         </div>
