@@ -968,6 +968,25 @@ export default function Home() {
     const a=document.createElement("a"); a.href=merchantQr; a.download="gbk-loyalty-business-qr.png"; a.click();
   };
 
+  const downloadInstallQr = async () => {
+    try {
+      const data = await QRCode.toDataURL("https://loyalty.gbkai.com", {
+        width: 800,
+        margin: 3,
+        errorCorrectionLevel: "H"
+      });
+      const a = document.createElement("a");
+      a.href = data;
+      a.download = "gbk-loyalty-install-webapp-qr.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setShareNotice("GBK Loyalty Install Web App QR downloaded.");
+    } catch (e:any) {
+      setAuthNotice(e?.message || "Install QR could not be created.");
+    }
+  };
+
   const suggestBusiness = async () => {
     const targetCountry = suggestBusinessCountry || (country !== "Global" ? country : "");
     if (!suggestBusinessName.trim() || !suggestBusinessCity.trim() || !targetCountry) { setAuthNotice("Enter the business name, city and country."); return; }
@@ -1288,7 +1307,7 @@ export default function Home() {
           <div className="offerPreview" style={{display:"grid",gap:8,margin:"14px 0",textAlign:"center"}}>
             <b>📱 Scan to open this business</b>
             {merchantQr ? <img src={merchantQr} alt={`GBK Loyalty QR for ${selectedMerchant.business_name}`} style={{width:220,height:220,maxWidth:"100%",margin:"0 auto",background:"#fff",padding:10,borderRadius:16}}/> : <button className="secondary" type="button" onClick={()=>openMerchantQr(selectedMerchant)} disabled={qrBusy}>{qrBusy?"Creating QR…":"Generate Business QR"}</button>}
-            {merchantQr && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><button className="secondary" type="button" onClick={downloadMerchantQr}>⬇️ Download QR</button><button className="secondary" type="button" onClick={()=>shareMerchantQr(selectedMerchant)}>📤 Share</button></div>}
+            {merchantQr && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><button className="secondary" type="button" onClick={downloadMerchantQr}>⬇️ Download Business QR</button><button className="secondary" type="button" onClick={downloadInstallQr}>📱 Download Install QR</button><button className="secondary" type="button" onClick={()=>shareMerchantQr(selectedMerchant)}>📤 Share</button><button className="secondary" type="button" onClick={install}>📲 Install Web App</button></div>}
             {shareNotice && <small>{shareNotice}</small>}
           </div>
           <label style={{display:"grid",gap:6,margin:"14px 0"}}>
