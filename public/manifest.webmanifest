@@ -1,1 +1,18 @@
-{"name":"GBK AI Loyalty","short_name":"GBK Loyalty","start_url":"/","display":"standalone","background_color":"#f5f8f6","theme_color":"#159447","description":"Shop, earn GBK rewards, hold, swap and transfer."}
+{
+  "name": "GBK AI Loyalty",
+  "short_name": "GBK Loyalty",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "background_color": "#f5f8f6",
+  "theme_color": "#6d28d9",
+  "description": "Shop, pay, earn GBK rewards and connect with local businesses.",
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}
