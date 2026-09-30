@@ -762,8 +762,12 @@ export default function Home() {
   };
   const continueCurrentPayment = () => {
     if (!currentOrderReference || !selectedMerchant) return;
-    const details = selectedMerchant?.payment_details?.upi_id ?? selectedMerchant?.payment_details?.details ?? selectedMerchant?.payment_details ?? "";
-    const upiId = String(details || "").trim();
+    let paymentDetails:any = selectedMerchant?.payment_details ?? "";
+    if (typeof paymentDetails === "string") {
+      try { paymentDetails = JSON.parse(paymentDetails); } catch {}
+    }
+    const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
+    const upiId = typeof details === "string" ? details.trim() : "";
     if (!upiId) { setAuthNotice("Merchant UPI payment details are not configured."); return; }
     const amountMajor = Number(orderAmount || 0).toFixed(2);
     const params = new URLSearchParams({pa:upiId,pn:selectedMerchant.business_name||"GBK Merchant",am:amountMajor,cu:String(selectedMerchant.payment_currency||currency||"INR").toUpperCase(),tn:currentOrderReference});
