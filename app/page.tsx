@@ -319,23 +319,34 @@ export default function Home() {
       try { localStorage.setItem("gbk_loyalty_active_role", targetRole); } catch {}
 
       if (targetRole === "founder") {
-        // Load the verified Founder status before opening the Founder dashboard.
-        // Without this, the dashboard opens with founderStatus=null and hides
-        // the referral code and Founder Network until a second verification.
+        // First sync an already-active Founder membership from the Founder system
+        // using the same connected wallet. This prevents verified Founders from
+        // being shown the Loyalty registration form again.
+        try {
+          await loyaltyApi(s, "founder_sync_verified_membership", {
+            country: country === "Global" ? "" : country
+          });
+        } catch {
+          // A new/unverified Founder can continue through the normal verification flow.
+        }
         try {
           const founderResult = await loyaltyApi(s, "founder_status", {});
           setFounderStatus(founderResult?.founder || null);
           if (founderResult?.founder?.founder_verified) {
             await loadFounderNetwork(s);
+            setRole("Founder");
+            setAuthNotice("Verified Founder recognized. Founder benefits and network are ready.");
           } else {
             setFounderNetwork({users:[], businesses:[]});
+            setRole("Founder");
+            setAuthNotice("Founder wallet connected. Complete Founder verification if this wallet is not yet verified.");
           }
         } catch {
           setFounderStatus(null);
           setFounderNetwork({users:[], businesses:[]});
+          setRole("Founder");
+          setAuthNotice("Founder wallet connected. Complete Founder verification to activate benefits.");
         }
-        setRole("Founder");
-        setAuthNotice("Founder wallet connected successfully.");
       } else {
         setRole("Customer");
         setAuthNotice("Customer wallet connected successfully.");
