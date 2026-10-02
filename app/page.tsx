@@ -48,6 +48,8 @@ export default function Home() {
   const [shareNotice,setShareNotice] = useState("");
   const [merchantQr,setMerchantQr] = useState("");
   const [qrBusy,setQrBusy] = useState(false);
+  const [offerQrId,setOfferQrId] = useState("");
+  const [offerQr,setOfferQr] = useState("");
   const [suggestedBusinessId,setSuggestedBusinessId] = useState("");
   const [claimBusiness,setClaimBusiness] = useState<any|null>(null);
   const [claimName,setClaimName] = useState("");
@@ -151,7 +153,10 @@ export default function Home() {
   const selectCountry = (value:string) => { setCountry(value); const next = value === "Global" ? "USD" : currencyForCountry(value); setCurrency(next); setPaymentCurrency(next); try { localStorage.setItem("gbk_loyalty_country", value); localStorage.setItem("gbk_loyalty_currency", next); } catch {} };
 
   useEffect(() => {
-    const merchantId = new URLSearchParams(window.location.search).get("merchant");
+    const params = new URLSearchParams(window.location.search);
+    const merchantId = params.get("merchant");
+    const offerId = params.get("offer");
+    if(offerId) setSelectedOfferId(offerId);
     if(!merchantId)return;
     (async()=>{
       try{
@@ -990,6 +995,26 @@ export default function Home() {
     if(!merchantQr)return;
     const a=document.createElement("a"); a.href=merchantQr; a.download="gbk-loyalty-business-qr.png"; a.click();
   };
+  const generateOfferQr = async (offer:any) => {
+    if(!offer?.id || !merchantStatus?.merchant?.id) return;
+    setOfferQrId(String(offer.id)); setOfferQr(""); setQrBusy(true);
+    try {
+      const url=`${window.location.origin}/?merchant=${merchantStatus.merchant.id}&offer=${offer.id}`;
+      const data=await QRCode.toDataURL(url,{width:800,margin:4,errorCorrectionLevel:"H"});
+      setOfferQr(data);
+    } catch(e:any) {
+      setAuthNotice(e?.message||"Offer QR could not be created.");
+    } finally { setQrBusy(false); }
+  };
+  const downloadOfferQr = (offer:any) => {
+    if(!offerQr || offerQrId!==String(offer?.id)) {
+      setAuthNotice("Generate this offer QR first.");
+      return;
+    }
+    const safe=String(offer?.product_name||"offer").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"").toLowerCase()||"offer";
+    const a=document.createElement("a"); a.href=offerQr; a.download=`gbk-loyalty-${safe}-qr.png`; document.body.appendChild(a); a.click(); a.remove();
+    setShareNotice(`${offer?.product_name||"Offer"} QR downloaded.`);
+  };
 
   const downloadInstallQr = async () => {
     try {
@@ -1297,10 +1322,24 @@ export default function Home() {
               <b>🏷️ Merchant Loyalty Offers</b>
               <small>Choose the reward in your local currency. Example: ₹1,000 purchase → 10% → ₹100 GBK Loyalty.</small>
               <input className="modalInput" value={productOfferName} onChange={e=>setProductOfferName(e.target.value)} placeholder="Product or service name"/>
-              <input className="modalInput" type="number" min="0.01" step="0.01" value={productOfferPrice} onChange={e=>setProductOfferPrice(e.target.value)} placeholder="Price"/>
-              <select className="modalSelect" value={productOfferPercent} onChange={e=>setProductOfferPercent(e.target.value)}><option value="5">5% loyalty</option><option value="10">10% loyalty</option><option value="15">15% loyalty</option><option value="20">20% loyalty</option><option value="custom">Custom percentage</option></select>{productOfferPercent==="custom" && <input className="modalInput" type="number" min="1" max="50" step="0.1" value={customOffer} onChange={e=>setCustomOffer(e.target.value)} placeholder="Custom loyalty %"/>}
-              <button className="primary" type="button" onClick={createProductOffer} disabled={apiBusy}>{apiBusy ? "Saving…" : "➕ Save Loyalty Offer"}</button>
-              {productOffers.length>0 && <div style={{display:"grid",gap:6}}>{productOffers.map((o:any)=><div key={o.id} style={{display:"flex",justifyContent:"space-between",gap:8}}><span><strong>{o.product_name}</strong> · {o.product_price_minor/100} {o.currency} · {String(o.offer_type||"PERCENT")==="FLAT" ? "Flat "+(Number(o.flat_reward_minor)/100)+" "+o.currency : (Number(o.loyalty_offer_bps)/100).toFixed(1)+"%"}</span><button className="secondary" type="button" onClick={async()=>{const active=session||getStoredSession();if(!active)return;await loyaltyApi(active,"merchant_product_offer_update",{offer_id:o.id,active:!o.active});await loadProductOffers(String(merchantStatus?.merchant?.id||""));}}> {o.active?"Pause":"Activate"} </button></div>)}</div>}
+              <input className="modalInput" type="number" min="0.01" step="0.01" value={productOfferPrice} onChange={e=>setProductOfferPrice(e.target.value)} placeholder={`Price in ${currency||"local currency"}`}/>
+              <select className="modalSelect" value={productOfferType} onChange={e=>setProductOfferType(e.target.value as "PERCENT"|"FLAT")}>
+                <option value="PERCENT">Percentage loyalty</option><option value="FLAT">Flat amount loyalty</option>
+              </select>
+              {productOfferType==="PERCENT"
+                ? <input className="modalInput" type="number" min="1" max="50" step="0.1" value={productOfferPercent} onChange={e=>setProductOfferPercent(e.target.value)} placeholder="Loyalty percentage (1–50%)"/>
+                : <input className="modalInput" type="number" min="0.01" step="0.01" value={productOfferFlat} onChange={e=>setProductOfferFlat(e.target.value)} placeholder={`Flat reward in ${currency||"local currency"}`}/>}
+              <button className="primary" type="button" onClick={createProductOffer} disabled={apiBusy}>{apiBusy ? "Saving…" : "➕ Save Custom Offer"}</button>
+              {productOffers.length>0 && <div style={{display:"grid",gap:8}}>{productOffers.map((o:any)=><div key={o.id} className="offerPreview">
+                <div><strong>{o.product_name}</strong> · {Number(o.product_price_minor)/100} {o.currency}</div>
+                <span>{String(o.offer_type||"PERCENT")==="FLAT" ? `Flat ${Number(o.flat_reward_minor)/100} ${o.currency}` : `${(Number(o.loyalty_offer_bps)/100).toFixed(1)}% loyalty`}</span>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <button className="secondary" type="button" onClick={()=>generateOfferQr(o)} disabled={qrBusy}>{qrBusy && offerQrId===String(o.id) ? "Creating QR…" : "🔳 Generate QR"}</button>
+                  <button className="secondary" type="button" onClick={()=>downloadOfferQr(o)} disabled={!offerQr || offerQrId!==String(o.id)}>⬇️ Download QR</button>
+                </div>
+                {offerQrId===String(o.id) && offerQr && <img src={offerQr} alt={`${o.product_name} offer QR`} style={{width:180,height:180,margin:"8px auto 0",display:"block",background:"#fff",padding:8,borderRadius:12}}/>}
+                <button className="secondary" type="button" onClick={async()=>{const active=session||getStoredSession();if(!active)return;await loyaltyApi(active,"merchant_product_offer_update",{offer_id:o.id,active:!o.active});await loadProductOffers(String(merchantStatus?.merchant?.id||""));}}> {o.active?"Pause":"Activate"} </button>
+              </div>)}</div>}
             </div>
           <b>📷 Customer QR Scanner</b><span>Scan a participating merchant QR with your phone camera to open the business directly.</span>
           <button className="primary" type="button" onClick={()=>{setScannerOpen(true);setAuthNotice("");}}>📷 Scan Merchant QR</button>
