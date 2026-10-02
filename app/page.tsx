@@ -1289,12 +1289,12 @@ export default function Home() {
           <button onClick={()=>setQuery("AC repair near me")}>🔧 Services</button><button onClick={()=>setQuery("agriculture products or farm service near me")}>🌾 Agriculture</button>
         </div>
         <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
-              <b>🏷️ Custom Product / Service Offers</b>
-              <small>Create a specific offer such as <strong>$30 product → 10% GBK Loyalty</strong>. The full reward pool must be funded by the merchant before an order can be created.</small>
+              <b>🏷️ Merchant Loyalty Offers</b>
+              <small>Choose the reward in your local currency. Example: ₹1,000 purchase → 10% → ₹100 GBK Loyalty.</small>
               <input className="modalInput" value={productOfferName} onChange={e=>setProductOfferName(e.target.value)} placeholder="Product or service name"/>
               <input className="modalInput" type="number" min="0.01" step="0.01" value={productOfferPrice} onChange={e=>setProductOfferPrice(e.target.value)} placeholder="Price"/>
-              <input className="modalInput" type="number" min="1" max="50" step="0.1" value={productOfferPercent} onChange={e=>setProductOfferPercent(e.target.value)} placeholder="Custom loyalty %"/>
-              <button className="primary" type="button" onClick={createProductOffer} disabled={apiBusy}>{apiBusy ? "Saving…" : "➕ Create Product Offer"}</button>
+              <select className="modalSelect" value={productOfferPercent} onChange={e=>setProductOfferPercent(e.target.value)}><option value="5">5% loyalty</option><option value="10">10% loyalty</option><option value="15">15% loyalty</option><option value="20">20% loyalty</option><option value="custom">Custom percentage</option></select>{productOfferPercent==="custom" && <input className="modalInput" type="number" min="1" max="50" step="0.1" value={customOffer} onChange={e=>setCustomOffer(e.target.value)} placeholder="Custom loyalty %"/>}
+              <button className="primary" type="button" onClick={createProductOffer} disabled={apiBusy}>{apiBusy ? "Saving…" : "➕ Save Loyalty Offer"}</button>
               {productOffers.length>0 && <div style={{display:"grid",gap:6}}>{productOffers.map((o:any)=><div key={o.id} style={{display:"flex",justifyContent:"space-between",gap:8}}><span><strong>{o.product_name}</strong> · {o.product_price_minor/100} {o.currency} · {(Number(o.loyalty_offer_bps)/100).toFixed(1)}%</span><button className="secondary" type="button" onClick={async()=>{const active=session||getStoredSession();if(!active)return;await loyaltyApi(active,"merchant_product_offer_update",{offer_id:o.id,active:!o.active});await loadProductOffers(String(merchantStatus?.merchant?.id||""));}}> {o.active?"Pause":"Activate"} </button></div>)}</div>}
             </div>
           <b>📷 Customer QR Scanner</b><span>Scan a participating merchant QR with your phone camera to open the business directly.</span>
