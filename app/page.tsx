@@ -1388,7 +1388,7 @@ export default function Home() {
               <button className="primary" onClick={()=>{setClaimBusiness(m);setClaimName("");setClaimMobile("");setClaimEmail("");setClaimSubmitted(false);setRole("ClaimBusiness");}}>Claim this business →</button>
             </> : <>
               <div><span className="roleTag">{Math.round(Number(m.loyalty_offer_bps||0)/100)}% GBK Loyalty</span><span className="roleTag">Active merchant</span></div>
-              <button className="primary" onClick={()=>setSelectedMerchant(m);setSelectedOfferId("")}>Earn GBK →</button>
+              <button className="primary" onClick={()=>{setSelectedMerchant(m);setSelectedOfferId("")}}>Earn GBK →</button>
             </>}
           </div>)}
         </div>
