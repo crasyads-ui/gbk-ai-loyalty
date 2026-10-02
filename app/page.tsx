@@ -86,6 +86,7 @@ export default function Home() {
   const [paymentSuccess,setPaymentSuccess] = useState<any>(null);
   const [merchantBusinessName,setMerchantBusinessName]=useState("");
   const [founderReferralCode,setFounderReferralCode]=useState("");
+  const [founderReferralStatus,setFounderReferralStatus]=useState<any>(null);
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
   const [merchantPhone,setMerchantPhone]=useState("");
   const [merchantEmail,setMerchantEmail]=useState("");
@@ -142,6 +143,40 @@ export default function Home() {
   const holderRewardMax = 6.3;
 
   const selectCountry = (value:string) => { setCountry(value); const next = value === "Global" ? "USD" : currencyForCountry(value); setCurrency(next); setPaymentCurrency(next); try { localStorage.setItem("gbk_loyalty_country", value); localStorage.setItem("gbk_loyalty_currency", next); } catch {} };
+
+  useEffect(() => {
+    const rawRef = new URLSearchParams(window.location.search).get("ref");
+    if (rawRef) setFounderReferralCode(rawRef.trim());
+  }, []);
+
+  useEffect(() => {
+    if (role !== "Merchant" || !founderReferralCode.trim()) {
+      if (!founderReferralCode.trim()) setFounderReferralStatus(null);
+      return;
+    }
+    let cancelled=false;
+    const timer=window.setTimeout(async()=>{
+      try{
+        let active=session || getStoredSession();
+        if(!active) active=await signInAnonymously();
+        if(!cancelled){
+          setSession(active);
+          const result=await loyaltyApi(active,"founder_referral_check",{
+            founder_referral_code:founderReferralCode.trim(),
+            country
+          });
+          if(result?.verified){
+            setFounderReferralStatus(result.founder);
+          }else{
+            setFounderReferralStatus({error:result?.message||"Founder referral is not verified."});
+          }
+        }
+      }catch(e:any){
+        if(!cancelled)setFounderReferralStatus({error:e?.message||"Founder referral verification failed."});
+      }
+    },350);
+    return ()=>{cancelled=true;window.clearTimeout(timer);};
+  }, [founderReferralCode,country,role]);
 
   useEffect(() => {
     const merchantId = new URLSearchParams(window.location.search).get("merchant");
@@ -1167,6 +1202,13 @@ export default function Home() {
       if (!activeSession) activeSession = await signInAnonymously();
       setSession(activeSession);
       await ensureProfile(activeSession, "merchant");
+      const referralCheck = founderReferralCode.trim()
+        ? await loyaltyApi(activeSession, "founder_referral_check", {founder_referral_code:founderReferralCode.trim(), country})
+        : {verified:false};
+      if(founderReferralCode.trim() && !referralCheck?.verified){
+        setFounderReferralStatus({error:referralCheck?.message||"Founder referral is not valid or the Founder is not verified."});
+        throw new Error(referralCheck?.message||"Founder referral is not valid or the Founder is not verified.");
+      }
       await loyaltyApi(activeSession, "merchant_register", {
         business_name: merchantBusinessName.trim(),
         owner_name: merchantOwnerName.trim(),
@@ -1923,8 +1965,18 @@ export default function Home() {
             <input type="email" placeholder="Email (optional)" value={merchantEmail} onChange={e=>setMerchantEmail(e.target.value)}/>
             <select className="modalSelect" value={merchantCategory} onChange={e=>setMerchantCategory(e.target.value)}>{businessCategories.map(x=><option key={x}>{x}</option>)}</select>
             <input placeholder="City" value={merchantCity} onChange={e=>setMerchantCity(e.target.value)}/>
-            <input className="modalInput" placeholder="Founder referral code (optional)" value={founderReferralCode} onChange={e=>setFounderReferralCode(e.target.value.toUpperCase())}/>
-            <small>Optional. Anyone can list a business directly. Enter a verified Founder code only if this business was referred by that Founder.</small>
+            <input className="modalInput" placeholder="Founder referral code or referral link (optional)" value={founderReferralCode} onChange={e=>setFounderReferralCode(e.target.value)}/>
+            {founderReferralStatus?.id ? (
+              <div className="offerPreview" style={{marginTop:6}}>
+                <b>✅ Founder referral verified</b>
+                <span>{founderReferralStatus.referral_code ? "Code: "+founderReferralStatus.referral_code+" · " : ""}{founderReferralStatus.country || "Global"} Founder</span>
+              </div>
+            ) : founderReferralStatus?.error ? (
+              <small style={{color:"#b42318",display:"block",marginTop:6}}>❌ {founderReferralStatus.error}</small>
+            ) : founderReferralCode.trim() ? (
+              <small style={{display:"block",marginTop:6}}>Checking Founder referral…</small>
+            ) : null}
+            <small>Optional. You can paste the Founder code, wallet address, or the full GBK referral link. A Founder reward is assigned only after verification.</small>
             <select className="modalSelect" value={merchantOffer} onChange={e=>setMerchantOffer(e.target.value)}>
               <option value="5%">5% loyalty</option>
               <option value="10%">10% loyalty</option>
