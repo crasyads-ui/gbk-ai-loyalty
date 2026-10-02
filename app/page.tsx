@@ -307,7 +307,7 @@ export default function Home() {
               loyaltyApi(s, "merchant_fund_status", { merchant_id: lookup.merchant.id }),
               loyaltyApi(s, "my_data", {})
             ]);
-            setMerchantStatus({...live, merchant_orders:dataWithOrders?.merchant_orders || []});
+            setMerchantStatus({...live, merchant_orders:dataWithOrders?.merchant_orders || []}); await loadProductOffers(String(live?.merchant?.id||""));
             await refreshMerchantChainStatus(address);
           } catch {}
           setRole("MerchantWallet");
@@ -488,7 +488,7 @@ export default function Home() {
         loyaltyApi(s,"merchant_fund_status",{merchant_id:merchant.id}),
         loyaltyApi(s,"my_data",{})
       ]);
-      setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []});
+      setMerchantStatus({...live,merchant_orders:dataWithOrders?.merchant_orders || []}); await loadProductOffers(String(live?.merchant?.id||""));
       await refreshMerchantChainStatus(connected || knownMerchantWallet);
       try { localStorage.setItem("gbk_loyalty_merchant_wallet", String(live?.merchant?.profile_id ? (connected || knownMerchantWallet) : knownMerchantWallet)); } catch {}
       setRole("MerchantWallet");
