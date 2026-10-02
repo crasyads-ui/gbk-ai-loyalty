@@ -68,6 +68,7 @@ export default function Home() {
   const [merchantUpiEditing,setMerchantUpiEditing] = useState(false);
   const [merchantOfferEditing,setMerchantOfferEditing] = useState(false);
   const [merchantOfferEdit,setMerchantOfferEdit] = useState("10");
+  const [merchantOfferPreset,setMerchantOfferPreset] = useState("5");
   const [productOfferName,setProductOfferName]=useState("");
   const [productOfferPrice,setProductOfferPrice]=useState("");
   const [productOfferPercent,setProductOfferPercent]=useState("10");
@@ -1759,12 +1760,23 @@ export default function Home() {
               {!merchantOfferEditing ? <>
                 <span>Current offer: <strong>{(Number(merchantStatus?.merchant?.loyalty_offer_bps || 0)/100).toFixed(merchantStatus?.merchant?.loyalty_offer_bps % 100 ? 2 : 0)}%</strong></span>
                 <button className="secondary" type="button" onClick={()=>{
-                  setMerchantOfferEdit(String(Number(merchantStatus?.merchant?.loyalty_offer_bps || 0)/100));
+                  const current=Number(merchantStatus?.merchant?.loyalty_offer_bps || 0)/100;
+                  setMerchantOfferEdit(String(current));
+                  setMerchantOfferPreset(["2","3","5","10","15","20"].includes(String(current)) ? String(current) : "custom");
                   setMerchantOfferEditing(true);
                 }}>✏️ Edit Loyalty %</button>
               </> : <>
-                <small>Change the loyalty percentage from 1% to 50%. Existing completed orders keep their original offer.</small>
-                <input className="modalInput" type="number" min="1" max="50" step="0.1" value={merchantOfferEdit} onChange={e=>setMerchantOfferEdit(e.target.value)} placeholder="Loyalty percentage"/>
+                <small>Select a loyalty percentage, or choose Custom for any value from 1% to 50%. Existing completed orders keep their original offer.</small>
+                <select className="modalSelect" value={merchantOfferPreset} onChange={e=>{const v=e.target.value;setMerchantOfferPreset(v);if(v!=="custom")setMerchantOfferEdit(v);}}>
+                  <option value="2">2% loyalty</option>
+                  <option value="3">3% loyalty</option>
+                  <option value="5">5% loyalty</option>
+                  <option value="10">10% loyalty</option>
+                  <option value="15">15% loyalty</option>
+                  <option value="20">20% loyalty</option>
+                  <option value="custom">Custom percentage</option>
+                </select>
+                {merchantOfferPreset==="custom" && <input className="modalInput" type="number" min="1" max="50" step="0.1" value={merchantOfferEdit} onChange={e=>setMerchantOfferEdit(e.target.value)} placeholder="Custom loyalty percentage (1–50%)"/>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                   <button className="primary" type="button" onClick={saveMerchantOffer} disabled={apiBusy}>{apiBusy ? "Saving…" : "Save New %"} </button>
                   <button className="secondary" type="button" onClick={()=>setMerchantOfferEditing(false)} disabled={apiBusy}>Cancel</button>
