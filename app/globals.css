@@ -231,3 +231,6 @@ input,select,.modal input,.modalSelect{font-size:16px}
  .askAiModal .askAiInput button{width:100%}
  .bottomNav a:last-child{color:#7c3aed;font-weight:900}
 }
+
+/* Back to top */
+.backToTop{position:fixed;right:16px;bottom:82px;z-index:19;border:1px solid #d8c5f5;background:#fff;color:#6d28d9;box-shadow:0 8px 24px rgba(52,35,68,.16);border-radius:999px;padding:10px 14px;min-height:44px;font-weight:900;cursor:pointer}@media(max-width:520px){.backToTop{right:14px;bottom:78px}}
