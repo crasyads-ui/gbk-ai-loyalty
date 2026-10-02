@@ -636,25 +636,51 @@ export default function Home() {
   };
   const speechLangMap:Record<string,string> = {
     "English":"en-IN","हिन्दी":"hi-IN","తెలుగు":"te-IN","বাংলা":"bn-IN","தமிழ்":"ta-IN",
-    "मराठी":"mr-IN","Español":"es-ES","العربية":"ar-SA","Français":"fr-FR","Português":"pt-BR"
+    "मराठी":"mr-IN","ಕನ್ನಡ":"kn-IN","മലയാളം":"ml-IN","Español":"es-ES","العربية":"ar-SA",
+    "Français":"fr-FR","Português":"pt-BR","中文":"zh-CN"
   };
   const speakText = (text:string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (typeof window === "undefined" || !("speechSynthesis" in window) || !text.trim()) {
+      setAuthNotice("🔊 Text-to-speech is not available in this browser.");
+      return;
+    }
     try {
       const synth = window.speechSynthesis;
       synth.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = speechLangMap[language] || "en-IN";
-      utter.rate = 0.95;
-      utter.onstart = () => setSpeaking(true);
-      utter.onend = () => setSpeaking(false);
-      utter.onerror = () => setSpeaking(false);
-      const voices = synth.getVoices();
       const wanted = (speechLangMap[language] || "en-IN").toLowerCase();
-      const voice = voices.find(v => v.lang.toLowerCase() === wanted) || voices.find(v => v.lang.toLowerCase().startsWith(wanted.split("-")[0]));
-      if (voice) utter.voice = voice;
-      synth.speak(utter);
-    } catch {}
+      const speakNow = () => {
+        const utter = new SpeechSynthesisUtterance(text.trim());
+        utter.lang = wanted;
+        utter.rate = 0.95;
+        utter.pitch = 1;
+        utter.volume = 1;
+        utter.onstart = () => setSpeaking(true);
+        utter.onend = () => setSpeaking(false);
+        utter.onerror = () => setSpeaking(false);
+        const voices = synth.getVoices();
+        const voice = voices.find(v => v.lang.toLowerCase() === wanted)
+          || voices.find(v => v.lang.toLowerCase().startsWith(wanted.split("-")[0]));
+        if (voice) utter.voice = voice;
+        synth.speak(utter);
+      };
+      const voices = synth.getVoices();
+      if (voices.length) {
+        speakNow();
+      } else {
+        const onVoices = () => {
+          synth.removeEventListener("voiceschanged", onVoices);
+          speakNow();
+        };
+        synth.addEventListener("voiceschanged", onVoices);
+        window.setTimeout(() => {
+          synth.removeEventListener("voiceschanged", onVoices);
+          if (!synth.speaking && !synth.pending) speakNow();
+        }, 500);
+      }
+    } catch {
+      setSpeaking(false);
+      setAuthNotice("🔊 Could not start voice playback. Please tap Speak again.");
+    }
   };
   const openScannedBusiness = async (text:string) => {
     try {
