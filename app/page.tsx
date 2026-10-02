@@ -51,7 +51,8 @@ export default function Home() {
   const [suggestedBusinessId,setSuggestedBusinessId] = useState("");
   const [claimBusiness,setClaimBusiness] = useState<any|null>(null);
   const [claimName,setClaimName] = useState("");
-  const [claimContact,setClaimContact] = useState("");
+  const [claimMobile,setClaimMobile] = useState("");
+  const [claimEmail,setClaimEmail] = useState("");
   const [claimSubmitted,setClaimSubmitted] = useState(false);
   const [installPrompt,setInstallPrompt] = useState<any>(null);
   const [installed,setInstalled] = useState(false);
