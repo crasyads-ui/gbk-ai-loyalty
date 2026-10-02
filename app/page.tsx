@@ -78,6 +78,7 @@ export default function Home() {
   const [directoryResults,setDirectoryResults] = useState<any[]>([]);
   const [directoryCounts,setDirectoryCounts] = useState({active:0,unclaimed:0,total:0});
   const [directoryLoading,setDirectoryLoading] = useState(false);
+  const [showBackToTop,setShowBackToTop] = useState(false);
   const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
   const [orderAmount,setOrderAmount] = useState("");
   const [currentOrderReference,setCurrentOrderReference] = useState("");
@@ -143,6 +144,13 @@ export default function Home() {
   const holderRewardMax = 6.3;
 
   const selectCountry = (value:string) => { setCountry(value); const next = value === "Global" ? "USD" : currencyForCountry(value); setCurrency(next); setPaymentCurrency(next); try { localStorage.setItem("gbk_loyalty_country", value); localStorage.setItem("gbk_loyalty_currency", next); } catch {} };
+
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 550);
+    window.addEventListener("scroll", onScroll, {passive:true});
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const rawRef = new URLSearchParams(window.location.search).get("ref");
@@ -2121,6 +2129,7 @@ export default function Home() {
         </div>
       </div>}
 
+      {showBackToTop && <button className="backToTop" type="button" aria-label="Back to top" onClick={()=>window.scrollTo({top:0,behavior:"smooth"})}>↑ Top</button>}
       <nav className={`bottomNav${searchFocused ? " searchFocused" : ""}`}><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : activeWalletRole==="customer" ? setRole("Customer") : activeWalletRole==="founder" ? setRole("Founder") : connectWallet("merchant")}>👛<span>Wallet</span></a><a onClick={()=>setAskAiOpen(true)}>🤖<span>Ask AI</span></a></nav>
     </main>
   );
