@@ -2053,6 +2053,14 @@ export default function Home() {
               <b>Founder referral code</b>
               <span>Share this code with businesses you personally refer to GBK Loyalty.</span>
               <strong style={{fontSize:20,letterSpacing:1}}>{founderStatus.founder_referral_code || "Generated for your Founder account"}</strong>
+              {founderStatus.founder_referral_code && <div style={{display:"grid",gap:8,marginTop:8}}>
+                <input className="modalInput" readOnly value={`https://app.gbkai.com/?ref=${founderStatus.founder_referral_code}`} onFocus={e=>e.currentTarget.select()} />
+                <button className="primary" type="button" onClick={async()=>{
+                  const link=`https://app.gbkai.com/?ref=${founderStatus.founder_referral_code}`;
+                  try { await navigator.clipboard.writeText(link); setAuthNotice("Founder referral link copied. Share it with businesses and users."); }
+                  catch { setAuthNotice(link); }
+                }}>🔗 Copy Founder Referral Link</button>
+              </div>}
             </div>}
             {founderStatus?.founder_verified && <div className="offerPreview" style={{marginTop:12}}>
               <b>🛡️ Business Review Center</b>
