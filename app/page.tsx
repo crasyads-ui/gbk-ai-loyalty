@@ -1075,13 +1075,13 @@ export default function Home() {
   };
 
   const submitClaim = async () => {
-    if(!claimBusiness?.id || claimName.trim().length<2 || claimContact.trim().length<4){setAuthNotice("Enter the owner name and phone or email.");return;}
+    if(!claimBusiness?.id || claimName.trim().length<2 || claimMobile.trim().length<5 || claimEmail.trim().length<5){setAuthNotice("Enter the owner name, mobile number and email.");return;}
     setApiBusy(true);setAuthNotice("");
     try{
       let active=session||getStoredSession(); if(!active) active=await signInAnonymously(); setSession(active);
-      const result=await loyaltyApi(active,"claim_business",{suggestion_id:claimBusiness.id,claimant_name:claimName.trim(),claimant_contact:claimContact.trim()});
+      const result=await loyaltyApi(active,"claim_business",{suggestion_id:claimBusiness.id,claimant_name:claimName.trim(),claimant_contact:`Mobile: ${claimMobile.trim()} | Email: ${claimEmail.trim()}`});
       setClaimSubmitted(result?.status !== "ALREADY_PENDING");
-      setAuthNotice(result?.status==="ALREADY_PENDING"?"A claim request is already pending.":"Claim request submitted. Verification is required before the business becomes an active merchant.");
+      setAuthNotice(result?.status==="ALREADY_PENDING"?"A claim request is already pending.":"Claim request submitted. After approval, connect the merchant wallet, add UPI/bank details and fund the live GBK balance to activate.");
     }catch(e:any){setAuthNotice(e?.message||"Claim request failed");}finally{setApiBusy(false);}
   };
 
@@ -1296,7 +1296,7 @@ export default function Home() {
               {m.address && <p>{m.address}</p>}
               <div><span className="roleTag">Unclaimed business</span><span className="roleTag">Not reward-active</span></div>
               <p style={{fontSize:13}}>This business is listed but has not completed owner claim and merchant activation.</p>
-              <button className="primary" type="button" onClick={()=>{setClaimBusiness(m);setClaimName("");setClaimContact("");setClaimSubmitted(false);setRole("ClaimBusiness");}}>Claim this business →</button>
+              <button className="primary" type="button" onClick={()=>{setClaimBusiness(m);setClaimName("");setClaimMobile("");setClaimEmail("");setClaimSubmitted(false);setRole("ClaimBusiness");}}>Claim this business →</button>
             </div>
           )}
         </div>
@@ -1634,7 +1634,7 @@ export default function Home() {
             </div>
             <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
               <b>🔄 How it works</b>
-              <span><b>1. Claim</b> — tell us who you are.</span>
+              <span><b>1. Claim</b> — tell us who you are with your mobile and email.</span>
               <span><b>2. Verify</b> — GBK reviews the owner/authorized representative claim.</span>
               <span><b>3. Complete profile</b> — update business and payment information.</span>
               <span><b>4. Connect wallet</b> — connect the merchant GBK wallet.</span>
@@ -1651,7 +1651,8 @@ export default function Home() {
             </div>
             {!claimSubmitted ? <>
               <input placeholder="Owner / authorized representative name *" value={claimName} onChange={e=>setClaimName(e.target.value)}/>
-              <input placeholder="Phone or email *" value={claimContact} onChange={e=>setClaimContact(e.target.value)}/>
+              <input placeholder="Mobile number *" value={claimMobile} onChange={e=>setClaimMobile(e.target.value)}/>
+              <input type="email" placeholder="Email address *" value={claimEmail} onChange={e=>setClaimEmail(e.target.value)}/>
               {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
               <button className="primary" type="button" onClick={submitClaim} disabled={apiBusy}>{apiBusy ? "Submitting claim…" : "👉 Claim This Business — Submit →"}</button>
             </> : <div className="status" style={{marginTop:12}}>
@@ -1763,7 +1764,7 @@ export default function Home() {
                 ? (Number(merchantChainStatus?.balanceRaw || merchantStatus?.live_gbk_balance_raw || 0) > 0
                   ? "Merchant is active and reward funding is ready."
                   : "Merchant is active. Add GBK to the connected wallet before eligible rewards are settled.")
-                : "Accept the merchant terms to activate the business. GBK funding is not required just to become active."}</span>
+                : "Connect the merchant wallet, add UPI/bank details, accept the terms and maintain the required live GBK balance to activate."}</span>
             </div>
             <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
             {merchantStatus?.merchant?.invitation_status !== "ACCEPTED" && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
