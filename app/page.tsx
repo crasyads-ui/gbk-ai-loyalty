@@ -89,6 +89,7 @@ export default function Home() {
   const [founderReferralCode,setFounderReferralCode]=useState("");
   const [founderReferralStatus,setFounderReferralStatus]=useState<any>(null);
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
+  const [merchantTermsAccepted,setMerchantTermsAccepted]=useState(false);
   const [merchantPhone,setMerchantPhone]=useState("");
   const [merchantEmail,setMerchantEmail]=useState("");
   const [merchantCity,setMerchantCity]=useState("");
@@ -143,7 +144,7 @@ export default function Home() {
   const holderRewardMin = 0.7;
   const holderRewardMax = 6.3;
 
-  const selectCountry = (value:string) => { setCountry(value); const next = value === "Global" ? "USD" : currencyForCountry(value); setCurrency(next); setPaymentCurrency(next); try { localStorage.setItem("gbk_loyalty_country", value); localStorage.setItem("gbk_loyalty_currency", next); } catch {} };
+  const selectCountry = (value:string) => { setCountry(value); const next = value === "Global" ? "USD" : currencyForCountry(value); setCurrency(next); setPaymentCurrency(next); if (value === "United States") { setPaymentGateway("STRIPE"); setPaymentMethod("CARD_WALLETS"); setPaymentDetails(""); } else if (value === "India") { setPaymentGateway("DIRECT"); setPaymentMethod("UPI"); setPaymentDetails(""); } else { setPaymentGateway("DIRECT"); setPaymentMethod("LOCAL_CURRENCY"); setPaymentDetails(""); } try { localStorage.setItem("gbk_loyalty_country", value); localStorage.setItem("gbk_loyalty_currency", next); } catch {} };
 
   useEffect(() => {
     const onScroll = () => setShowBackToTop(window.scrollY > 550);
@@ -1257,8 +1258,9 @@ export default function Home() {
         payment_account_ref: paymentGateway === "DIRECT" ? null : (paymentAccountRef || null),
         payment_currency: paymentCurrency,
         payment_method: paymentMethod,
-        payment_details: { details: paymentDetails, owner: merchantOwnerName },
+        payment_details: { details: paymentDetails, owner: merchantOwnerName, supported_methods: country === "United States" ? ["APPLE_PAY","GOOGLE_PAY","CARD","PAYPAL","VENMO","SQUARE","GBK_QR"] : country === "India" ? ["UPI","CARD","GBK_QR"] : ["LOCAL_CURRENCY","CARD","GBK_QR"], terms_accepted: merchantTermsAccepted },
         founder_referral_code: founderReferralCode.trim() || null,
+        terms_accepted: merchantTermsAccepted,
       });
       setAuthNotice("Merchant registration submitted successfully.");
       setRole(null);
@@ -2028,33 +2030,41 @@ export default function Home() {
             </div>
             <select className="modalSelect" defaultValue="0%"><option>0% lead commission</option><option>5% lead commission</option><option>10% lead commission</option><option>15% lead commission</option><option>20% lead commission</option></select>
             <div className="paymentBox">
-              <b>Merchant payment</b>
-              <small>Customer pays you directly in your local currency. GBK does not receive the customer payment.</small>
-              <select className="modalSelect" value={paymentGateway} onChange={e=>setPaymentGateway(e.target.value)}>
-                <option value="DIRECT">Direct payment</option>
-                <option value="RAZORPAY">Razorpay (optional)</option>
-                <option value="CASHFREE">Cashfree Easy Split (optional)</option>
-                <option value="PAYU">PayU Split Settlement (optional)</option>
-              </select>
-              <small>Choose how the customer normally pays you. Payment-provider accounts are optional during registration.</small>
-              {paymentGateway !== "DIRECT" && <input className="modalInput" value={paymentAccountRef} onChange={e=>setPaymentAccountRef(e.target.value.trim())} placeholder="Approved linked merchant ID (optional)"/>}
-              <select className="modalSelect" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}>
-                <option value="CASH">Cash</option>
-                <option value="USDT">USDT</option>
-                <option value="LOCAL_CURRENCY">Local currency / bank / UPI</option>
-              </select>
-              <input className="modalInput" value={paymentCurrency} onChange={e=>setPaymentCurrency(e.target.value.toUpperCase())} placeholder="Currency code e.g. INR, AED, USD" maxLength={3}/>
-              {paymentMethod !== "CASH" && <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder={paymentMethod==="USDT" ? "USDT wallet/payment details (optional)" : "Merchant UPI ID, bank or payment details (e.g. merchant@upi)"}/>}
-              {paymentMethod === "CASH" && <small>Cash payments are recorded and verified by the merchant before any GBK reward is released.</small>}
+              <b>Merchant payment — {country === "United States" ? "🇺🇸 USA" : country === "India" ? "🇮🇳 India" : "🌍 Global"}</b>
+              <small>Customer pays the merchant in the local payment system. GBK Loyalty uses payment confirmation only to release eligible GBK rewards.</small>
+              {country === "United States" ? <>
+                <select className="modalSelect" value={paymentGateway} onChange={e=>setPaymentGateway(e.target.value)}>
+                  <option value="STRIPE">Stripe Checkout</option>
+                  <option value="DIRECT">Merchant-direct payment</option>
+                </select>
+                <div className="offerPreview"><b>USA checkout methods</b><span>Apple Pay · Google Pay · Credit/Debit Card</span><span>Optional: PayPal · Venmo · Square</span><small>Wallet methods appear when supported by the connected provider, customer device and checkout.</small></div>
+                {paymentGateway !== "DIRECT" && <input className="modalInput" value={paymentAccountRef} onChange={e=>setPaymentAccountRef(e.target.value.trim())} placeholder="Stripe Connected Account ID (when enabled)"/>}
+                <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder="USA payment details or connected account reference (optional)"/>
+              </> : <>
+                <select className="modalSelect" value={paymentGateway} onChange={e=>setPaymentGateway(e.target.value)}>
+                  <option value="DIRECT">Merchant-direct payment</option>
+                  <option value="RAZORPAY">Razorpay (optional)</option>
+                  <option value="CASHFREE">Cashfree Easy Split (optional)</option>
+                  <option value="PAYU">PayU Split Settlement (optional)</option>
+                </select>
+                <select className="modalSelect" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}>
+                  {isIndia ? <option value="UPI">UPI / UPI QR</option> : <option value="LOCAL_CURRENCY">Local currency / bank / wallet</option>}
+                  <option value="CASH">Cash</option>
+                  <option value="USDT">USDT</option>
+                </select>
+                <input className="modalInput" value={paymentCurrency} onChange={e=>setPaymentCurrency(e.target.value.toUpperCase())} placeholder="Currency code e.g. INR, AED, USD" maxLength={3}/>
+                {paymentMethod !== "CASH" && <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder={paymentMethod==="USDT" ? "USDT payment details (optional)" : isIndia ? "Merchant UPI ID, e.g. merchant@upi" : "Local payment details (optional)"}/>}
+              </>}
               <div className="walletRequiredBox">
                 <b>Merchant GBK wallet — required</b>
-                <small>The connected wallet is the merchant identity and reward-balance wallet.</small>
+                <small>Connect the BNB Smart Chain wallet that funds loyalty rewards. The live GBK balance is checked automatically.</small>
                 <input className="modalInput" value={merchantWallet} readOnly placeholder="Connect Wallet to continue"/>
                 <button type="button" className="secondary" onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{merchantWallet ? "Wallet Connected" : "Connect Wallet"}</button>
+                <a className="secondary" href="https://swap.gbkai.com" target="_blank" rel="noreferrer" style={{display:"block",textAlign:"center",marginTop:8}}>🔄 Swap USDT → GBK</a>
               </div>
-              {isIndia && <small>India: INR/local payment only. USDT is disabled for this merchant flow.</small>}
+              <small>Payment processing requires the merchant’s supported provider account to be connected and configured. GBK funding is separate from customer payment.</small>
             </div>
-            <label className="check"><input type="checkbox"/> I accept that GBK provides leads and loyalty benefits; the merchant controls the product/service and its business policy.</label>
+            <label className="check"><input type="checkbox" checked={merchantTermsAccepted} onChange={e=>setMerchantTermsAccepted(e.target.checked)}/> I accept the GBK Loyalty merchant terms and understand that my connected GBK wallet funds eligible loyalty rewards.</label>
           </> : role==="Founder" ? <>
             {founderStatus?.founder_verified ? <>
             <div className="status" style={{marginBottom:12}}>
@@ -2125,7 +2135,7 @@ export default function Home() {
             <input placeholder="Mobile or email"/>
           </>}
           {role==="Merchant" && authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
-          {role==="Founder" ? <button className="primary" onClick={verifyFounder} disabled={apiBusy}>{apiBusy ? "Verifying…" : "Verify Founder Member →"}</button> : role==="Merchant" ? <button className="primary" disabled={apiBusy} onClick={registerMerchant}>{apiBusy ? "Registering…" : "Continue →"}</button> : null}{role==="MerchantWallet" ? <small>Send GBK only to the connected merchant wallet. The website does not take custody of merchant GBK.</small> : <small>No token transfer happens from this screen.</small>}
+          {role==="Founder" ? <button className="primary" onClick={verifyFounder} disabled={apiBusy}>{apiBusy ? "Verifying…" : "Verify Founder Member →"}</button> : role==="Merchant" ? <button className="primary" disabled={apiBusy || !merchantTermsAccepted} onClick={registerMerchant}>{apiBusy ? "Registering…" : merchantTermsAccepted ? "Register & Activate →" : "Accept terms to continue →"}</button> : null}{role==="MerchantWallet" ? <small>Send GBK only to the connected merchant wallet. The website does not take custody of merchant GBK.</small> : <small>No token transfer happens from this screen.</small>}
         </div>
       </div>}
 
