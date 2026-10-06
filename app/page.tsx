@@ -1870,7 +1870,10 @@ export default function Home() {
                 <input className="modalInput" value={merchantOfferEditDescription} onChange={e=>setMerchantOfferEditDescription(e.target.value)} placeholder={merchantOfferEditType==="Product" ? "Product name / offer" : "Service name / offer"}/>
                 <input className="modalInput" type="number" min="0.01" step="0.01" value={merchantOfferEditAmount} onChange={e=>setMerchantOfferEditAmount(e.target.value)} placeholder={`Amount in ${merchantOfferEditCurrency.toUpperCase()}`}/>
                 <input className="modalInput" value={merchantOfferEditCurrency} onChange={e=>setMerchantOfferEditCurrency(e.target.value.toUpperCase())} maxLength={3} placeholder="Currency code e.g. INR, AED, USD"/>
+                <label><b>Flat Store Percentage</b><small>Keep the previous store-wide percentage option for all eligible purchases.</small></label>
                 <select className="modalSelect" value={merchantOfferEdit} onChange={e=>setMerchantOfferEdit(e.target.value)}>
+                  <option value="2">2% loyalty</option>
+                  <option value="3">3% loyalty</option>
                   <option value="5">5% loyalty</option>
                   <option value="10">10% loyalty</option>
                   <option value="15">15% loyalty</option>
@@ -2131,7 +2134,10 @@ export default function Home() {
               <input className="modalInput" type="number" min="0" step="0.01" value={merchantOfferAmount} onChange={e=>setMerchantOfferAmount(e.target.value)} placeholder={`Amount in ${paymentCurrency}`}/>
               <small>Amount is only the offer example/price. The actual customer reward is calculated from the verified purchase amount.</small>
             </div>
+            <label><b>Flat Store Percentage</b><small>Store-wide loyalty percentage applied to eligible purchases.</small></label>
             <select className="modalSelect" value={merchantOffer} onChange={e=>setMerchantOffer(e.target.value)}>
+              <option value="2%">2% loyalty</option>
+              <option value="3%">3% loyalty</option>
               <option value="5%">5% loyalty</option>
               <option value="10%">10% loyalty</option>
               <option value="15%">15% loyalty</option>
