@@ -1318,7 +1318,7 @@ export default function Home() {
         payment_account_ref: paymentGateway === "DIRECT" ? null : (paymentAccountRef || null),
         payment_currency: paymentCurrency,
         payment_method: paymentMethod,
-        payment_details: { details: paymentDetails, owner: merchantOwnerName, offer: { type: merchantOfferType, description: merchantOfferDescription.trim() || null, amount: merchantOfferAmount.trim() ? Number(merchantOfferAmount) : null, currency: paymentCurrency, loyalty_pool_percent: selectedOffer, customer_percent: customerShare, founder_percent: founderShare, platform_percent: platformShare }, supported_methods: country === "United States" ? ["APPLE_PAY","GOOGLE_PAY","CARD","PAYPAL","VENMO","SQUARE","GBK_QR"] : country === "India" ? ["UPI","CARD","GBK_QR"] : ["LOCAL_CURRENCY","CARD","GBK_QR"], terms_accepted: merchantTermsAccepted },
+        payment_details: { details: paymentDetails, owner: merchantOwnerName, offer: { type: merchantOfferType, description: merchantOfferDescription.trim() || null, amount: merchantOfferAmount.trim() ? Number(merchantOfferAmount) : null, currency: paymentCurrency, loyalty_pool_percent: selectedOffer, customer_percent: customerShare, founder_percent: founderShare, platform_percent: platformShare }, supported_methods: country === "United States" ? ["APPLE_PAY","GOOGLE_PAY","CARD","PAYPAL","VENMO","SQUARE","GBK_QR"] : country === "India" ? ["UPI","CARD","GBK_QR"] : country === "Thailand" ? ["THAI_QR","THAI_BANK","CARD","GBK_QR"] : country === "Malaysia" ? ["MY_QR","MY_BANK","CARD","GBK_QR"] : country === "Philippines" ? ["PH_QR","PH_BANK","CARD","GBK_QR"] : country === "United Arab Emirates" ? ["UAE_QR","UAE_BANK","CARD","GBK_QR"] : ["LOCAL_CURRENCY","CARD","GBK_QR"], terms_accepted: merchantTermsAccepted },
         founder_referral_code: founderReferralCode.trim() || null,
         terms_accepted: merchantTermsAccepted,
       });
@@ -2119,12 +2119,42 @@ export default function Home() {
                   <option value="PAYU">PayU Split Settlement (optional)</option>
                 </select>
                 <select className="modalSelect" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}>
-                  {isIndia ? <option value="UPI">UPI / UPI QR</option> : <option value="LOCAL_CURRENCY">Local currency / bank / wallet</option>}
+                  {isIndia ? <option value="UPI">UPI / UPI QR</option> : country === "Thailand" ? <>
+                    <option value="THAI_QR">Thai QR / PromptPay</option>
+                    <option value="THAI_BANK">Thai Bank Transfer</option>
+                    <option value="LOCAL_CURRENCY">Local currency / bank / wallet</option>
+                  </> : country === "Malaysia" ? <>
+                    <option value="MY_QR">DuitNow QR</option>
+                    <option value="MY_BANK">Malaysian Bank Transfer</option>
+                    <option value="LOCAL_CURRENCY">Local currency / bank / wallet</option>
+                  </> : country === "Philippines" ? <>
+                    <option value="PH_QR">GCash / QR Ph</option>
+                    <option value="PH_BANK">Philippine Bank Transfer</option>
+                    <option value="LOCAL_CURRENCY">Local currency / bank / wallet</option>
+                  </> : country === "United Arab Emirates" ? <>
+                    <option value="UAE_QR">UAE QR / Merchant QR</option>
+                    <option value="UAE_BANK">UAE Bank Transfer</option>
+                    <option value="LOCAL_CURRENCY">Local currency / bank / wallet</option>
+                  </> : <option value="LOCAL_CURRENCY">Local currency / bank / wallet</option>}
                   <option value="CASH">Cash</option>
                   <option value="USDT">USDT</option>
                 </select>
                 <input className="modalInput" value={paymentCurrency} onChange={e=>setPaymentCurrency(e.target.value.toUpperCase())} placeholder="Currency code e.g. INR, AED, USD" maxLength={3}/>
-                {paymentMethod !== "CASH" && <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder={paymentMethod==="USDT" ? "USDT payment details (optional)" : isIndia ? "Merchant UPI ID, e.g. merchant@upi" : "Local payment details (optional)"}/>}
+                {paymentMethod !== "CASH" && <input className="modalInput" value={paymentDetails} onChange={e=>setPaymentDetails(e.target.value)} placeholder={
+                  paymentMethod==="USDT" ? "USDT payment details (optional)" :
+                  paymentMethod==="UPI" ? "Merchant UPI ID, e.g. merchant@upi" :
+                  paymentMethod==="THAI_QR" ? "PromptPay / Thai QR ID or QR image URL" :
+                  paymentMethod==="THAI_BANK" ? "Thai bank name, account name, account number, branch" :
+                  paymentMethod==="MY_QR" ? "DuitNow QR ID or QR image URL" :
+                  paymentMethod==="MY_BANK" ? "Malaysian bank name, account name, account number" :
+                  paymentMethod==="PH_QR" ? "GCash / QR Ph number or QR image URL" :
+                  paymentMethod==="PH_BANK" ? "Philippine bank name, account name, account number" :
+                  paymentMethod==="UAE_QR" ? "UAE merchant QR ID or QR image URL" :
+                  paymentMethod==="UAE_BANK" ? "UAE bank name, account name, IBAN, SWIFT/BIC" :
+                  "Local payment / bank / wallet details (optional)"
+                }/>}
+                {(paymentMethod==="THAI_QR" || paymentMethod==="MY_QR" || paymentMethod==="PH_QR" || paymentMethod==="UAE_QR") && <small>QR payment details can be saved for the merchant and shown to customers during payment.</small>}
+                {(paymentMethod==="THAI_BANK" || paymentMethod==="MY_BANK" || paymentMethod==="PH_BANK" || paymentMethod==="UAE_BANK") && <small>Enter the merchant bank details used to receive the local-currency payment.</small>}
               </>}
               <div className="walletRequiredBox">
                 <b>Merchant GBK wallet — required</b>
