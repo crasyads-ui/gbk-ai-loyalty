@@ -45,6 +45,9 @@ export default function Home() {
   const [role,setRole] = useState<string|null>(null);
   const [merchantOffer,setMerchantOffer] = useState("10%");
   const [customOffer,setCustomOffer] = useState("25");
+  const [merchantOfferType,setMerchantOfferType] = useState<"Product"|"Service">("Product");
+  const [merchantOfferDescription,setMerchantOfferDescription] = useState("");
+  const [merchantOfferAmount,setMerchantOfferAmount] = useState("");
   const [shareNotice,setShareNotice] = useState("");
   const [merchantQr,setMerchantQr] = useState("");
   const [qrBusy,setQrBusy] = useState(false);
@@ -1307,11 +1310,15 @@ export default function Home() {
         email: merchantEmail || null,
         loyalty_offer_percent: selectedOffer,
         lead_commission_percent: 0,
+        offer_type: merchantOfferType,
+        offer_description: merchantOfferDescription.trim() || null,
+        offer_amount: merchantOfferAmount.trim() ? Number(merchantOfferAmount) : null,
+        offer_currency: paymentCurrency,
         payment_provider: paymentGateway,
         payment_account_ref: paymentGateway === "DIRECT" ? null : (paymentAccountRef || null),
         payment_currency: paymentCurrency,
         payment_method: paymentMethod,
-        payment_details: { details: paymentDetails, owner: merchantOwnerName, supported_methods: country === "United States" ? ["APPLE_PAY","GOOGLE_PAY","CARD","PAYPAL","VENMO","SQUARE","GBK_QR"] : country === "India" ? ["UPI","CARD","GBK_QR"] : ["LOCAL_CURRENCY","CARD","GBK_QR"], terms_accepted: merchantTermsAccepted },
+        payment_details: { details: paymentDetails, owner: merchantOwnerName, offer: { type: merchantOfferType, description: merchantOfferDescription.trim() || null, amount: merchantOfferAmount.trim() ? Number(merchantOfferAmount) : null, currency: paymentCurrency, loyalty_pool_percent: selectedOffer, customer_percent: customerShare, founder_percent: founderShare, platform_percent: platformShare }, supported_methods: country === "United States" ? ["APPLE_PAY","GOOGLE_PAY","CARD","PAYPAL","VENMO","SQUARE","GBK_QR"] : country === "India" ? ["UPI","CARD","GBK_QR"] : ["LOCAL_CURRENCY","CARD","GBK_QR"], terms_accepted: merchantTermsAccepted },
         founder_referral_code: founderReferralCode.trim() || null,
         terms_accepted: merchantTermsAccepted,
       });
@@ -2066,6 +2073,17 @@ export default function Home() {
               <small style={{display:"block",marginTop:6}}>Checking Founder referral…</small>
             ) : null}
             <small>Optional. You can paste the Founder code, wallet address, or the full GBK referral link. A Founder reward is assigned only after verification.</small>
+            <div className="offerPreview" style={{display:"grid",gap:8,marginTop:8}}>
+              <b>🛍️ Offer Setup</b>
+              <span>Create the product or service offer customers will see. Your existing loyalty percentage controls remain below.</span>
+              <select className="modalSelect" value={merchantOfferType} onChange={e=>setMerchantOfferType(e.target.value as "Product"|"Service")}>
+                <option value="Product">Product</option>
+                <option value="Service">Service</option>
+              </select>
+              <input className="modalInput" value={merchantOfferDescription} onChange={e=>setMerchantOfferDescription(e.target.value)} placeholder={merchantOfferType==="Product" ? "Product name / offer, e.g. Grocery package" : "Service name / offer, e.g. AC service"}/>
+              <input className="modalInput" type="number" min="0" step="0.01" value={merchantOfferAmount} onChange={e=>setMerchantOfferAmount(e.target.value)} placeholder={`Amount in ${paymentCurrency}`}/>
+              <small>Amount is only the offer example/price. The actual customer reward is calculated from the verified purchase amount.</small>
+            </div>
             <select className="modalSelect" value={merchantOffer} onChange={e=>setMerchantOffer(e.target.value)}>
               <option value="5%">5% loyalty</option>
               <option value="10%">10% loyalty</option>
