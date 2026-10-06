@@ -204,15 +204,59 @@ export default function Home() {
   useEffect(() => {
     const claimId = new URLSearchParams(window.location.search).get("claim");
     if(!claimId)return;
-    (async()=>{
+    let cancelled=false;
+    const loadClaim = async () => {
       try{
         let active=getStoredSession();
         if(!active) active=await signInAnonymously();
+        if(cancelled)return;
         setSession(active);
         const result=await loyaltyApi(active,"get_business_suggestion",{suggestion_id:claimId});
-        if(result?.suggestion){setClaimBusiness(result.suggestion);setClaimSubmitted(false);setRole("ClaimBusiness");}
-      }catch(e:any){setAuthNotice(e?.message||"Business link could not be opened.");}
-    })();
+        if(cancelled || !result?.suggestion)return;
+        const b=result.suggestion;
+        setClaimBusiness(b);
+        if(result.claim?.claimant_name && !claimName) setClaimName(result.claim.claimant_name);
+        if(result.claim_status==="PENDING") setClaimSubmitted(true);
+        const approved=result.claim_status==="APPROVED" || b.status==="CONVERTED";
+        if(approved){
+          setMerchantBusinessName(b.business_name||"");
+          setMerchantOwnerName(result.claim?.claimant_name||claimName||"");
+          setMerchantPhone(b.phone||"");
+          setMerchantEmail("");
+          setMerchantCity(b.city||"");
+          setMerchantCategory(b.category||businessCategories[0]);
+          if(b.country && countries.includes(b.country)) selectCountry(b.country);
+          setAuthNotice("Claim approved. The same business details are now loaded into Merchant Registration. Connect the merchant wallet to continue activation.");
+          setRole("Merchant");
+        }else{
+          setRole("ClaimBusiness");
+        }
+      }catch(e:any){if(!cancelled)setAuthNotice(e?.message||"Business link could not be opened.");}
+    };
+    loadClaim();
+    const timer=window.setInterval(async()=>{
+      if(cancelled)return;
+      try{
+        const active=getStoredSession();
+        if(!active)return;
+        const result=await loyaltyApi(active,"get_business_suggestion",{suggestion_id:claimId});
+        const b=result?.suggestion;
+        if(!b)return;
+        setClaimBusiness(b);
+        if(result.claim_status==="APPROVED" || b.status==="CONVERTED"){
+          setMerchantBusinessName(b.business_name||"");
+          setMerchantOwnerName(result.claim?.claimant_name||claimName||"");
+          setMerchantPhone(b.phone||"");
+          setMerchantCity(b.city||"");
+          setMerchantCategory(b.category||businessCategories[0]);
+          if(b.country && countries.includes(b.country)) selectCountry(b.country);
+          setAuthNotice("Claim approved. Business details loaded into Merchant Registration. Connect the merchant wallet to continue.");
+          setRole("Merchant");
+          window.clearInterval(timer);
+        }
+      }catch{}
+    },5000);
+    return()=>{cancelled=true;window.clearInterval(timer);};
   }, []);
 
   useEffect(() => {
@@ -1161,7 +1205,7 @@ export default function Home() {
       let active=session||getStoredSession(); if(!active) active=await signInAnonymously(); setSession(active);
       const result=await loyaltyApi(active,"claim_business",{suggestion_id:claimBusiness.id,claimant_name:claimName.trim(),claimant_contact:`Mobile: ${claimMobile.trim()} | Email: ${claimEmail.trim()}`});
       setClaimSubmitted(result?.status !== "ALREADY_PENDING");
-      setAuthNotice(result?.status==="ALREADY_PENDING"?"A claim request is already pending.":"Claim request submitted. After approval, connect the merchant wallet, add UPI/bank details and fund the live GBK balance to activate.");
+      setAuthNotice(result?.status==="ALREADY_PENDING"?"A claim request is already pending.":"Claim submitted. After Founder approval, the same business details will automatically open in Merchant Registration—no re-entry.");
     }catch(e:any){setAuthNotice(e?.message||"Claim request failed");}finally{setApiBusy(false);}
   };
 
