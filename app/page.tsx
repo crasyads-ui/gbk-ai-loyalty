@@ -69,6 +69,11 @@ export default function Home() {
   const [merchantUpiEditing,setMerchantUpiEditing] = useState(false);
   const [merchantOfferEditing,setMerchantOfferEditing] = useState(false);
   const [merchantOfferEdit,setMerchantOfferEdit] = useState("10");
+  const [merchantOfferEditType,setMerchantOfferEditType] = useState<"Product"|"Service">("Product");
+  const [merchantOfferEditDescription,setMerchantOfferEditDescription] = useState("");
+  const [merchantOfferEditAmount,setMerchantOfferEditAmount] = useState("");
+  const [merchantOfferEditCurrency,setMerchantOfferEditCurrency] = useState("INR");
+  const [merchantOfferEditCustom,setMerchantOfferEditCustom] = useState("25");
   const [session,setSession] = useState<LoyaltySession|null>(null);
   const [activeWalletRole,setActiveWalletRole] = useState<"customer"|"merchant"|"founder"|null>(null);
   const [authMode,setAuthMode] = useState<"login"|"signup">("login");
@@ -568,8 +573,14 @@ export default function Home() {
       let merchantPaymentDetails:any = merchant?.payment_details ?? "";
       if (typeof merchantPaymentDetails === "string") { try { merchantPaymentDetails = JSON.parse(merchantPaymentDetails); } catch {} }
       const savedUpiId = String(merchantPaymentDetails?.upi_id ?? merchantPaymentDetails?.details ?? merchantPaymentDetails?.vpa ?? merchantPaymentDetails?.upi ?? "").trim();
+      const savedOffer = merchantPaymentDetails?.offer && typeof merchantPaymentDetails.offer === "object" ? merchantPaymentDetails.offer : {};
       setMerchantUpiId(savedUpiId);
       setMerchantUpiEditing(false);
+      setMerchantOfferEdit(String(Number(merchant?.loyalty_offer_bps || 0) / 100));
+      setMerchantOfferEditType(savedOffer?.type === "Service" ? "Service" : "Product");
+      setMerchantOfferEditDescription(String(savedOffer?.description || merchant?.description || ""));
+      setMerchantOfferEditAmount(savedOffer?.amount != null ? String(savedOffer.amount) : "");
+      setMerchantOfferEditCurrency(String(savedOffer?.currency || merchant?.payment_currency || currencyForCountry(merchant?.country || country) || "USD").toUpperCase());
       setMerchantStatus({merchant});
       const [live,dataWithOrders] = await Promise.all([
         loyaltyApi(s,"merchant_fund_status",{merchant_id:merchant.id}),
@@ -1252,20 +1263,33 @@ export default function Home() {
 
   const saveMerchantOffer = async () => {
     const merchantId = String(merchantStatus?.merchant?.id || "");
-    const offer = Number(merchantOfferEdit);
+    const offer = merchantOfferEdit === "custom" ? Number(merchantOfferEditCustom) : Number(merchantOfferEdit);
+    const amount = Number(merchantOfferEditAmount);
+    const description = String(merchantOfferEditDescription || "").trim();
     const active = session || getStoredSession();
     if (!merchantId) { setAuthNotice("Merchant account not found. Refresh the Merchant Wallet."); return; }
     if (!Number.isFinite(offer) || offer < 1 || offer > 50) { setAuthNotice("Enter a loyalty offer from 1% to 50%."); return; }
+    if (!description) { setAuthNotice("Enter the product or service name/description."); return; }
+    if (!Number.isFinite(amount) || amount <= 0) { setAuthNotice("Enter a valid product/service amount greater than 0."); return; }
+    if (!/^[A-Za-z]{3}$/.test(merchantOfferEditCurrency.trim().toUpperCase())) { setAuthNotice("Enter a valid 3-letter currency code."); return; }
     if (!active) { setAuthNotice("Connect the merchant wallet first."); return; }
     const current = Number(merchantStatus?.merchant?.loyalty_offer_bps || 0) / 100;
-    if (offer === current) { setMerchantOfferEditing(false); return; }
-    if (!window.confirm(`Change GBK Loyalty from ${current}% to ${offer}%?`)) return;
+    if (!window.confirm(`Save ${merchantOfferEditType} offer: ${description}, ${merchantOfferEditCurrency.toUpperCase()} ${amount}, with ${offer}% loyalty?`)) return;
     setApiBusy(true); setAuthNotice("");
     try {
-      const result = await loyaltyApi(active, "merchant_offer_update", { merchant_id: merchantId, loyalty_offer_percent: offer });
+      const result = await loyaltyApi(active, "merchant_offer_update", {
+        merchant_id: merchantId,
+        loyalty_offer_percent: offer,
+        offer_type: merchantOfferEditType,
+        offer_description: description,
+        offer_amount: amount,
+        offer_currency: merchantOfferEditCurrency.trim().toUpperCase()
+      });
       if (result?.merchant) setMerchantStatus((prev:any) => ({...(prev || {}), merchant: result.merchant}));
       setMerchantOfferEditing(false);
-      setAuthNotice(`GBK Loyalty offer updated from ${current}% to ${offer}%.`);
+      setMerchantOfferEdit(String(offer));
+      setMerchantOfferEditCustom(String(offer));
+      setAuthNotice(`Offer saved: ${merchantOfferEditType} — ${description}, ${merchantOfferEditCurrency.trim().toUpperCase()} ${amount}, ${offer}% loyalty.`);
     } catch (e:any) {
       setAuthNotice(e?.message || "GBK Loyalty offer could not be updated.");
     } finally { setApiBusy(false); }
@@ -1824,16 +1848,39 @@ export default function Home() {
             <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
               <b>🎁 GBK Loyalty Offer</b>
               {!merchantOfferEditing ? <>
-                <span>Current offer: <strong>{(Number(merchantStatus?.merchant?.loyalty_offer_bps || 0)/100).toFixed(merchantStatus?.merchant?.loyalty_offer_bps % 100 ? 2 : 0)}%</strong></span>
+                <span>Product / Service: <strong>{String(merchantStatus?.merchant?.payment_details?.offer?.description || merchantStatus?.merchant?.description || "Not configured")}</strong></span>
+                {merchantStatus?.merchant?.payment_details?.offer?.amount != null && <span>Offer amount: <strong>{String(merchantStatus?.merchant?.payment_details?.offer?.currency || merchantStatus?.merchant?.payment_currency || "USD").toUpperCase()} {Number(merchantStatus.merchant.payment_details.offer.amount).toLocaleString()}</strong></span>}
+                <span>Current loyalty: <strong>{(Number(merchantStatus?.merchant?.loyalty_offer_bps || 0)/100).toFixed(merchantStatus?.merchant?.loyalty_offer_bps % 100 ? 2 : 0)}%</strong> · Customer 60% · Founder 20% · Platform 20%</span>
                 <button className="secondary" type="button" onClick={()=>{
+                  const saved=merchantStatus?.merchant?.payment_details?.offer || {};
                   setMerchantOfferEdit(String(Number(merchantStatus?.merchant?.loyalty_offer_bps || 0)/100));
+                  setMerchantOfferEditCustom(String(Number(merchantStatus?.merchant?.loyalty_offer_bps || 0)/100));
+                  setMerchantOfferEditType(saved?.type === "Service" ? "Service" : "Product");
+                  setMerchantOfferEditDescription(String(saved?.description || merchantStatus?.merchant?.description || ""));
+                  setMerchantOfferEditAmount(saved?.amount != null ? String(saved.amount) : "");
+                  setMerchantOfferEditCurrency(String(saved?.currency || merchantStatus?.merchant?.payment_currency || "USD").toUpperCase());
                   setMerchantOfferEditing(true);
-                }}>✏️ Edit Loyalty %</button>
+                }}>✏️ Edit Offer</button>
               </> : <>
-                <small>Change the loyalty percentage from 1% to 50%. Existing completed orders keep their original offer.</small>
-                <input className="modalInput" type="number" min="1" max="50" step="0.1" value={merchantOfferEdit} onChange={e=>setMerchantOfferEdit(e.target.value)} placeholder="Loyalty percentage"/>
+                <small>Edit the Product/Service, amount and custom loyalty percentage. Completed orders keep their original offer.</small>
+                <select className="modalSelect" value={merchantOfferEditType} onChange={e=>setMerchantOfferEditType(e.target.value as "Product"|"Service")}>
+                  <option value="Product">Product</option>
+                  <option value="Service">Service</option>
+                </select>
+                <input className="modalInput" value={merchantOfferEditDescription} onChange={e=>setMerchantOfferEditDescription(e.target.value)} placeholder={merchantOfferEditType==="Product" ? "Product name / offer" : "Service name / offer"}/>
+                <input className="modalInput" type="number" min="0.01" step="0.01" value={merchantOfferEditAmount} onChange={e=>setMerchantOfferEditAmount(e.target.value)} placeholder={`Amount in ${merchantOfferEditCurrency.toUpperCase()}`}/>
+                <input className="modalInput" value={merchantOfferEditCurrency} onChange={e=>setMerchantOfferEditCurrency(e.target.value.toUpperCase())} maxLength={3} placeholder="Currency code e.g. INR, AED, USD"/>
+                <select className="modalSelect" value={merchantOfferEdit} onChange={e=>setMerchantOfferEdit(e.target.value)}>
+                  <option value="5">5% loyalty</option>
+                  <option value="10">10% loyalty</option>
+                  <option value="15">15% loyalty</option>
+                  <option value="20">20% loyalty</option>
+                  <option value="custom">Custom percentage</option>
+                </select>
+                {merchantOfferEdit === "custom" ? <input className="modalInput" type="number" min="1" max="50" step="0.1" value={merchantOfferEditCustom} onChange={e=>setMerchantOfferEditCustom(e.target.value)} placeholder="Custom loyalty percentage 1%–50%"/> : null}
+                <small>Custom percentage: enter 1%–50%. Reward pool is split 60% Customer / 20% Founder / 20% Platform.</small>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <button className="primary" type="button" onClick={saveMerchantOffer} disabled={apiBusy}>{apiBusy ? "Saving…" : "Save New %"} </button>
+                  <button className="primary" type="button" onClick={saveMerchantOffer} disabled={apiBusy}>{apiBusy ? "Saving…" : "💾 Save Offer"}</button>
                   <button className="secondary" type="button" onClick={()=>setMerchantOfferEditing(false)} disabled={apiBusy}>Cancel</button>
                 </div>
               </>}
