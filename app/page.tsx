@@ -577,7 +577,7 @@ export default function Home() {
       setMerchantUpiId(savedUpiId);
       setMerchantUpiEditing(false);
       setMerchantOfferEdit(String(Number(merchant?.loyalty_offer_bps || 0) / 100));
-      setMerchantOfferEditType(savedOffer?.type === "Service" ? "Service" : "Product");
+      setMerchantOfferEditType(savedOffer?.type === "Flat Store" ? "Flat Store" : savedOffer?.type === "Service" ? "Service" : "Product");
       setMerchantOfferEditDescription(String(savedOffer?.description || merchant?.description || ""));
       setMerchantOfferEditAmount(savedOffer?.amount != null ? String(savedOffer.amount) : "");
       setMerchantOfferEditCurrency(String(savedOffer?.currency || merchant?.payment_currency || currencyForCountry(merchant?.country || country) || "USD").toUpperCase());
@@ -1876,8 +1876,6 @@ export default function Home() {
                 </> : <small>Use one store-wide loyalty percentage for all eligible orders.</small>}
                 <label><b>Flat Store Percentage</b><small>Keep the previous store-wide percentage option for all eligible purchases.</small></label>
                 <select className="modalSelect" value={merchantOfferEdit} onChange={e=>setMerchantOfferEdit(e.target.value)}>
-                  <option value="2">2% loyalty</option>
-                  <option value="3">3% loyalty</option>
                   <option value="2">2% loyalty</option>
                   <option value="3">3% loyalty</option>
                   <option value="5">5% loyalty</option>
