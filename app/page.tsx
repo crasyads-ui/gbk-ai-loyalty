@@ -69,7 +69,7 @@ export default function Home() {
   const [merchantUpiEditing,setMerchantUpiEditing] = useState(false);
   const [merchantOfferEditing,setMerchantOfferEditing] = useState(false);
   const [merchantOfferEdit,setMerchantOfferEdit] = useState("10");
-  const [merchantOfferEditType,setMerchantOfferEditType] = useState<"Product"|"Service">("Product");
+  const [merchantOfferEditType,setMerchantOfferEditType] = useState<"Flat Store"|"Product"|"Service">("Flat Store");
   const [merchantOfferEditDescription,setMerchantOfferEditDescription] = useState("");
   const [merchantOfferEditAmount,setMerchantOfferEditAmount] = useState("");
   const [merchantOfferEditCurrency,setMerchantOfferEditCurrency] = useState("INR");
@@ -1264,17 +1264,18 @@ export default function Home() {
   const saveMerchantOffer = async () => {
     const merchantId = String(merchantStatus?.merchant?.id || "");
     const offer = merchantOfferEdit === "custom" ? Number(merchantOfferEditCustom) : Number(merchantOfferEdit);
+    const isFlatStore = merchantOfferEditType === "Flat Store";
     const amount = Number(merchantOfferEditAmount);
     const description = String(merchantOfferEditDescription || "").trim();
     const active = session || getStoredSession();
     if (!merchantId) { setAuthNotice("Merchant account not found. Refresh the Merchant Wallet."); return; }
     if (!Number.isFinite(offer) || offer < 1 || offer > 50) { setAuthNotice("Enter a loyalty offer from 1% to 50%."); return; }
-    if (!description) { setAuthNotice("Enter the product or service name/description."); return; }
-    if (!Number.isFinite(amount) || amount <= 0) { setAuthNotice("Enter a valid product/service amount greater than 0."); return; }
-    if (!/^[A-Za-z]{3}$/.test(merchantOfferEditCurrency.trim().toUpperCase())) { setAuthNotice("Enter a valid 3-letter currency code."); return; }
+    if (!isFlatStore && !description) { setAuthNotice("Enter the product or service name/description."); return; }
+    if (!isFlatStore && (!Number.isFinite(amount) || amount <= 0)) { setAuthNotice("Enter a valid product/service amount greater than 0."); return; }
+    if (!isFlatStore && !/^[A-Za-z]{3}$/.test(merchantOfferEditCurrency.trim().toUpperCase())) { setAuthNotice("Enter a valid 3-letter currency code."); return; }
     if (!active) { setAuthNotice("Connect the merchant wallet first."); return; }
     const current = Number(merchantStatus?.merchant?.loyalty_offer_bps || 0) / 100;
-    if (!window.confirm(`Save ${merchantOfferEditType} offer: ${description}, ${merchantOfferEditCurrency.toUpperCase()} ${amount}, with ${offer}% loyalty?`)) return;
+    if (!window.confirm(isFlatStore ? `Save Flat Store loyalty at ${offer}%?` : `Save ${merchantOfferEditType} offer: ${description}, ${merchantOfferEditCurrency.toUpperCase()} ${amount}, with ${offer}% loyalty?`)) return;
     setApiBusy(true); setAuthNotice("");
     try {
       const result = await loyaltyApi(active, "merchant_offer_update", {
@@ -1289,7 +1290,7 @@ export default function Home() {
       setMerchantOfferEditing(false);
       setMerchantOfferEdit(String(offer));
       setMerchantOfferEditCustom(String(offer));
-      setAuthNotice(`Offer saved: ${merchantOfferEditType} — ${description}, ${merchantOfferEditCurrency.trim().toUpperCase()} ${amount}, ${offer}% loyalty.`);
+      setAuthNotice(isFlatStore ? `Flat Store loyalty saved at ${offer}%.` : `Offer saved: ${merchantOfferEditType} — ${description}, ${merchantOfferEditCurrency.trim().toUpperCase()} ${amount}, ${offer}% loyalty.`);
     } catch (e:any) {
       setAuthNotice(e?.message || "GBK Loyalty offer could not be updated.");
     } finally { setApiBusy(false); }
@@ -1855,7 +1856,7 @@ export default function Home() {
                   const saved=merchantStatus?.merchant?.payment_details?.offer || {};
                   setMerchantOfferEdit(String(Number(merchantStatus?.merchant?.loyalty_offer_bps || 0)/100));
                   setMerchantOfferEditCustom(String(Number(merchantStatus?.merchant?.loyalty_offer_bps || 0)/100));
-                  setMerchantOfferEditType(saved?.type === "Service" ? "Service" : "Product");
+                  setMerchantOfferEditType(saved?.type === "Service" ? "Service" : saved?.type === "Product" ? "Product" : "Flat Store");
                   setMerchantOfferEditDescription(String(saved?.description || merchantStatus?.merchant?.description || ""));
                   setMerchantOfferEditAmount(saved?.amount != null ? String(saved.amount) : "");
                   setMerchantOfferEditCurrency(String(saved?.currency || merchantStatus?.merchant?.payment_currency || "USD").toUpperCase());
@@ -1863,15 +1864,20 @@ export default function Home() {
                 }}>✏️ Edit Offer</button>
               </> : <>
                 <small>Edit the Product/Service, amount and custom loyalty percentage. Completed orders keep their original offer.</small>
-                <select className="modalSelect" value={merchantOfferEditType} onChange={e=>setMerchantOfferEditType(e.target.value as "Product"|"Service")}>
-                  <option value="Product">Product</option>
-                  <option value="Service">Service</option>
+                <select className="modalSelect" value={merchantOfferEditType} onChange={e=>setMerchantOfferEditType(e.target.value as "Flat Store"|"Product"|"Service")}>
+                  <option value="Flat Store">Flat Store Percentage</option>
+                  <option value="Product">Product Offer</option>
+                  <option value="Service">Service Offer</option>
                 </select>
-                <input className="modalInput" value={merchantOfferEditDescription} onChange={e=>setMerchantOfferEditDescription(e.target.value)} placeholder={merchantOfferEditType==="Product" ? "Product name / offer" : "Service name / offer"}/>
-                <input className="modalInput" type="number" min="0.01" step="0.01" value={merchantOfferEditAmount} onChange={e=>setMerchantOfferEditAmount(e.target.value)} placeholder={`Amount in ${merchantOfferEditCurrency.toUpperCase()}`}/>
-                <input className="modalInput" value={merchantOfferEditCurrency} onChange={e=>setMerchantOfferEditCurrency(e.target.value.toUpperCase())} maxLength={3} placeholder="Currency code e.g. INR, AED, USD"/>
+                {merchantOfferEditType !== "Flat Store" ? <>
+                  <input className="modalInput" value={merchantOfferEditDescription} onChange={e=>setMerchantOfferEditDescription(e.target.value)} placeholder={merchantOfferEditType==="Product" ? "Product name / offer" : "Service name / offer"}/>
+                  <input className="modalInput" type="number" min="0.01" step="0.01" value={merchantOfferEditAmount} onChange={e=>setMerchantOfferEditAmount(e.target.value)} placeholder={`Amount in ${merchantOfferEditCurrency.toUpperCase()}`}/>
+                  <input className="modalInput" value={merchantOfferEditCurrency} onChange={e=>setMerchantOfferEditCurrency(e.target.value.toUpperCase())} maxLength={3} placeholder="Currency code e.g. INR, AED, USD"/>
+                </> : <small>Use one store-wide loyalty percentage for all eligible orders.</small>}
                 <label><b>Flat Store Percentage</b><small>Keep the previous store-wide percentage option for all eligible purchases.</small></label>
                 <select className="modalSelect" value={merchantOfferEdit} onChange={e=>setMerchantOfferEdit(e.target.value)}>
+                  <option value="2">2% loyalty</option>
+                  <option value="3">3% loyalty</option>
                   <option value="2">2% loyalty</option>
                   <option value="3">3% loyalty</option>
                   <option value="5">5% loyalty</option>
