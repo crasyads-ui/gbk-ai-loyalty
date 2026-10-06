@@ -1086,7 +1086,15 @@ export default function Home() {
       const category = esc(merchant?.category || "Business");
       const city = esc(merchant?.city || "");
       const countryName = esc(merchant?.country || "");
-      const offer = Math.round(Number(merchant?.loyalty_offer_bps || 0) / 100);
+      const merchantPool = Number(merchant?.loyalty_offer_bps || 0) / 100;
+      const customerReward = merchantPool * 0.6;
+      const founderReward = merchantPool * 0.2;
+      const platformReward = merchantPool * 0.2;
+      const formatPercent = (value:number) => Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/,"");
+      const customerRewardText = formatPercent(customerReward);
+      const merchantPoolText = formatPercent(merchantPool);
+      const founderRewardText = formatPercent(founderReward);
+      const platformRewardText = formatPercent(platformReward);
       const qrX = 200, qrY = 365, qrSize = 800;
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
   <rect width="1200" height="1600" rx="48" fill="#ffffff"/>
@@ -1103,9 +1111,10 @@ export default function Home() {
   <text x="600" y="777" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="800" fill="#ffffff">GBK</text>
   <text x="600" y="1260" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="800" fill="#171717">${businessName}</text>
   <text x="600" y="1302" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#555555">${category}${city ? " • " + city : ""}${countryName ? " • " + countryName : ""}</text>
-  <rect x="290" y="1340" width="620" height="76" rx="38" fill="#f3e8ff"/>
-  <text x="600" y="1390" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" font-weight="800" fill="#6d28d9">${offer}% GBK LOYALTY REWARD</text>
-  <text x="600" y="1465" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#171717">Scan • Enter Amount • Pay • Earn GBK</text>
+  <rect x="235" y="1335" width="730" height="92" rx="46" fill="#f3e8ff"/>
+  <text x="600" y="1374" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" font-weight="800" fill="#6d28d9">CUSTOMER EARNS ${customerRewardText}% GBK</text>
+  <text x="600" y="1410" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#555555">Merchant Loyalty Pool ${merchantPoolText}% • Customer 60%</text>
+  <text x="600" y="1465" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#171717">Pool: ${merchantPoolText}% → Customer ${customerRewardText}% • Founder ${founderRewardText}% • Platform ${platformRewardText}%</text>
   <text x="600" y="1510" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" fill="#555555">loyalty.gbkai.com</text>
   <text x="600" y="1542" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#777777">Open the web app • No Play Store required</text>
 </svg>`;
@@ -1465,7 +1474,7 @@ export default function Home() {
           <div className="roleIcon">🏪</div>
           <h2>{selectedMerchant.business_name}</h2>
           <p>{[selectedMerchant.category,selectedMerchant.city,selectedMerchant.country].filter(Boolean).join(" • ")}</p>
-          <p>GBK Loyalty offer: <b>{Math.round(Number(selectedMerchant.loyalty_offer_bps||0)/100)}%</b></p>
+          <p>Customer reward: <b>{((Number(selectedMerchant.loyalty_offer_bps||0)/100)*0.6).toFixed(1).replace(/\.0$/,"")}% GBK</b> · Merchant Loyalty Pool: <b>{(Number(selectedMerchant.loyalty_offer_bps||0)/100).toFixed(1).replace(/\.0$/,"")}%</b></p>
           <div className="offerPreview" style={{display:"grid",gap:8,margin:"14px 0",textAlign:"center"}}>
             <b>📱 Scan to open this business</b>
             {merchantQr ? <img src={merchantQr} alt={`GBK Loyalty QR for ${selectedMerchant.business_name}`} style={{width:220,height:220,maxWidth:"100%",margin:"0 auto",background:"#fff",padding:10,borderRadius:16}}/> : <button className="secondary" type="button" onClick={()=>openMerchantQr(selectedMerchant)} disabled={qrBusy}>{qrBusy?"Creating QR…":"Generate Business QR"}</button>}
