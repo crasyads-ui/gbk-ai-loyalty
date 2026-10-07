@@ -511,3 +511,9 @@ input,select,.modal input,.modalSelect{font-size:16px}
   .tellGbkPanel:before{font-size:8px}
   .tellGbkPanel .tellGbkCategories{margin-top:5px}
 }
+
+
+.tellGbkHearBtn{min-height:48px!important;border-radius:13px!important;font-weight:900!important}
+@media(max-width:520px){
+  .tellGbkHearBtn{width:100%!important;background:#f3ebff!important;color:#6d28d9!important;border:1px solid #d8c7ee!important}
+}
