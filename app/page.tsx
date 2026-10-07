@@ -58,6 +58,7 @@ export default function Home() {
   const [askBusy,setAskBusy] = useState(false);
   const [askAiOpen,setAskAiOpen] = useState(false);
   const [tellGbkText,setTellGbkText] = useState("");
+  const [tellGbkCategory,setTellGbkCategory] = useState("Grocery");
   const [tellGbkBusy,setTellGbkBusy] = useState(false);
   const [tellGbkItems,setTellGbkItems] = useState<string[]>([]);
   const [tellGbkStores,setTellGbkStores] = useState<any[]>([]);
@@ -983,12 +984,14 @@ export default function Home() {
     try{
       let active=session||getStoredSession();
       if(!active){active=await signInAnonymously();setSession(active);}
-      const r=await loyaltyApi(active,"search",{query:q+" kirana grocery store",country});
+      const categoryHints:any={Grocery:"kirana grocery supermarket store",Food:"restaurant food cafe bakery",Restaurants:"restaurant dining food",Hotels:"hotel accommodation resort",Travel:"travel tours flights hotels",Services:"local services repair professionals",Real Estate:"apartments villas plots commercial real estate"};
+      const categoryHint=categoryHints[tellGbkCategory]||tellGbkCategory;
+      const r=await loyaltyApi(active,"search",{query:q+" "+categoryHint,country});
       const all=(r?.results||[]).filter((x:any)=>!x?.unclaimed);
       const matches=all.filter((x:any)=>{
         const s=String(x.category||"").toLowerCase();
         const n=String(x.business_name||"").toLowerCase();
-        return /grocery|kirana|supermarket|store|grocer/.test(s+" "+n);
+        return tellGbkCategory==="Grocery" ? /grocery|kirana|supermarket|store|grocer/.test(s+" "+n) : new RegExp(categoryHint.replace(/\s+/g,"|"),"i").test(s+" "+n+" "+q);
       }).slice(0,6);
       setTellGbkStores(matches.length ? matches : all.slice(0,6));
       if(!all.length) setAuthNotice("No active Kirana/grocery store is available for this request yet.");
@@ -1005,7 +1008,7 @@ export default function Home() {
       await loyaltyApi(active,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null});
       const created=await loyaltyApi(active,"create_order",{
         merchant_id:m.id, amount_minor:0, currency:String(m.payment_currency||currency||"INR").toUpperCase(),
-        request_text:tellGbkText.trim(), category:m.category||"Groceries & Supermarkets", country, order_source:"GBK_AI_TELL"
+        request_text:tellGbkText.trim(), category:m.category||tellGbkCategory, country, order_source:"GBK_AI_TELL"
       });
       setTellGbkOrderSent(true);
       setTellGbkSelectedStore(m);
@@ -1714,9 +1717,12 @@ export default function Home() {
             <div><b>🗣️ Tell GBKAI — New Local Shopping</b><span style={{display:"block",marginTop:3}}>Don't search products. Just tell GBKAI what you need.</span></div>
             <span className="roleTag">🛒 Kirana • Grocery</span>
           </div>
+          <div className="tellGbkCategories" aria-label="Tell GBKAI category">
+            {["Grocery","Food","Restaurants","Hotels","Travel","Services","Real Estate"].map((cat)=><button key={cat} type="button" className={tellGbkCategory===cat ? "active" : ""} onClick={()=>{setTellGbkCategory(cat);setTellGbkStores([]);setTellGbkOrderSent(false);}}>{cat==="Grocery"?"🛒":cat==="Food"?"🍱":cat==="Restaurants"?"🍽️":cat==="Hotels"?"🏨":cat==="Travel"?"✈️":cat==="Services"?"🔧":"🏠"} {cat}</button>)}
+          </div>
           <div className="search tellGbkSearch" style={{marginTop:2,width:"100%",maxWidth:"100%",minWidth:0,overflow:"hidden"}}>
             <span>🛒</span>
-            <input value={tellGbkText} onChange={e=>setTellGbkText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void tellGbkAi()}} placeholder={language==="తెలుగు" ? "నాకు 5 కిలోల బియ్యం, 2 లీటర్ల నూనె కావాలి" : language==="हिन्दी" ? "मुझे 5 किलो चावल और 2 लीटर तेल चाहिए" : "Tell GBKAI: 5 kg rice, 2 litres oil, 1 kg dal…"} />
+            <input value={tellGbkText} onChange={e=>setTellGbkText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void tellGbkAi()}} placeholder={tellGbkCategory==="Grocery" ? (language==="తెలుగు" ? "నాకు 5 కిలోల బియ్యం, 2 లీటర్ల నూనె కావాలి" : language==="हिन्दी" ? "मुझे 5 किलो चावल और 2 लीटर तेल चाहिए" : "Tell GBKAI: 5 kg rice, 2 litres oil…") : `Tell GBKAI what you need in ${tellGbkCategory}…`} />
             <button className="voiceBtn" type="button" onClick={startVoiceSearch} aria-label="Speak grocery request">🎤</button>
             <button type="button" onClick={()=>void tellGbkAi()} disabled={tellGbkBusy}>{tellGbkBusy ? "Finding…" : "Tell GBKAI →"}</button>
           </div>
