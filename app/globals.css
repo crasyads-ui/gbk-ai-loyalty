@@ -375,3 +375,24 @@ input,select,.modal input,.modalSelect{font-size:16px}
  .orderBottom{display:grid;gap:4px}
  .orderRequest{font-size:15px}
 }
+
+
+/* Tell GBKAI pre-send order review */
+.tellGbkReviewBar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:15px;background:#fff;border:1px solid #e5d9ef}
+.tellGbkReviewBar b{font-size:14px;color:#3b2b4b}
+.tellGbkReviewBar .secondary{padding:9px 12px;min-height:42px}
+.tellGbkOrderReview{display:grid;gap:8px;padding:13px;border-radius:17px;background:#fff;border:1px solid #e4d8ef}
+.tellGbkOrderReviewHead{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.tellGbkOrderReviewHead b{font-size:16px;color:#34263f}
+.tellGbkOrderReviewHead span{font-size:11px;color:#756d80;background:#f3edfa;border-radius:999px;padding:6px 9px}
+.tellGbkOrderItem{display:grid;grid-template-columns:22px 1fr 38px;align-items:center;gap:7px}
+.tellGbkOrderItem>span{font-weight:900;color:#7c3aed;text-align:center}
+.tellGbkOrderItem input{width:100%;min-width:0;border:1px solid #e1d7eb;border-radius:11px;padding:10px 11px;font-size:14px;color:#34263f;background:#fff}
+.tellGbkOrderItem button{border:1px solid #eadfea;background:#fff;border-radius:10px;min-height:42px;font-size:20px;color:#8b5a8e;cursor:pointer}
+.tellGbkReviewNote{font-size:11px;line-height:1.45;color:#756d80;padding-top:4px}
+@media(max-width:520px){
+ .tellGbkReviewBar{align-items:stretch;flex-direction:column}
+ .tellGbkReviewBar .secondary{width:100%}
+ .tellGbkOrderReview{padding:11px}
+ .tellGbkOrderItem input{font-size:16px;min-height:44px}
+}
