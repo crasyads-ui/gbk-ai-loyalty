@@ -829,7 +829,7 @@ export default function Home() {
     } catch {}
   };
 
-  const openScannedBusiness = async (text:string) => { (text:string) => {
+  const openScannedBusiness = async (text:string) => {
     try {
       const parsed = new URL(text);
       const merchantId = parsed.searchParams.get("merchant");
