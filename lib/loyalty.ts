@@ -107,6 +107,25 @@ export async function getGbkWalletStatus(address: string): Promise<{balanceRaw:s
   throw lastError || new Error("Unable to read the GBK wallet.");
 }
 
+export async function getWalletAssetBalances(address: string): Promise<{gbkRaw:string; usdtRaw:string; bnbRaw:string}> {
+  if (typeof window === "undefined") throw new Error("Wallet balances are available in the browser only.");
+  if (!/^0x[a-fA-F0-9]{40}$/.test(address)) throw new Error("Invalid wallet address.");
+  const pad = (v:string) => v.toLowerCase().replace(/^0x/,"").padStart(64,"0");
+  const rpc = async (method:string, params:any[]) => {
+    const r = await fetch(BSC_RPC,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:Date.now()+Math.random(),method,params})});
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || d?.error) throw new Error(d?.error?.message || "BNB Smart Chain read failed.");
+    return String(d?.result || "0x0");
+  };
+  const balanceData = "0x70a08231" + pad(address);
+  const [gbk,usdt,bnb] = await Promise.all([
+    rpc("eth_call",[{to:"0xdA0638EA374c4c5bF2914E6F4D5B2335dEb8D80D",data:balanceData},"latest"]),
+    rpc("eth_call",[{to:"0x55d398326f99059ff775485246999027b3197955",data:balanceData},"latest"]),
+    rpc("eth_getBalance",[address,"latest"])
+  ]);
+  return {gbkRaw:String(BigInt(gbk||"0x0")),usdtRaw:String(BigInt(usdt||"0x0")),bnbRaw:String(BigInt(bnb||"0x0"))};
+}
+
 export async function getConnectedEvmWallet(): Promise<string> {
   if (typeof window === "undefined") return "";
   const w = window as any;
