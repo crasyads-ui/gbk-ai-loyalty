@@ -1021,7 +1021,9 @@ export default function Home() {
         return tellGbkCategory==="Grocery" ? /grocery|kirana|supermarket|store|grocer/.test(s+" "+n) : new RegExp(categoryHint.replace(/\s+/g,"|"),"i").test(s+" "+n+" "+q);
       }).slice(0,6);
       setTellGbkStores(matches.length ? matches : all.slice(0,6));
-      if(!all.length) setAuthNotice("No active Kirana/grocery store is available for this request yet.");
+      const foundCount=(matches.length ? matches : all.slice(0,6)).length;
+      if(!all.length){setAuthNotice("No active Kirana/grocery store is available for this request yet."); speakText("No active GBK Loyalty business is available for this request yet. Please try another request.");}
+      else {setAuthNotice("GBKAI found "+foundCount+" active local businesses. Review your order before sending."); speakText("GBKAI found "+foundCount+" active local businesses. Please review your order before sending.");}
     }catch(e:any){setTellGbkStores([]);setAuthNotice(e?.message||"GBKAI could not find an active grocery store.");}
     finally{setTellGbkBusy(false);}
   };
@@ -1849,7 +1851,7 @@ export default function Home() {
             <span>🛒</span>
             <input value={tellGbkText} onChange={e=>setTellGbkText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void tellGbkAi()}} placeholder={tellGbkCategory==="Grocery" ? (language==="తెలుగు" ? "నాకు 5 కిలోల బియ్యం, 2 లీటర్ల నూనె కావాలి" : language==="हिन्दी" ? "मुझे 5 किलो चावल और 2 लीटर तेल चाहिए" : "Tell GBKAI: 5 kg rice, 2 litres oil…") : `Tell GBKAI what you need in ${tellGbkCategory}…`} />
             <button className="voiceBtn tellGbkVoiceBtn" type="button" onClick={tellGbkVoiceListening ? stopTellGbkVoice : startTellGbkVoice} disabled={tellGbkBusy} aria-label={tellGbkVoiceListening ? "Stop voice" : "Start voice"}>{tellGbkVoiceListening ? "⏹️ Stop" : "🎤 Start Voice"}</button>
-            <button type="button" onClick={()=>void tellGbkAi()} disabled={tellGbkBusy}>{tellGbkBusy ? "Finding…" : "Tell GBKAI →"}</button>
+            <button type="button" onClick={()=>void tellGbkAi()} disabled={tellGbkBusy}>{tellGbkBusy ? "Finding…" : "Tell GBKAI →"}</button><button type="button" className="secondary tellGbkHearBtn" onClick={()=>{unlockVoice(); const items=tellGbkItems.length?tellGbkItems.join(", "):tellGbkText; speakText("Your order request is: "+items+". Review the order list, choose an active merchant, then send the order.");}} aria-label="Hear GBKAI aloud">🔊 Hear</button>
           </div>
           {tellGbkVoiceListening && <div className="tellGbkListening" aria-live="polite"><span className="tellGbkPulse">🎙️</span><b>Listening…</b><span>Speak naturally in {language}</span></div>}{tellGbkVoiceTranscript && <div className="tellGbkTranscript" aria-live="polite"><b>📝 You said</b><span>{tellGbkVoiceTranscript}</span></div>}{tellGbkItems.length>0 && <><div className="tellGbkReviewBar"><b>🧾 Order list ready</b><button type="button" className="secondary" onClick={()=>setShowTellOrderReview(v=>!v)}>{showTellOrderReview ? "Hide order list" : "View order list"}</button></div>{showTellOrderReview && <div className="tellGbkOrderReview"><div className="tellGbkOrderReviewHead"><b>Review before sending</b><span>{tellGbkItems.length} item{tellGbkItems.length===1?"":"s"}</span></div>{tellGbkItems.slice(0,20).map((x,i)=><div className="tellGbkOrderItem" key={i}><span>✓</span><input value={x} onChange={e=>setTellGbkItems(prev=>prev.map((v,j)=>j===i?e.target.value:v))} aria-label={"Order item "+(i+1)} /><button type="button" onClick={()=>setTellGbkItems(prev=>prev.filter((_,j)=>j!==i))} aria-label={"Remove item "+(i+1)}>×</button></div>)}<div className="tellGbkReviewNote">You can review or edit the list before choosing a merchant and sending the order.</div></div>}</>}
           {tellGbkStores.length>0 && <div style={{display:"grid",gap:8}}>
