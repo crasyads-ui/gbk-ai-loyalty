@@ -1703,12 +1703,12 @@ export default function Home() {
         <div className="search"><span>⌕</span><input id="searchInput" value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder={language==="తెలుగు" ? "మీకు ఏమి కావాలి?" : language==="हिन्दी" ? "आज आपको क्या चाहिए?" : "What do you need today?"}/><button className="voiceBtn" onMouseDown={()=>setSearchFocused(true)} onClick={startVoiceSearch} disabled={apiBusy || voiceListening} aria-label="Speak your request">{voiceListening ? "🎙️ Listening" : "🎤 Speak"}</button><button onMouseDown={()=>setSearchFocused(true)} onClick={()=>doSearch()} disabled={apiBusy}>{apiBusy ? "Searching…" : "Find businesses"}</button></div>
 <div className="voiceStatus">{voiceSupported ? (voiceListening ? "🎙️ GBK AI is listening in " + language : "🎤 Speak in your selected language") : "⌨️ Type your request or use your device voice input"}</div>
         <div className="askHint"><span>Hotels • Restaurants • Shopping • Services • Travel</span></div>
-        <div className="offerPreview" style={{display:"grid",gap:10,marginTop:16,border:"1px solid rgba(34,197,94,.35)",background:"linear-gradient(135deg,rgba(34,197,94,.08),rgba(59,130,246,.08))"}}>
+        <div className="offerPreview tellGbkPanel" style={{display:"grid",gap:10,marginTop:16,border:"1px solid rgba(34,197,94,.35)",background:"linear-gradient(135deg,rgba(34,197,94,.08),rgba(59,130,246,.08))"}}>
           <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}>
             <div><b>🗣️ Tell GBKAI — New Local Shopping</b><span style={{display:"block",marginTop:3}}>Don't search products. Just tell GBKAI what you need.</span></div>
             <span className="roleTag">🛒 Kirana • Grocery</span>
           </div>
-          <div className="search" style={{marginTop:2}}>
+          <div className="search tellGbkSearch" style={{marginTop:2,width:"100%",maxWidth:"100%",minWidth:0,overflow:"hidden"}}>
             <span>🛒</span>
             <input value={tellGbkText} onChange={e=>setTellGbkText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void tellGbkAi()}} placeholder={language==="తెలుగు" ? "నాకు 5 కిలోల బియ్యం, 2 లీటర్ల నూనె కావాలి" : language==="हिन्दी" ? "मुझे 5 किलो चावल और 2 लीटर तेल चाहिए" : "Tell GBKAI: 5 kg rice, 2 litres oil, 1 kg dal…"} />
             <button className="voiceBtn" type="button" onClick={startVoiceSearch} aria-label="Speak grocery request">🎤</button>
