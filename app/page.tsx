@@ -926,7 +926,7 @@ export default function Home() {
         phonepe:"upi://pay?"+params.toString(),
         googlepay:"upi://pay?"+params.toString(),
         paytm:"upi://pay?"+params.toString(),
-        bhim:"upi://pay?"+params.toString()"
+        bhim:"upi://pay?"+params.toString()
       };
       setUpiPayment({provider:"DIRECT",method:merchant.payment_method||"LOCAL_CURRENCY",currency:String(merchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:merchant.business_name||"GBK Merchant",gbk_order_id:upiPayment?.gbk_order_id||null,order_reference:currentOrderReference,amount_major:amountMajor,upi_id:upiId,upi_links:links});
       setAuthNotice("Payment options are ready. Choose your UPI app below.");
@@ -974,7 +974,7 @@ export default function Home() {
             phonepe:"upi://pay?"+params.toString(),
             googlepay:"upi://pay?"+params.toString(),
             paytm:"upi://pay?"+params.toString(),
-            bhim:"upi://pay?"+params.toString()"
+            bhim:"upi://pay?"+params.toString()
           } : null;
           setCurrentOrderReference(ref);
           setUpiPayment({
@@ -1000,7 +1000,7 @@ export default function Home() {
           phonepe:"upi://pay?"+params.toString(),
           googlepay:"upi://pay?"+params.toString(),
           paytm:"upi://pay?"+params.toString(),
-          bhim:"upi://pay?"+params.toString()"
+          bhim:"upi://pay?"+params.toString()
         } : null;
         setCurrentOrderReference(ref);
         setUpiPayment({...paid.payment,gbk_order_id:created?.order?.id,order_reference:ref,amount_major:amountMajor,upi_id:upiId||null,upi_links:links});
