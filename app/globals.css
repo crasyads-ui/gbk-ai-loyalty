@@ -549,3 +549,15 @@ input,select,.modal input,.modalSelect{font-size:16px}
 @media(max-width:520px){
   .orderCheckedBtn{font-size:15px;min-height:50px}
 }
+
+
+.tellGbkCompleteCard{display:grid;gap:8px;margin-top:12px;padding:16px;border-radius:18px;background:#effaf1;border:1px solid #bfe1c5;color:#2e4734}
+.tellGbkCompleteTitle{font-size:18px;font-weight:950;color:#18733a}
+.tellGbkCompleteCard>b{font-size:16px;color:#30243a}
+.tellGbkCompleteCard>span{font-size:13px;line-height:1.45}
+.tellGbkCompleteActions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:6px}
+.tellGbkCompleteActions button{min-height:46px;border-radius:12px;font-weight:900}
+@media(max-width:520px){
+ .tellGbkCompleteCard{padding:14px}
+ .tellGbkCompleteActions{grid-template-columns:1fr}
+}
