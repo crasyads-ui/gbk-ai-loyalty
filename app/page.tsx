@@ -70,6 +70,8 @@ export default function Home() {
   const [tellGbkOrderSent,setTellGbkOrderSent] = useState(false);
   const [tellGbkVoiceListening,setTellGbkVoiceListening] = useState(false);
   const [tellGbkVoiceTranscript,setTellGbkVoiceTranscript] = useState("");
+  const tellGbkVoiceBufferRef = useRef("");
+  const tellGbkVoiceStopRequestedRef = useRef(false);
   const [customerOrders,setCustomerOrders] = useState<any[]>([]);
   const [showTellOrderReview,setShowTellOrderReview] = useState(false);
   const [tellGbkOrderChecked,setTellGbkOrderChecked] = useState(false);
@@ -994,6 +996,7 @@ export default function Home() {
     finally {setApiBusy(false); }
   };
   const stopTellGbkVoice = () => {
+    tellGbkVoiceStopRequestedRef.current = true;
     try{speechRecognitionRef.current?.stop?.();}catch{}
     setTellGbkVoiceListening(false);
     setVoiceListening(false);
@@ -1020,17 +1023,18 @@ export default function Home() {
     const q=String(request ?? tellGbkText).trim();
     if(q.length<3){setAuthNotice("Tell GBKAI what you need, for example: 5 kg rice, 2 litres oil and 1 kg dal.");return;}
     setTellGbkText(q); setTellGbkBusy(true); setTellGbkOrderSent(false); setTellGbkSelectedStore(null); setAuthNotice("");
-    // Build a real editable order list. Split comma/and-separated requests,
-    // and also split when a new quantity+unit starts (e.g. "25 kg rice bag 5 l oil").
-    const quantityStart=/(?:^|\\s)(\\d+(?:\\.\\d+)?\\s*(?:kg|kgs|g|gram|grams|l|litre|litres|liter|liters|ml|pack|packs|pcs|pc|piece|pieces|dozen|bottle|bottles|box|boxes|bag|bags)\\b)/gi;
+    // Build a real editable order list. Split commas/conjunctions and every
+    // new quantity+unit boundary so a complete 5-item voice order stays intact.
+    const normalizedRequest=q.replace(/[•·]/g,",").replace(/\s+/g," ").trim();
+    const quantityStart=/(?:^|\s)(\d+(?:\.\d+)?\s*(?:kg|kgs|g|gram|grams|l|litre|litres|liter|liters|ml|pack|packs|pcs|pc|piece|pieces|dozen|bottle|bottles|box|boxes|bag|bags)\b)/gi;
     const starts:number[]=[];
     let m:any;
-    while((m=quantityStart.exec(q))!==null){ starts.push(m.index + (m[0].startsWith(" ")?1:0)); }
+    while((m=quantityStart.exec(normalizedRequest))!==null){ starts.push(m.index + (m[0].startsWith(" ")?1:0)); }
     let parts:string[]=[];
     if(starts.length>1){
-      parts=starts.map((start,idx)=>q.slice(start,idx+1<starts.length?starts[idx+1]:q.length).trim()).filter(Boolean);
+      parts=starts.map((start,idx)=>normalizedRequest.slice(start,idx+1<starts.length?starts[idx+1]:normalizedRequest.length).trim()).filter(Boolean);
     }else{
-      parts=q.split(/[,\\n]|\\band\\b|\\+|;/i).map(x=>x.trim()).filter(Boolean);
+      parts=normalizedRequest.split(/[,\n]|\band\b|\+|;/i).map(x=>x.trim()).filter(Boolean);
     }
     setTellGbkItems(parts.length?parts:[q]);
     setShowTellOrderReview(true);
@@ -1080,36 +1084,37 @@ export default function Home() {
       setAuthNotice("🎤 Chrome speech recognition is not available. Use Chrome on Android and allow microphone access.");
       return;
     }
-    // IMPORTANT: recognition.start() must happen directly inside the tap event.
-    // Do not await getUserMedia/permissions first: Chrome can lose the user
-    // activation after an await, especially after a wallet connection flow.
     try {
       try { speechRecognitionRef.current?.abort?.(); } catch {}
       speechRecognitionRef.current = null;
+      tellGbkVoiceStopRequestedRef.current = false;
+      tellGbkVoiceBufferRef.current = "";
+      setTellGbkVoiceTranscript("");
       const recognition = new SpeechRecognitionCtor();
       speechRecognitionRef.current = recognition;
       recognition.lang = speechLangMap[language] || "en-IN";
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = true;
       recognition.maxAlternatives = 3;
       recognition.onstart = () => {
         setTellGbkVoiceListening(true);
         setVoiceListening(true);
-        setAuthNotice("🎙️ Listening… Say your complete order with quantities. GBKAI is ready.");
+        setAuthNotice("🎙️ Listening… Say your complete order. You can pause between items.");
       };
-      recognition.onaudiostart = () => setAuthNotice("🎙️ Microphone connected. Speak now…");
+      recognition.onaudiostart = () => setAuthNotice("🎙️ Microphone connected. Speak your complete order…");
       recognition.onspeechstart = () => setAuthNotice("🎙️ I can hear you…");
       recognition.onresult = (event:any) => {
+        // Rebuild from all recognition results so later results cannot replace
+        // the earlier shopping items (the previous bug could leave only “5 kg”).
         let transcript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) transcript += String(event.results[i]?.[0]?.transcript || "");
-        transcript = transcript.trim();
-        if (transcript) { setTellGbkVoiceTranscript(transcript); setTellGbkText(transcript); }
-        const last = event.results?.[event.results.length - 1];
-        if (last?.isFinal && transcript) {
-          setTellGbkVoiceListening(false);
-          setVoiceListening(false);
-          setAuthNotice("⏳ Voice captured. GBKAI is checking your complete order…");
-          window.setTimeout(() => { void tellGbkAi(transcript); }, 150);
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += String(event.results[i]?.[0]?.transcript || "") + " ";
+        }
+        transcript = transcript.replace(/\s+/g," ").trim();
+        if (transcript) {
+          tellGbkVoiceBufferRef.current = transcript;
+          setTellGbkVoiceTranscript(transcript);
+          setTellGbkText(transcript);
         }
       };
       recognition.onerror = (event:any) => {
@@ -1127,8 +1132,12 @@ export default function Home() {
         setTellGbkVoiceListening(false);
         setVoiceListening(false);
         speechRecognitionRef.current = null;
+        const transcript = tellGbkVoiceBufferRef.current.trim();
+        if (!tellGbkVoiceStopRequestedRef.current && transcript.length >= 3) {
+          setAuthNotice("⏳ Voice captured. GBKAI is checking your complete order…");
+          window.setTimeout(() => { void tellGbkAi(transcript); }, 150);
+        }
       };
-      // Directly from the user's button tap — critical for Chrome mobile.
       recognition.start();
     } catch {
       setTellGbkVoiceListening(false);
