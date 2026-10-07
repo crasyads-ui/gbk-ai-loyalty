@@ -68,6 +68,8 @@ export default function Home() {
   const [tellGbkStores,setTellGbkStores] = useState<any[]>([]);
   const [tellGbkSelectedStore,setTellGbkSelectedStore] = useState<any|null>(null);
   const [tellGbkOrderSent,setTellGbkOrderSent] = useState(false);
+  const [tellGbkVoiceListening,setTellGbkVoiceListening] = useState(false);
+  const [tellGbkVoiceTranscript,setTellGbkVoiceTranscript] = useState("");
   const [language,setLanguage] = useState("English");
   const [country,setCountry] = useState("Global");
   const [currency,setCurrency] = useState("USD");
@@ -975,8 +977,9 @@ export default function Home() {
   };
   const stopTellGbkVoice = () => {
     try{speechRecognitionRef.current?.stop?.();}catch{}
+    setTellGbkVoiceListening(false);
     setVoiceListening(false);
-    setAuthNotice("Voice shopping stopped.");
+    setAuthNotice("Voice shopping stopped. You can start again anytime.");
   };
 
   useEffect(()=>{try{const a=localStorage.getItem("gbk_loyalty_home_address")||"";if(a)setTellGbkHomeAddress(a);}catch{}},[]);
@@ -1017,6 +1020,74 @@ export default function Home() {
       if(!all.length) setAuthNotice("No active Kirana/grocery store is available for this request yet.");
     }catch(e:any){setTellGbkStores([]);setAuthNotice(e?.message||"GBKAI could not find an active grocery store.");}
     finally{setTellGbkBusy(false);}
+  };
+
+  const startTellGbkVoice = () => {
+    const w:any = window;
+    const SpeechRecognitionCtor = w.SpeechRecognition || w.webkitSpeechRecognition;
+    unlockVoice();
+    if (!SpeechRecognitionCtor) {
+      setAuthNotice("🎤 Voice input is not available in this browser. On Android, open GBKAI in Chrome and allow microphone access; on iPhone use the keyboard microphone.");
+      return;
+    }
+    try {
+      try { speechRecognitionRef.current?.abort?.(); } catch {}
+      const recognition = new SpeechRecognitionCtor();
+      speechRecognitionRef.current = recognition;
+      recognition.lang = speechLangMap[language] || "en-IN";
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 3;
+      setTellGbkVoiceTranscript("");
+      recognition.onstart = () => {
+        setTellGbkVoiceListening(true);
+        setVoiceListening(true);
+        setAuthNotice("🎙️ Listening… speak your GBKAI request now.");
+      };
+      recognition.onresult = (event:any) => {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += String(event.results[i]?.[0]?.transcript || "");
+        }
+        transcript = transcript.trim();
+        if (transcript) {
+          setTellGbkVoiceTranscript(transcript);
+          setTellGbkText(transcript);
+        }
+        const last = event.results?.[event.results.length - 1];
+        if (last?.isFinal && transcript) {
+          setTellGbkVoiceListening(false);
+          setVoiceListening(false);
+          setAuthNotice("⏳ Voice captured. GBKAI is finding active merchants…");
+          window.setTimeout(() => { void tellGbkAi(transcript); }, 250);
+        }
+      };
+      recognition.onerror = (event:any) => {
+        setTellGbkVoiceListening(false);
+        setVoiceListening(false);
+        const code = String(event?.error || "");
+        if (code === "not-allowed" || code === "service-not-allowed") {
+          setAuthNotice("🎤 Microphone permission is blocked. Allow microphone access for loyalty.gbkai.com and try again.");
+        } else if (code === "no-speech") {
+          setAuthNotice("🎙️ No speech detected. Tap Start Voice and speak clearly.");
+        } else if (code === "network") {
+          setAuthNotice("🌐 Browser voice service is unavailable. Try Chrome on Android or use the keyboard microphone.");
+        } else {
+          setAuthNotice("🎙️ Voice input could not start. Please try again.");
+        }
+      };
+      recognition.onend = () => {
+        setTellGbkVoiceListening(false);
+        setVoiceListening(false);
+        speechRecognitionRef.current = null;
+      };
+      recognition.start();
+    } catch {
+      setTellGbkVoiceListening(false);
+      setVoiceListening(false);
+      speechRecognitionRef.current = null;
+      setAuthNotice("🎙️ Voice input could not start. Allow microphone access and try again.");
+    }
   };
 
   const sendTellGbkOrder = async (m:any) => {
@@ -1756,10 +1827,10 @@ export default function Home() {
           <div className="search tellGbkSearch" style={{marginTop:2,width:"100%",maxWidth:"100%",minWidth:0,overflow:"hidden"}}>
             <span>🛒</span>
             <input value={tellGbkText} onChange={e=>setTellGbkText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void tellGbkAi()}} placeholder={tellGbkCategory==="Grocery" ? (language==="తెలుగు" ? "నాకు 5 కిలోల బియ్యం, 2 లీటర్ల నూనె కావాలి" : language==="हिन्दी" ? "मुझे 5 किलो चावल और 2 लीटर तेल चाहिए" : "Tell GBKAI: 5 kg rice, 2 litres oil…") : `Tell GBKAI what you need in ${tellGbkCategory}…`} />
-            <button className="voiceBtn" type="button" onClick={startVoiceSearch} aria-label="Speak grocery request">🎤</button>
+            <button className="voiceBtn tellGbkVoiceBtn" type="button" onClick={tellGbkVoiceListening ? stopTellGbkVoice : startTellGbkVoice} disabled={tellGbkBusy} aria-label={tellGbkVoiceListening ? "Stop voice" : "Start voice"}>{tellGbkVoiceListening ? "⏹️ Stop" : "🎤 Start Voice"}</button>
             <button type="button" onClick={()=>void tellGbkAi()} disabled={tellGbkBusy}>{tellGbkBusy ? "Finding…" : "Tell GBKAI →"}</button>
           </div>
-          {tellGbkItems.length>0 && <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tellGbkItems.slice(0,12).map((x,i)=><span className="roleTag" key={i}>✓ {x}</span>)}</div>}
+          {tellGbkVoiceListening && <div className="tellGbkListening" aria-live="polite"><span className="tellGbkPulse">🎙️</span><b>Listening…</b><span>Speak naturally in {language}</span></div>}{tellGbkVoiceTranscript && <div className="tellGbkTranscript" aria-live="polite"><b>📝 You said</b><span>{tellGbkVoiceTranscript}</span></div>}{tellGbkItems.length>0 && <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tellGbkItems.slice(0,12).map((x,i)=><span className="roleTag" key={i}>✓ {x}</span>)}</div>}
           {tellGbkStores.length>0 && <div style={{display:"grid",gap:8}}>
             <b>🏪 Active stores that can receive this request</b>
             {tellGbkStores.map((m:any)=><div className="offerPreview" key={"tell-"+m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
