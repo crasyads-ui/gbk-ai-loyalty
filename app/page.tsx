@@ -786,7 +786,7 @@ export default function Home() {
       setAuthNotice("🔊 Voice playback is not available on this device. Try Chrome on Android.");
       return;
     }
-    const clean = String(text || "").replace(/Sources[\\s\\S]*/i, "").replace(/https?:\\/\\/\\S+/g, "").trim();
+    const clean = String(text || "").replace(/Sources[\s\S]*/i, "").replace(/https?:\/\/\S+/g, "").trim();
     if (!clean) return;
     lastSpokenTextRef.current = clean;
     try {
