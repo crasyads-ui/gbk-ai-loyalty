@@ -102,6 +102,9 @@ export default function Home() {
   const [paymentSuccess,setPaymentSuccess] = useState<any>(null);
   const [merchantBusinessName,setMerchantBusinessName]=useState("");
   const [founderReferralCode,setFounderReferralCode]=useState("");
+  const [creatorReferralCode,setCreatorReferralCode]=useState("");
+  const [creatorReferralStatus,setCreatorReferralStatus]=useState<any>(null);
+  const [creatorReferralLink,setCreatorReferralLink]=useState("");
   const [founderReferralStatus,setFounderReferralStatus]=useState<any>(null);
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
   const [merchantTermsAccepted,setMerchantTermsAccepted]=useState(false);
@@ -170,7 +173,22 @@ export default function Home() {
 
   useEffect(() => {
     const rawRef = new URLSearchParams(window.location.search).get("ref");
-    if (rawRef) setFounderReferralCode(rawRef.trim());
+    if (!rawRef) return;
+    const ref = rawRef.trim();
+    let cancelled=false;
+    (async()=>{
+      try{
+        const active = session || getStoredSession() || await signInAnonymously();
+        if(!session) setSession(active);
+        const creator = await loyaltyApi(active,"creator_referral_check",{creator_referral_code:ref});
+        if(creator?.verified){
+          if(!cancelled){ setCreatorReferralCode(ref); setCreatorReferralStatus(creator.creator); setFounderReferralCode(""); }
+          return;
+        }
+      }catch{}
+      if(!cancelled) setFounderReferralCode(ref);
+    })();
+    return()=>{cancelled=true;};
   }, []);
 
   useEffect(() => {
@@ -1137,6 +1155,35 @@ export default function Home() {
     finally { setApiBusy(false); }
   };
 
+  const createCreatorReferral = async () => {
+    setApiBusy(true); setAuthNotice("");
+    try{
+      const active=session || getStoredSession() || await signInAnonymously();
+      setSession(active);
+      const result=await loyaltyApi(active,"creator_referral_register",{
+        creator_name:fullName.trim()||undefined,
+        handle:fullName.trim()||undefined,
+        platform:"MULTI",
+        country:country==="Global"?null:country,
+        language,
+      });
+      if(result?.creator){
+        setCreatorReferralStatus(result.creator);
+        setCreatorReferralCode(result.creator.referral_code);
+        setCreatorReferralLink(result.creator.referral_link || ("https://loyalty.gbkai.com/?ref="+result.creator.referral_code));
+        setAuthNotice("Your unique GBKAI Merchant Referral link is ready. Share it with real businesses.");
+      }
+    }catch(e:any){setAuthNotice(e?.message||"Creator referral link could not be created.");}
+    finally{setApiBusy(false);}
+  };
+
+  const copyCreatorReferralLink = async () => {
+    const link=creatorReferralLink || (creatorReferralCode ? "https://loyalty.gbkai.com/?ref="+creatorReferralCode : "");
+    if(!link){setAuthNotice("Create your unique referral link first.");return;}
+    try{await navigator.clipboard.writeText(link);setShareNotice("Unique GBKAI referral link copied.");}
+    catch{setAuthNotice("Referral link: "+link);}
+  };
+
   const shareBusiness = async (businessName:string, businessUrl?:string) => {
     const url = businessUrl || window.location.href;
     const text = `Check out ${businessName} on GBK AI Loyalty. Discover participating businesses and earn eligible GBK rewards from qualifying purchases.`;
@@ -1407,6 +1454,7 @@ export default function Home() {
         payment_method: paymentMethod,
         payment_details: { details: paymentDetails, owner: merchantOwnerName, offer: { type: merchantOfferType, description: merchantOfferDescription.trim() || null, amount: merchantOfferAmount.trim() ? Number(merchantOfferAmount) : null, currency: paymentCurrency, loyalty_pool_percent: selectedOffer, customer_percent: customerShare, founder_percent: founderShare, platform_percent: platformShare }, supported_methods: country === "United States" ? ["APPLE_PAY","GOOGLE_PAY","CARD","PAYPAL","VENMO","SQUARE","GBK_QR"] : country === "India" ? ["UPI","CARD","GBK_QR"] : country === "Thailand" ? ["THAI_QR","THAI_BANK","CARD","GBK_QR"] : country === "Malaysia" ? ["MY_QR","MY_BANK","CARD","GBK_QR"] : country === "Philippines" ? ["PH_QR","PH_BANK","CARD","GBK_QR"] : country === "United Arab Emirates" ? ["UAE_QR","UAE_BANK","CARD","GBK_QR"] : ["LOCAL_CURRENCY","CARD","GBK_QR"], terms_accepted: merchantTermsAccepted },
         founder_referral_code: founderReferralCode.trim() || null,
+        creator_referral_code: creatorReferralCode.trim() || null,
         terms_accepted: merchantTermsAccepted,
       });
       setAuthNotice("Merchant registration submitted successfully.");
@@ -1762,12 +1810,27 @@ export default function Home() {
         <div className="categoryStrip"><b>Business categories:</b>{businessCategories.map(x=><span key={x}>{x}</span>)}</div>
       </section>
 
+      <section className="offerGrid" style={{marginTop:18}}>
+        <div className="offerPreview" style={{display:"grid",gap:10}}>
+          <span className="eyebrow">🔗 GBKAI MERCHANT REFERRAL</span>
+          <h2 style={{margin:0}}>Recruit real merchants with your unique referral link</h2>
+          <p>Anyone can create a unique GBKAI referral link. Bring a real business to GBK Loyalty. When the merchant has no Founder attached, the qualifying loyalty reward allocation includes <strong>10% for the referring creator</strong>.</p>
+          <div className="status"><span>60% Customer · 10% Creator · 30% Platform</span><small>With an eligible Founder attached, the Founder allocation applies instead: 60% Customer · 20% Founder · 20% Platform. Creator and Founder rewards do not stack.</small></div>
+          <button className="primary" type="button" onClick={()=>setRole("Creator")}>🔗 Get My Unique Referral Link</button>
+        </div>
+        <div className="offerPreview" style={{display:"grid",gap:8}}>
+          <b>🎥 Not only YouTubers</b>
+          <span>Customers, creators, local influencers, salespeople and community members can recruit legitimate merchants.</span>
+          <span>Rewards are tied to <strong>real verified loyalty transactions</strong> — not clicks, views or fake registrations.</span>
+        </div>
+      </section>
+
       <section className="merchantRules roleOnlySection">
         <div><span className="eyebrow">MERCHANT TERMS</span><h2>Simple rules before activation</h2></div>
         <div className="ruleGrid">
           <div><b>01 · Activate first</b><p>A verified merchant can activate without a GBK balance. The connected merchant wallet is used for reward funding when an eligible reward is due.</p></div>
           <div><b>02 · Choose loyalty</b><p>Merchant selects 5%, 10%, 15%, 20% or a custom loyalty percentage.</p></div>
-          <div><b>03 · Automatic split</b><p>The selected merchant offer is allocated 60% to the customer, 20% to the Founder/referrer and 20% to the GBK platform.</p></div>
+          <div><b>03 · Automatic split</b><p>With a Founder: 60% Customer / 20% Founder / 20% Platform. Without a Founder but with a creator referral: 60% Customer / 10% Creator / 30% Platform. Without either: 60% Customer / 40% Platform.</p></div>
           <div><b>04 · Lead commission</b><p>Merchant can accept a separate lead commission before receiving eligible leads.</p></div>
           <div><b>05 · Verified transaction</b><p>No reward is released merely because an order was sent or a payment button was clicked. Payment/order completion must be verified.</p></div>
           <div><b>06 · Low reward balance</b><p>If the connected wallet does not have enough GBK for an eligible reward, the merchant stays visible and active while that reward waits for sufficient funding.</p></div>
@@ -1840,7 +1903,7 @@ export default function Home() {
         <div className="modal" onClick={e=>e.stopPropagation()}>
           <button className="close" onClick={()=>setRole(null)}>×</button>
           <div className="roleIcon">{role==="MerchantWallet" ? "👛" : role==="SuggestBusiness" || role==="ClaimBusiness" ? "🏪" : (roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍"))}</div>
-          <h2>{role==="MerchantWallet" ? "Merchant Wallet" : role==="WalletChooser" ? "Choose Your Wallet" : role==="SuggestBusiness" ? "Suggest a Business" : role==="ClaimBusiness" ? "Claim This Business" : `${role} registration`}</h2>
+          <h2>{role==="MerchantWallet" ? "Merchant Wallet" : role==="WalletChooser" ? "Choose Your Wallet" : role==="SuggestBusiness" ? "Suggest a Business" : role==="ClaimBusiness" ? "Claim This Business" : role==="Creator" ? "GBKAI Merchant Referral" : `${role} registration`}</h2>
           {role==="SuggestBusiness" ? <>
             <p>Help GBK Loyalty grow faster globally. Anyone can suggest a legitimate business — no Founder is required and no wallet is required to submit the suggestion.</p>
             <div className="status"><span>🟡 Unclaimed first</span><small>The suggestion is reviewed before publication. The business owner must claim and activate the merchant profile before customers can place reward-eligible orders.</small></div>
