@@ -24,7 +24,7 @@ const currencyForCountry = (value:string) => currencyMap[value] || "USD";
 
 const roles = [
   {icon:"👤",title:"Customer",text:"Find businesses, pay normally and earn eligible GBK Loyalty rewards.",items:["Earn GBK","Hold • Use • Transfer"]},
-  {icon:"🏪",title:"Merchant",text:"Register your business, connect your merchant wallet and activate. Add GBK to the reward wallet when eligible rewards need funding.",items:["5%–20% or Custom","Automatic rewards"]},
+  {icon:"🏪",title:"Merchant",text:"Register or claim your business, connect the merchant wallet, add GBK and activate. A live GBK balance is required before the business becomes ACTIVE.",items:["5%–20% or Custom","Automatic rewards"]},
   {icon:"🌍",title:"Founder",text:"Country or Global Founder Members can onboard businesses and receive the Founder allocation from verified loyalty sales.",items:["Add users","Add businesses","Track earnings"]},
 ];
 
@@ -1751,8 +1751,20 @@ export default function Home() {
       </section>
 
       <section className="merchant">
-        <div><span className="eyebrow">FOR BUSINESSES</span><h2>Activate loyalty. Receive eligible leads.</h2><p>Register any legitimate product or service business, accept the commercial terms, choose 5%–20% or a custom percentage, connect your wallet and activate. GBK funding is added when eligible rewards need it.</p></div>
+        <div><span className="eyebrow">DIRECT MERCHANT ACTIVE PROGRAM</span><h2>Activate real merchants city by city.</h2><p>Directly invite legitimate businesses, send the owner a Claim & Activate link, connect the merchant wallet, add a live GBK balance, create the loyalty offer and make the business ACTIVE for real customer transactions.</p></div>
         <button onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Connecting…" : "Connect / Register Merchant →"}</button>
+      </section>
+      <section className="offerGrid" style={{marginTop:18}}>
+        <div className="offerPreview" style={{display:"grid",gap:8}}>
+          <b>🏙️ City activation target</b>
+          <span>Start with <strong>50 active merchants per pilot city</strong> and expand after real transactions are proven.</span>
+          <span>Priority: groceries · restaurants · retail · services · hotels · real estate.</span>
+        </div>
+        <div className="offerPreview" style={{display:"grid",gap:8}}>
+          <b>📲 Direct owner activation</b>
+          <span>Business added → owner invited → owner claims → payment method → GBK balance → offer → 🟢 ACTIVE.</span>
+          <button className="secondary" type="button" onClick={()=>setRole("SuggestBusiness")}>➕ Add Business & Send Owner Invite</button>
+        </div>
       </section>
 
       {role && <div className="modalBackdrop" onClick={()=>setRole(null)}>
@@ -1841,7 +1853,7 @@ export default function Home() {
               <small>Merchant wallets are checked against the registered merchant record. Existing merchants open directly; unregistered wallets continue to new merchant registration.</small>
             </div>
           </> : role==="MerchantWallet" ? <>
-            <p>Manage the connected merchant reward wallet. Customer payments remain direct to the merchant; GBK is used only for the merchant-funded loyalty reward pool.</p>
+            <p>Manage the connected merchant reward wallet. Customer payments remain direct to the merchant; the connected wallet must have a live GBK balance before this merchant can become ACTIVE. GBK is used for eligible loyalty rewards.</p>
             <div className="offerPreview" style={{display:"grid",gap:6}}>
               <b>Merchant: {merchantStatus?.merchant?.business_name || "—"}</b>
               <span>Wallet: {walletAddress ? walletAddress.slice(0,6)+"…"+walletAddress.slice(-4) : (merchantStatus?.merchant?.profile_id ? "Connected" : "Not connected")}</span>
@@ -1955,14 +1967,28 @@ export default function Home() {
                 : "⏳ Merchant activation pending"}
               <span>{merchantStatus?.merchant?.invitation_status==="ACCEPTED"
                 ? (Number(merchantChainStatus?.balanceRaw || merchantStatus?.live_gbk_balance_raw || 0) > 0
-                  ? "Merchant is active and reward funding is ready."
-                  : "Merchant is active. Add GBK to the connected wallet before eligible rewards are settled.")
+                  ? "Merchant is active and the live GBK balance is available for eligible rewards."
+                  : "Merchant is active, but the live GBK balance is now zero. Add GBK before processing reward-eligible transactions.")
                 : "Connect the merchant wallet, add UPI/bank details, accept the terms and maintain the required live GBK balance to activate."}</span>
             </div>
             <button className="secondary" onClick={openMerchantWallet} disabled={apiBusy}>{apiBusy ? "Checking…" : "Refresh live GBK balance"}</button>
+            {merchantStatus?.merchant?.invitation_status !== "ACCEPTED" && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:10}}>
+              <b>💰 Get GBK to activate</b>
+              <span>Activation requires a positive live GBK balance in the connected merchant wallet.</span>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <a className="primary" href="https://swap.gbkai.com" target="_blank" rel="noreferrer" style={{textAlign:"center",textDecoration:"none"}}>🔄 Get GBK — USDT → GBK</a>
+                <button className="secondary" type="button" onClick={async()=>{
+                  const address=merchantWallet || walletAddress || "";
+                  if(!address){setAuthNotice("Connect the merchant wallet first.");return;}
+                  try{await navigator.clipboard.writeText(address);setAuthNotice("Merchant wallet address copied. Transfer GBK to this wallet, then refresh the live balance.");}
+                  catch{setAuthNotice("Merchant wallet: "+address);}
+                }}>📥 Copy Wallet — Transfer GBK</button>
+              </div>
+              <small>GBK remains in the merchant's connected wallet. GBKAI does not take custody of the merchant's tokens.</small>
+            </div>}
             {merchantStatus?.merchant?.invitation_status !== "ACCEPTED" && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
               <b>Merchant activation</b>
-              <span>Connect the merchant wallet, add a payment method (UPI or bank/local payment), accept the GBK Loyalty terms, and the business becomes ACTIVE. GBK funding is only needed when rewards are ready to settle.</span>
+              <span>GBK balance is required for activation. Connect the merchant wallet, add a payment method, accept the terms, then use Get GBK or transfer GBK into the connected wallet. The system checks the live BNB Smart Chain balance before making the business ACTIVE.</span>
               <button className="primary" disabled={apiBusy} onClick={async()=>{
                 if(!session || !merchantStatus?.merchant?.id) return;
                 setApiBusy(true); setAuthNotice("");
