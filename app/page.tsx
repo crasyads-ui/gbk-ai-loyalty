@@ -1027,7 +1027,7 @@ export default function Home() {
       const categoryHints:any={Grocery:"kirana grocery supermarket store",Food:"restaurant food cafe bakery",Restaurants:"restaurant dining food",Hotels:"hotel accommodation resort",Travel:"travel tours flights hotels",Services:"local services repair professionals","Real Estate":"apartments villas plots commercial real estate"};
       const categoryHint=categoryHints[tellGbkCategory]||tellGbkCategory;
       const r=await loyaltyApi(active,"search",{query:q+" "+categoryHint,country});
-      const all=(r?.results||[]).filter((x:any)=>!x?.unclaimed);
+      const all=(r?.results||[]).filter((x:any)=>!x?.unclaimed && String(x?.status||x?.merchant_status||"ACTIVE").toUpperCase()==="ACTIVE");
       const matches=all.filter((x:any)=>{
         const s=String(x.category||"").toLowerCase();
         const n=String(x.business_name||"").toLowerCase();
@@ -1141,6 +1141,8 @@ export default function Home() {
   const sendTellGbkOrder = async (m:any) => {
     if(!m?.id || !tellGbkText.trim()) return;
     if(!tellGbkItems.length || !tellGbkOrderChecked){ setShowTellOrderReview(true); setAuthNotice("🧾 Please check the complete order list before sending."); return; }
+    if(tellGbkLocationMode==="home" && !tellGbkHomeAddress.trim()){ setAuthNotice("🏠 Please enter your home delivery address before sending the order."); return; }
+    if(tellGbkLocationMode==="current" && !tellGbkLocation){ setAuthNotice("📍 Please select Current location before sending the order."); return; }
     setTellGbkBusy(true); setAuthNotice("");
     try{
       let active=session||getStoredSession();
@@ -1887,7 +1889,7 @@ export default function Home() {
               <button className="primary" type="button" disabled={tellGbkBusy || !tellGbkOrderChecked} onClick={()=>void sendTellGbkOrder(m)}>{tellGbkOrderSent && tellGbkSelectedStore?.id===m.id ? "✓ Sent" : tellGbkOrderChecked ? "Send Order" : "Check Order First"}</button>
             </div>)}
           </div>}
-          {tellGbkOrderSent && tellGbkSelectedStore && <div className="status"><span>🧾 {tellGbkSelectedStore.business_name} will confirm the items, send the final bill, and arrange home delivery. You pay after the bill is confirmed.</span></div>}
+          {tellGbkOrderSent && tellGbkSelectedStore && <div className="tellGbkCompleteCard"><div className="tellGbkCompleteTitle">✅ Order request complete</div><b>{tellGbkSelectedStore.business_name}</b><span>🧾 Order: {currentOrderReference || "Created"}</span><span>📦 Merchant will confirm availability and prepare your items.</span><span>💰 The final bill will be sent before payment.</span><span>🚚 Delivery uses your selected delivery location.</span><div className="tellGbkCompleteActions"><button type="button" className="primary" onClick={()=>void loadCustomerOrders()}>🧾 View My Orders</button><button type="button" className="secondary" onClick={()=>{setTellGbkOrderSent(false);setTellGbkSelectedStore(null);setTellGbkOrderChecked(false);setShowTellOrderReview(true);}}>➕ New Order</button></div></div>}
         </div>
 
         <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
