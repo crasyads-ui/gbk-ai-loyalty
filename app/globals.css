@@ -561,3 +561,11 @@ input,select,.modal input,.modalSelect{font-size:16px}
  .tellGbkCompleteCard{padding:14px}
  .tellGbkCompleteActions{grid-template-columns:1fr}
 }
+
+
+.tellGbkVoiceGuide{display:grid;gap:10px;padding:13px 14px;border:1px solid #dfd0f2;border-radius:16px;background:#faf7ff;color:#3b2b4d}
+.tellGbkVoiceGuide>div{display:grid;gap:5px}
+.tellGbkVoiceGuide b{font-size:15px;color:#6d28d9}
+.tellGbkVoiceGuide span{font-size:13px;color:#6b6570}
+.tellGbkVoiceGuide strong{font-size:13px;line-height:1.45;font-weight:700}
+.tellGbkVoiceGuide button{width:100%;min-height:44px}
