@@ -49,6 +49,8 @@ export default function Home() {
   const [voiceListening,setVoiceListening] = useState(false);
   const [voiceSupported,setVoiceSupported] = useState(false);
   const [speaking,setSpeaking] = useState(false);
+  const speechRecognitionRef = useRef<any>(null);
+  const speechUnlockedRef = useRef(false);
   const [askQuery,setAskQuery] = useState("");
   const [askAnswer,setAskAnswer] = useState("");
   const [askResults,setAskResults] = useState<any[]>([]);
@@ -325,6 +327,12 @@ export default function Home() {
     } catch {}
     const SpeechRecognitionCtor = w.SpeechRecognition || w.webkitSpeechRecognition;
     setVoiceSupported(!!SpeechRecognitionCtor);
+    if ("speechSynthesis" in w) {
+      try {
+        w.speechSynthesis.getVoices();
+        w.speechSynthesis.addEventListener?.("voiceschanged", () => w.speechSynthesis.getVoices());
+      } catch {}
+    }
     try {
       const storedRole = localStorage.getItem("gbk_loyalty_active_role");
       if (storedRole === "customer" || storedRole === "merchant" || storedRole === "founder") setActiveWalletRole(storedRole);
@@ -758,48 +766,54 @@ export default function Home() {
   };
   const speakText = (text:string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window) || !text.trim()) {
-      setAuthNotice("🔊 Text-to-speech is not available in this browser.");
+      setAuthNotice("🔊 Voice playback is not available in this browser. Try Chrome/Android or use the text result.");
       return;
     }
     try {
       const synth = window.speechSynthesis;
       synth.cancel();
+      synth.resume();
       const wanted = (speechLangMap[language] || "en-IN").toLowerCase();
-      const speakNow = () => {
-        const utter = new SpeechSynthesisUtterance(text.trim());
-        utter.lang = wanted;
-        utter.rate = 0.95;
-        utter.pitch = 1;
-        utter.volume = 1;
-        utter.onstart = () => setSpeaking(true);
-        utter.onend = () => setSpeaking(false);
-        utter.onerror = () => setSpeaking(false);
-        const voices = synth.getVoices();
-        const voice = voices.find(v => v.lang.toLowerCase() === wanted)
-          || voices.find(v => v.lang.toLowerCase().startsWith(wanted.split("-")[0]));
-        if (voice) utter.voice = voice;
-        synth.speak(utter);
-      };
+      const utter = new SpeechSynthesisUtterance(text.trim());
+      utter.lang = wanted;
+      utter.rate = 0.9;
+      utter.pitch = 1;
+      utter.volume = 1;
+      utter.onstart = () => setSpeaking(true);
+      utter.onend = () => setSpeaking(false);
+      utter.onerror = () => setSpeaking(false);
       const voices = synth.getVoices();
-      if (voices.length) {
-        speakNow();
-      } else {
-        const onVoices = () => {
-          synth.removeEventListener("voiceschanged", onVoices);
-          speakNow();
-        };
-        synth.addEventListener("voiceschanged", onVoices);
-        window.setTimeout(() => {
-          synth.removeEventListener("voiceschanged", onVoices);
-          if (!synth.speaking && !synth.pending) speakNow();
-        }, 500);
-      }
+      const voice = voices.find(v => v.lang.toLowerCase() === wanted)
+        || voices.find(v => v.lang.toLowerCase().startsWith(wanted.split("-")[0]))
+        || voices.find(v => v.default);
+      if (voice) utter.voice = voice;
+      synth.speak(utter);
+      window.setTimeout(() => {
+        if (!synth.speaking && !synth.pending) {
+          setSpeaking(false);
+          setAuthNotice("🔊 Tap “Read results aloud” once to enable voice playback on this device.");
+        }
+      }, 700);
     } catch {
       setSpeaking(false);
-      setAuthNotice("🔊 Could not start voice playback. Please tap Speak again.");
+      setAuthNotice("🔊 Voice playback could not start. Tap “Read results aloud” again.");
     }
   };
-  const openScannedBusiness = async (text:string) => {
+
+  const unlockVoice = () => {
+    if (typeof window === "undefined") return;
+    try {
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      synth.resume();
+      const utter = new SpeechSynthesisUtterance("");
+      utter.volume = 0;
+      synth.speak(utter);
+      speechUnlockedRef.current = true;
+    } catch {}
+  };
+
+  const openScannedBusiness = async (text:string) => { (text:string) => {
     try {
       const parsed = new URL(text);
       const merchantId = parsed.searchParams.get("merchant");
@@ -922,30 +936,56 @@ export default function Home() {
   const startVoiceSearch = () => {
     const w:any = window;
     const SpeechRecognitionCtor = w.SpeechRecognition || w.webkitSpeechRecognition;
+    unlockVoice();
     if (!SpeechRecognitionCtor) {
-      setAuthNotice("Voice search is not supported in this browser. You can type your request instead.");
+      setAuthNotice("🎤 Voice input is not available in this browser. On Android, open GBKAI in Chrome and allow microphone access; on iPhone use the keyboard microphone.");
+      document.getElementById("searchInput")?.focus();
       return;
     }
     try {
+      try { speechRecognitionRef.current?.abort?.(); } catch {}
       const recognition = new SpeechRecognitionCtor();
+      speechRecognitionRef.current = recognition;
       recognition.lang = speechLangMap[language] || "en-IN";
       recognition.continuous = false;
       recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-      recognition.onstart = () => { setVoiceListening(true); setAuthNotice("🎙️ Listening… speak your request."); };
+      recognition.maxAlternatives = 3;
+      recognition.onstart = () => {
+        setVoiceListening(true);
+        setAuthNotice("🎙️ Listening… speak your request now.");
+      };
       recognition.onresult = (event:any) => {
         const transcript = String(event.results?.[0]?.[0]?.transcript || "").trim();
-        if (transcript) { setQuery(transcript); doSearch(transcript); }
+        if (transcript) {
+          setQuery(transcript);
+          setVoiceListening(false);
+          void doSearch(transcript);
+        } else {
+          setAuthNotice("🎙️ I did not hear a request. Tap Speak and try again.");
+        }
       };
       recognition.onerror = (event:any) => {
         setVoiceListening(false);
-        setAuthNotice(event?.error === "not-allowed" ? "Microphone permission is required for voice search." : "Voice search could not hear you. Please try again.");
+        const code = String(event?.error || "");
+        if (code === "not-allowed" || code === "service-not-allowed") {
+          setAuthNotice("🎤 Microphone permission is blocked. Allow microphone access for loyalty.gbkai.com and try again.");
+        } else if (code === "no-speech") {
+          setAuthNotice("🎙️ No speech detected. Tap Speak and speak clearly.");
+        } else if (code === "network") {
+          setAuthNotice("🌐 Browser voice service is unavailable. Try Chrome on Android or use the keyboard microphone.");
+        } else {
+          setAuthNotice("🎙️ Voice search could not start. Please try again.");
+        }
       };
-      recognition.onend = () => setVoiceListening(false);
+      recognition.onend = () => {
+        setVoiceListening(false);
+        speechRecognitionRef.current = null;
+      };
       recognition.start();
-    } catch {
+    } catch (e:any) {
       setVoiceListening(false);
-      setAuthNotice("Voice search could not start. Please try again.");
+      speechRecognitionRef.current = null;
+      setAuthNotice("🎙️ Voice search could not start. Allow microphone access and try again.");
     }
   };
   const continueCurrentPayment = async () => {
@@ -1623,7 +1663,7 @@ export default function Home() {
       </section>
 
       {searchResults.length > 0 && <section id="searchResults" className="roleSection">
-        <div className="sectionHead"><div><span className="eyebrow">BUSINESSES & LOCAL LISTINGS</span><h2>Choose a business</h2><p>Active merchants are shown once. Community listings appear only when no active merchant exists for the same business.</p></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button className="secondary" onClick={()=>{setScannerOpen(true);setAuthNotice("");}}>📷 Scan QR</button><button className="secondary voiceReadBtn" onClick={()=>spokenSummary(visibleSearchResults)}>{speaking ? "🔊 Speaking…" : "🔊 Read results aloud"}</button></div></div>
+        <div className="sectionHead"><div><span className="eyebrow">BUSINESSES & LOCAL LISTINGS</span><h2>Choose a business</h2><p>Active merchants are shown once. Community listings appear only when no active merchant exists for the same business.</p></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button className="secondary" onClick={()=>{setScannerOpen(true);setAuthNotice("");}}>📷 Scan QR</button><button className="secondary voiceReadBtn" onClick={()=>{unlockVoice();spokenSummary(visibleSearchResults)}}>{speaking ? "🔊 Speaking…" : "🔊 Read results aloud"}</button></div></div>
         <div className="roleGrid">
           {visibleSearchResults.map((m:any)=><div className="roleCard" key={m.id + (m.listing_type || "MERCHANT")}>
             <div className="roleIcon">🏪</div>
