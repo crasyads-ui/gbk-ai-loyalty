@@ -111,19 +111,59 @@ export async function getWalletAssetBalances(address: string): Promise<{gbkRaw:s
   if (typeof window === "undefined") throw new Error("Wallet balances are available in the browser only.");
   if (!/^0x[a-fA-F0-9]{40}$/.test(address)) throw new Error("Invalid wallet address.");
   const pad = (v:string) => v.toLowerCase().replace(/^0x/,"").padStart(64,"0");
-  const rpc = async (method:string, params:any[]) => {
-    const r = await fetch(BSC_RPC,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:Date.now()+Math.random(),method,params})});
-    const d = await r.json().catch(()=>({}));
-    if(!r.ok || d?.error) throw new Error(d?.error?.message || "BNB Smart Chain read failed.");
-    return String(d?.result || "0x0");
-  };
   const balanceData = "0x70a08231" + pad(address);
-  const [gbk,usdt,bnb] = await Promise.all([
-    rpc("eth_call",[{to:"0xdA0638EA374c4c5bF2914E6F4D5B2335dEb8D80D",data:balanceData},"latest"]),
-    rpc("eth_call",[{to:"0x55d398326f99059ff775485246999027b3197955",data:balanceData},"latest"]),
-    rpc("eth_getBalance",[address,"latest"])
-  ]);
-  return {gbkRaw:String(BigInt(gbk||"0x0")),usdtRaw:String(BigInt(usdt||"0x0")),bnbRaw:String(BigInt(bnb||"0x0"))};
+  const tokenCalls = [
+    {to:"0xdA0638EA374c4c5bF2914E6F4D5B2335dEb8D80D",data:balanceData},
+    {to:"0x55d398326f99059ff775485246999027b3197955",data:balanceData}
+  ];
+  const decode = (v:any) => String(BigInt(v || "0x0"));
+
+  // Prefer the connected wallet provider. This works reliably in mobile
+  // wallet browsers and avoids browser CORS problems with public RPC endpoints.
+  const w:any = window;
+  const providers:any[] = [];
+  const add=(p:any)=>{if(p && !providers.includes(p)) providers.push(p);};
+  if(Array.isArray(w.ethereum?.providers)) w.ethereum.providers.forEach(add);
+  add(w.ethereum);
+  for(const provider of providers){
+    try{
+      const [gbk,usdt,bnb] = await Promise.all([
+        provider.request({method:"eth_call",params:[tokenCalls[0],"latest"]}),
+        provider.request({method:"eth_call",params:[tokenCalls[1],"latest"]}),
+        provider.request({method:"eth_getBalance",params:[address,"latest"]})
+      ]);
+      return {gbkRaw:decode(gbk),usdtRaw:decode(usdt),bnbRaw:decode(bnb)};
+    }catch{}
+  }
+
+  // Public RPC fallback for browsers where the wallet provider is unavailable.
+  const rpcs = [
+    BSC_RPC,
+    "https://bsc-dataseed1.bnbchain.org",
+    "https://bsc-dataseed2.bnbchain.org"
+  ];
+  let lastError:any=null;
+  for(const endpoint of rpcs){
+    try{
+      const rpc=async(method:string,params:any[])=>{
+        const controller=new AbortController();
+        const timer=window.setTimeout(()=>controller.abort(),7000);
+        try{
+          const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:Date.now()+Math.random(),method,params}),signal:controller.signal});
+          const d=await r.json().catch(()=>({}));
+          if(!r.ok || d?.error) throw new Error(d?.error?.message || "BNB Smart Chain read failed.");
+          return String(d?.result || "0x0");
+        }finally{window.clearTimeout(timer);}
+      };
+      const [gbk,usdt,bnb]=await Promise.all([
+        rpc("eth_call",[tokenCalls[0],"latest"]),
+        rpc("eth_call",[tokenCalls[1],"latest"]),
+        rpc("eth_getBalance",[address,"latest"])
+      ]);
+      return {gbkRaw:decode(gbk),usdtRaw:decode(usdt),bnbRaw:decode(bnb)};
+    }catch(e:any){lastError=e;}
+  }
+  throw lastError || new Error("Live BNB Smart Chain balances could not be read.");
 }
 
 export async function getConnectedEvmWallet(): Promise<string> {
