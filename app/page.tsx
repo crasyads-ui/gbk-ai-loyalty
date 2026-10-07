@@ -1026,10 +1026,16 @@ export default function Home() {
     // Build a real editable order list. Split commas/conjunctions and every
     // new quantity+unit boundary so a complete 5-item voice order stays intact.
     const normalizedRequest=q.replace(/[•·]/g,",").replace(/\s+/g," ").trim();
-    const quantityStart=/(?:^|\s)(\d+(?:\.\d+)?\s*(?:kg|kgs|g|gram|grams|l|litre|litres|liter|liters|ml|pack|packs|pcs|pc|piece|pieces|dozen|bottle|bottles|box|boxes|bag|bags)\b)/gi;
+    // Support spoken quantities in digits AND common spoken/local-language forms.
+    // Telugu speech recognition may return “ఫైవ్ కేజీ”, “ఐదు కేజీ”, etc.
+    // Hindi/English speech can similarly return number words instead of digits.
+    const quantityStart=/(?:^|\s)((?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|hundred|ఒక|ఒక్క|రెండు|మూడు|నాలుగు|ఐదు|ఆరు|ఏడు|ఎనిమిది|తొమ్మిది|పది|ఫైవ్|టూ|త్రీ|ఫోర్|సిక్స్|సెవెన్|ఎయిట్|నైన్|టెన్|एक|एकम|दो|तीन|चार|पाँच|छह|सात|आठ|नौ|दस)\s*(?:kg|kgs|g|gram|grams|kilo|kilos|కేజీ|కిలో|కిలోలు|గ్రామ్|గ్రాములు|l|litre|litres|liter|liters|ml|లీటర్|లీటర్లు|మిల్లీ|pack|packs|pcs|pc|piece|pieces|dozen|bottle|bottles|box|boxes|bag|bags|ప్యాక్|ప్యాక్స్|బాటిల్|బాటిల్స్|డజన్)\b)/giu;
     const starts:number[]=[];
     let m:any;
-    while((m=quantityStart.exec(normalizedRequest))!==null){ starts.push(m.index + (m[0].startsWith(" ")?1:0)); }
+    while((m=quantityStart.exec(normalizedRequest))!==null){
+      const matched=String(m[0]||"");
+      starts.push(m.index + (/^\s/.test(matched) ? matched.search(/\S/) : 0));
+    }
     let parts:string[]=[];
     if(starts.length>1){
       parts=starts.map((start,idx)=>normalizedRequest.slice(start,idx+1<starts.length?starts[idx+1]:normalizedRequest.length).trim()).filter(Boolean);
