@@ -396,3 +396,90 @@ input,select,.modal input,.modalSelect{font-size:16px}
  .tellGbkOrderReview{padding:11px}
  .tellGbkOrderItem input{font-size:16px;min-height:44px}
 }
+
+
+/* Final mobile customer visual system: light, premium, high readability */
+@media(max-width:520px){
+  body{background:#f7f5fb;color:#241b2d}
+  .hero{
+    background:linear-gradient(145deg,#3b176d 0%,#6d28d9 58%,#8b5cf6 100%);
+    box-shadow:0 12px 30px rgba(76,29,149,.18);
+  }
+  .tellGbkPanel{
+    background:linear-gradient(180deg,#ffffff 0%,#fbf9ff 100%)!important;
+    border:1px solid #e4d9f0!important;
+    color:#2f2439;
+    box-shadow:0 8px 24px rgba(45,24,75,.08);
+  }
+  .tellGbkPanel>div:first-child b{color:#2f1c48}
+  .tellGbkPanel>div:first-child span{color:#71677b}
+  .tellGbkCategories button{
+    background:#fff;
+    border:1px solid #ddd1ea;
+    color:#51445e;
+  }
+  .tellGbkCategories button.active{
+    background:#7c3aed;
+    color:#fff;
+    border-color:#7c3aed;
+  }
+  .tellGbkSearch{
+    background:#fff!important;
+    border:1px solid #ded3e9;
+    box-shadow:0 5px 18px rgba(45,24,75,.07);
+  }
+  .tellGbkSearch input{color:#2f2439}
+  .tellGbkSearch input::placeholder{color:#8a8092}
+  .tellGbkVoiceBtn{
+    background:#fff!important;
+    color:#6d28d9!important;
+    border-color:#d9c8ef!important;
+  }
+  .tellGbkSearch>button:last-child{
+    background:#7c3aed;
+    color:#fff;
+  }
+  .tellGbkReviewBar,
+  .tellGbkOrderReview,
+  .tellGbkTranscript,
+  .tellGbkListening{
+    box-shadow:0 4px 14px rgba(45,24,75,.05);
+  }
+  .tellGbkOrderReview{background:#fff}
+  .tellGbkReviewBar{background:#fff}
+  .tellGbkReviewBar .secondary{
+    background:#f3ebff;
+    color:#6d28d9;
+    border-color:#dcc9f3;
+  }
+  .tellGbkOrderItem button{
+    color:#7b526f;
+    background:#fff;
+  }
+  .tellGbkPanel .offerPreview{
+    background:#fff!important;
+    border:1px solid #e6deeb!important;
+    border-radius:16px;
+    padding:13px;
+  }
+  .tellGbkPanel .offerPreview small{color:#16803b}
+  .tellGbkPanel .primary{
+    background:#7c3aed;
+    color:#fff;
+    border-radius:12px;
+    min-height:46px;
+  }
+  .tellGbkPanel .status{
+    background:#f1faee;
+    border-color:#d6ebcf;
+    color:#38533a;
+  }
+  .roleTag{
+    background:#f3ebff;
+    color:#6d28d9;
+  }
+  .bottomNav{
+    box-shadow:0 10px 30px rgba(52,35,68,.14);
+    border-color:#e2d9e9;
+  }
+}
