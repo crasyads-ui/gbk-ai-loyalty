@@ -186,9 +186,9 @@ export default function Home() {
         const customer = await loyaltyApi(active,"universal_referral_check",{referral_code:ref});
         if(customer?.verified){
           if(!cancelled){
-            setCustomerReferralCode(ref);
-            setCustomerReferralStatus(customer.referrer);
-            setCustomerReferralLink("https://loyalty.gbkai.com/?ref="+ref);
+            setUniversalReferralCode(ref);
+            setUniversalReferralStatus(customer.referrer);
+            setUniversalReferralLink("https://loyalty.gbkai.com/?ref="+ref);
             setCreatorReferralCode("");
             setFounderReferralCode("");
             setAuthNotice("Customer referral link verified. Eligible verified purchases can be attributed to this referrer.");
@@ -500,9 +500,9 @@ export default function Home() {
         try {
           const referralResult=await loyaltyApi(s,"universal_referral_register",{handle:fullName.trim()||undefined,country:country==="Global"?null:country,language});
           if(referralResult?.customer_referral_code){
-            setCustomerReferralCode(referralResult.customer_referral_code);
-            setCustomerReferralLink(referralResult.referral_link || ("https://loyalty.gbkai.com/?ref="+referralResult.customer_referral_code));
-            setCustomerReferralStatus(referralResult.customer);
+            setUniversalReferralCode(referralResult.customer_referral_code);
+            setUniversalReferralLink(referralResult.referral_link || ("https://loyalty.gbkai.com/?ref="+referralResult.customer_referral_code));
+            setUniversalReferralStatus(referralResult.customer);
           }
         } catch {}
         setRole("Customer");
@@ -1178,22 +1178,22 @@ export default function Home() {
     finally { setApiBusy(false); }
   };
 
-  const createCustomerReferral = async () => {
+  const createUniversalReferral = async () => {
     setApiBusy(true); setAuthNotice("");
     try{
       const active=session || getStoredSession() || await signInAnonymously();
       setSession(active);
       const result=await loyaltyApi(active,"universal_referral_register",{handle:fullName.trim()||undefined,country:country==="Global"?null:country,language});
       if(result?.referral_code){
-        setCustomerReferralStatus(result.customer);
-        setCustomerReferralCode(result.referral_code);
-        setCustomerReferralLink(result.referral_link || ("https://loyalty.gbkai.com/?ref="+result.referral_code));
+        setUniversalReferralStatus(result.referrer);
+        setUniversalReferralCode(result.referral_code);
+        setUniversalReferralLink(result.referral_link || ("https://loyalty.gbkai.com/?ref="+result.referral_code));
         setAuthNotice("Your unique GBK referral link is ready.");
       }
     }catch(e:any){setAuthNotice(e?.message||"Customer referral link could not be created.");}
     finally{setApiBusy(false);}
   };
-  const copyCustomerReferralLink = async () => {
+  const copyUniversalReferralLink = async () => {
     const link=universalReferralLink || (universalReferralCode ? "https://loyalty.gbkai.com/?ref="+universalReferralCode : "");
     if(!link){setAuthNotice("Create your unique GBK referral link first.");return;}
     try{await navigator.clipboard.writeText(link);setShareNotice("Your unique GBK referral link was copied.");}
@@ -2178,6 +2178,21 @@ export default function Home() {
             </div>}
             {authNotice && <div className="status" style={{marginTop:10}}><span>{authNotice}</span></div>}
             <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
+              <b>📲 Share My Business</b>
+              <span>Share this registered business with customers. This is separate from your personal GBK Referral Link.</span>
+              {merchantStatus?.merchant?.id && <>
+                <input className="modalInput" readOnly value={`${window.location.origin}/?merchant=${merchantStatus.merchant.id}`} />
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <button className="primary" type="button" onClick={()=>shareBusiness(String(merchantStatus?.merchant?.business_name||"this business"),`${window.location.origin}/?merchant=${merchantStatus.merchant.id}`)}>📤 Share Business</button>
+                  <button className="secondary" type="button" onClick={async()=>{
+                    const link=`${window.location.origin}/?merchant=${merchantStatus.merchant.id}`;
+                    try{await navigator.clipboard.writeText(link);setShareNotice("Business link copied. Share it with customers.");}
+                    catch{setAuthNotice("Business link: "+link);}
+                  }}>🔗 Copy Business Link</button>
+                </div>
+              </>}
+            </div>
+            <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
               <b>Orders & reward funding</b>
               {(merchantStatus?.merchant_orders || []).length === 0
                 ? <span>No merchant orders yet. Eligible customer orders will appear here.</span>
@@ -2245,9 +2260,9 @@ export default function Home() {
               {activeWalletRole==="customer" && walletAddress && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
                 <b>🔗 My GBK Referral Link</b>
                 <span>Share your unique link with real merchants/businesses. Earn 10% of the merchant loyalty reward pool from eligible verified transactions when no Founder allocation applies.</span>
-                {!universalReferralCode && <button className="primary" type="button" onClick={createCustomerReferral} disabled={apiBusy}>{apiBusy ? "Creating…" : "Create My Referral Link"}</button>}
+                {!universalReferralCode && <button className="primary" type="button" onClick={createUniversalReferral} disabled={apiBusy}>{apiBusy ? "Creating…" : "Create My Referral Link"}</button>}
                 {universalReferralCode && <input className="modalInput" readOnly value={universalReferralLink} />}
-                {universalReferralCode && <button className="secondary" type="button" onClick={copyCustomerReferralLink}>🔗 Copy Link</button>}
+                {universalReferralCode && <button className="secondary" type="button" onClick={copyUniversalReferralLink}>🔗 Copy Link</button>}
               </div>}
               <button className="secondary" onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Switching…" : "Switch to Merchant Wallet"}</button>
             </div>
