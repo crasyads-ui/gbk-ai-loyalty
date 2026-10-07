@@ -924,8 +924,8 @@ export default function Home() {
       const links = {
         generic:"upi://pay?"+params.toString(),
         phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end",
-        googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end",
-        paytm:"intent://pay?"+params.toString()+"#Intent;scheme=paytmmp;package=net.one97.paytm;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end",
+        googlepay:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end",
+        paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
         bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end"
       };
       setUpiPayment({provider:"DIRECT",method:merchant.payment_method||"LOCAL_CURRENCY",currency:String(merchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:merchant.business_name||"GBK Merchant",gbk_order_id:upiPayment?.gbk_order_id||null,order_reference:currentOrderReference,amount_major:amountMajor,upi_id:upiId,upi_links:links});
@@ -972,8 +972,8 @@ export default function Home() {
           const links = upiId ? {
             generic: upiUrl,
             phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
-            googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end",
-            paytm:"intent://pay?"+params.toString()+"#Intent;scheme=paytmmp;package=net.one97.paytm;end",
+            googlepay:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end",
+            paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
             bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
           } : null;
           setCurrentOrderReference(ref);
@@ -998,8 +998,8 @@ export default function Home() {
         const links = upiId && params ? {
           generic:"upi://pay?"+params.toString(),
           phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
-          googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end",
-          paytm:"intent://pay?"+params.toString()+"#Intent;scheme=paytmmp;package=net.one97.paytm;end",
+          googlepay:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end",
+          paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
           bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
         } : null;
         setCurrentOrderReference(ref);
@@ -1038,8 +1038,7 @@ export default function Home() {
   };
 
   const launchUpiApp = (appLink:string, appName:string) => {
-    try { setAuthNotice("Opening "+appName+"… Return to GBK Loyalty after payment; automatic confirmation will be checked."); window.location.href = appLink; }
-    catch { setAuthNotice("Could not open "+appName+". Use Open UPI / Other app instead."); }
+    setAuthNotice("Opening "+appName+"… Return to GBK Loyalty after payment; automatic confirmation will be checked.");
   };
   const checkAutomaticPaymentStatus = async (silent=false) => {
     const orderId=String(upiPayment?.gbk_order_id||"").trim(); if(!orderId) return false;
@@ -1610,9 +1609,9 @@ export default function Home() {
           {upiPayment?.upi_links && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>📲 Pay ₹{upiPayment.amount_major} by UPI</b>
             <small>{upiPayment.upi_id ? `Merchant UPI: ${upiPayment.upi_id}` : "Merchant UPI payment details are not configured."}</small>
-            {upiPayment.upi_links.phonepe && <button className="primary" type="button" onClick={()=>launchUpiApp(upiPayment.upi_links.phonepe,"PhonePe")}>🟣 Pay with PhonePe</button>}
-            {upiPayment.upi_links.googlepay && <button className="primary" type="button" onClick={async()=>{ try { await navigator.clipboard?.writeText(upiPayment.upi_id||""); } catch {} setAuthNotice(`Google Pay is ready. Open Google Pay manually and pay ₹${upiPayment.amount_major} to ${upiPayment.upi_id}. The UPI ID has been copied.`); }}>🟢 Pay with Google Pay</button>}
-            {upiPayment.upi_links.paytm && <a className="primary" href={upiPayment.upi_links.paytm}>🔵 Pay with Paytm</a>}
+            {upiPayment.upi_links.phonepe && <a className="primary" href={upiPayment.upi_links.phonepe} onClick={()=>launchUpiApp(upiPayment.upi_links.phonepe,"PhonePe")}>🟣 Pay with PhonePe</a>}
+            {upiPayment.upi_links.googlepay && <a className="primary" href={upiPayment.upi_links.googlepay} onClick={()=>launchUpiApp(upiPayment.upi_links.googlepay,"Google Pay")}>🟢 Pay with Google Pay</a>}
+            {upiPayment.upi_links.paytm && <a className="primary" href={upiPayment.upi_links.paytm} onClick={()=>launchUpiApp(upiPayment.upi_links.paytm,"Paytm")}>🔵 Pay with Paytm</a>}
             {upiPayment.upi_links.bhim && <a className="secondary" href={upiPayment.upi_links.bhim}>🏦 Pay with BHIM</a>}
             {upiPayment.upi_links.generic && <a className="secondary" href={upiPayment.upi_links.generic}>📱 Open UPI / Other app</a>}
             <small>Payment app opening is not payment verification. GBK reward is released only after verified payment confirmation.</small>
