@@ -923,7 +923,7 @@ export default function Home() {
       const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor,cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tr:currentOrderReference,tid:currentOrderReference,tn:"GBK Loyalty "+currentOrderReference});
       const links = {
         generic:"upi://pay?"+params.toString(),
-        phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end",
+        phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end",
         googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end",
         paytm:"intent://pay?"+params.toString()+"#Intent;scheme=paytmmp;package=net.one97.paytm;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end",
         bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end"
@@ -971,7 +971,7 @@ export default function Home() {
           const upiUrl = upiId ? "upi://pay?" + params.toString() : "";
           const links = upiId ? {
             generic: upiUrl,
-            phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=phonepe;package=com.phonepe.app;end",
+            phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
             googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end",
             paytm:"intent://pay?"+params.toString()+"#Intent;scheme=paytmmp;package=net.one97.paytm;end",
             bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
@@ -997,7 +997,7 @@ export default function Home() {
         const params = upiId ? new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:ref}) : null;
         const links = upiId && params ? {
           generic:"upi://pay?"+params.toString(),
-          phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=phonepe;package=com.phonepe.app;end",
+          phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
           googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end",
           paytm:"intent://pay?"+params.toString()+"#Intent;scheme=paytmmp;package=net.one97.paytm;end",
           bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
