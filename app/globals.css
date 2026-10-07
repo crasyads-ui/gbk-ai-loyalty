@@ -517,3 +517,14 @@ input,select,.modal input,.modalSelect{font-size:16px}
 @media(max-width:520px){
   .tellGbkHearBtn{width:100%!important;background:#f3ebff!important;color:#6d28d9!important;border:1px solid #d8c7ee!important}
 }
+
+
+.tellGbkHearRow{display:grid;gap:8px}
+.tellGbkHearRow:empty{display:none}
+.tellGbkHearRow .tellGbkHearBtn{width:100%;min-height:46px}
+@media(max-width:520px){
+  .tellGbkSearch{display:grid!important;grid-template-columns:38px minmax(0,1fr) auto auto!important;align-items:center!important}
+  .tellGbkSearch input{min-width:0!important}
+  .tellGbkSearch .tellGbkVoiceBtn{width:auto!important;min-width:96px!important}
+  .tellGbkSearch>button:not(.tellGbkVoiceBtn){width:auto!important;min-width:116px!important}
+}
