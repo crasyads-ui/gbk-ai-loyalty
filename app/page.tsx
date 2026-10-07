@@ -1045,71 +1045,72 @@ export default function Home() {
     } finally { setOrdersBusy(false); }
   };
 
-  const startTellGbkVoice = () => {
+  const startTellGbkVoice = async () => {
     const w:any = window;
     const SpeechRecognitionCtor = w.SpeechRecognition || w.webkitSpeechRecognition;
     unlockVoice();
     if (!SpeechRecognitionCtor) {
-      setAuthNotice("🎤 Voice input is not available in this browser. On Android, open GBKAI in Chrome and allow microphone access; on iPhone use the keyboard microphone.");
+      setAuthNotice("🎤 Chrome speech recognition is not available in this browser. Use Chrome on Android and allow microphone access.");
       return;
     }
     try {
       try { speechRecognitionRef.current?.abort?.(); } catch {}
+      speechRecognitionRef.current = null;
+      if (navigator.permissions?.query) {
+        try {
+          const permission:any = await navigator.permissions.query({name:"microphone" as PermissionName});
+          if (permission.state === "denied") {
+            setAuthNotice("🎤 Microphone is blocked. Chrome → Site settings → loyalty.gbkai.com → Microphone → Allow, then tap Start Voice again.");
+            return;
+          }
+        } catch {}
+      }
       const recognition = new SpeechRecognitionCtor();
       speechRecognitionRef.current = recognition;
       recognition.lang = speechLangMap[language] || "en-IN";
       recognition.continuous = false;
       recognition.interimResults = true;
       recognition.maxAlternatives = 3;
-      setTellGbkVoiceTranscript("");
       recognition.onstart = () => {
         setTellGbkVoiceListening(true);
         setVoiceListening(true);
-        setAuthNotice("🎙️ Listening… speak your GBKAI request now.");
+        setAuthNotice("🎙️ Listening… speak now. GBKAI is ready.");
       };
+      recognition.onaudiostart = () => setAuthNotice("🎙️ Microphone connected. Speak now…");
+      recognition.onspeechstart = () => setAuthNotice("🎙️ I can hear you…");
       recognition.onresult = (event:any) => {
         let transcript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += String(event.results[i]?.[0]?.transcript || "");
-        }
+        for (let i = event.resultIndex; i < event.results.length; i++) transcript += String(event.results[i]?.[0]?.transcript || "");
         transcript = transcript.trim();
-        if (transcript) {
-          setTellGbkVoiceTranscript(transcript);
-          setTellGbkText(transcript);
-        }
+        if (transcript) { setTellGbkVoiceTranscript(transcript); setTellGbkText(transcript); }
         const last = event.results?.[event.results.length - 1];
         if (last?.isFinal && transcript) {
-          setTellGbkVoiceListening(false);
-          setVoiceListening(false);
+          setTellGbkVoiceListening(false); setVoiceListening(false);
           setAuthNotice("⏳ Voice captured. GBKAI is finding active merchants…");
-          window.setTimeout(() => { void tellGbkAi(transcript); }, 250);
+          window.setTimeout(() => { void tellGbkAi(transcript); }, 200);
         }
       };
       recognition.onerror = (event:any) => {
-        setTellGbkVoiceListening(false);
-        setVoiceListening(false);
+        setTellGbkVoiceListening(false); setVoiceListening(false);
         const code = String(event?.error || "");
-        if (code === "not-allowed" || code === "service-not-allowed") {
-          setAuthNotice("🎤 Microphone permission is blocked. Allow microphone access for loyalty.gbkai.com and try again.");
-        } else if (code === "no-speech") {
-          setAuthNotice("🎙️ No speech detected. Tap Start Voice and speak clearly.");
-        } else if (code === "network") {
-          setAuthNotice("🌐 Browser voice service is unavailable. Try Chrome on Android or use the keyboard microphone.");
-        } else {
-          setAuthNotice("🎙️ Voice input could not start. Please try again.");
-        }
+        if (code === "not-allowed" || code === "service-not-allowed") setAuthNotice("🎤 Microphone permission is blocked. Chrome → Site settings → loyalty.gbkai.com → Microphone → Allow.");
+        else if (code === "audio-capture") setAuthNotice("🎤 Chrome cannot access the microphone. Close other apps using the microphone and try again.");
+        else if (code === "no-speech") setAuthNotice("🎙️ I did not hear speech. Tap Start Voice and speak clearly.");
+        else if (code === "network") setAuthNotice("🌐 Chrome speech service is unavailable. Check internet and try again.");
+        else if (code === "aborted") setAuthNotice("🎙️ Voice stopped. Tap Start Voice to try again.");
+        else setAuthNotice("🎙️ Voice input could not start. Please try again.");
       };
       recognition.onend = () => {
-        setTellGbkVoiceListening(false);
-        setVoiceListening(false);
+        setTellGbkVoiceListening(false); setVoiceListening(false);
         speechRecognitionRef.current = null;
       };
-      recognition.start();
+      window.setTimeout(() => {
+        try { recognition.start(); }
+        catch { try { recognition.abort(); } catch {} speechRecognitionRef.current=null; setTellGbkVoiceListening(false); setVoiceListening(false); setAuthNotice("🎙️ Chrome voice could not start. Tap Start Voice again."); }
+      }, 80);
     } catch {
-      setTellGbkVoiceListening(false);
-      setVoiceListening(false);
-      speechRecognitionRef.current = null;
-      setAuthNotice("🎙️ Voice input could not start. Allow microphone access and try again.");
+      setTellGbkVoiceListening(false); setVoiceListening(false); speechRecognitionRef.current=null;
+      setAuthNotice("🎙️ Voice input could not start. Check Chrome microphone permission and try again.");
     }
   };
 
