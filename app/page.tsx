@@ -1862,12 +1862,6 @@ export default function Home() {
           {tellGbkOrderSent && tellGbkSelectedStore && <div className="status"><span>🧾 {tellGbkSelectedStore.business_name} will confirm the items, send the final bill, and arrange home delivery. You pay after the bill is confirmed.</span></div>}
         </div>
 
-        <div className="suggestions">
-          <button onClick={()=>setQuery("restaurants with GBK rewards")}>🍽️ Restaurants</button>
-          <button onClick={()=>setQuery("hotels with GBK offers")}>🏨 Hotels</button>
-          <button onClick={()=>setQuery("tours and travel")}>✈️ Travel</button>
-          <button onClick={()=>setQuery("AC repair near me")}>🔧 Services</button><button onClick={()=>setQuery("agriculture products or farm service near me")}>🌾 Agriculture</button>
-        </div>
         <div className="offerPreview" style={{display:"grid",gap:8,marginTop:14}}>
           <b>📷 Customer QR Scanner</b><span>Scan a participating merchant QR with your phone camera to open the business directly.</span>
           <button className="primary" type="button" onClick={()=>{setScannerOpen(true);setAuthNotice("");}}>📷 Scan Merchant QR</button>
