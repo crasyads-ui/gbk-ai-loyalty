@@ -1026,29 +1026,60 @@ export default function Home() {
     // Build a real editable order list. Split commas/conjunctions and every
     // new quantity+unit boundary so a complete 5-item voice order stays intact.
     const normalizedRequest=q.replace(/[•·]/g,",").replace(/\s+/g," ").trim();
-    // Support spoken quantities in digits AND common spoken/local-language forms.
-    // Telugu speech recognition may return “ఫైవ్ కేజీ”, “ఐదు కేజీ”, etc.
-    // Hindi/English speech can similarly return number words instead of digits.
-    const quantityStart=/(?:^|\s)((?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|hundred|ఒక|ఒక్క|రెండు|మూడు|నాలుగు|ఐదు|ఆరు|ఏడు|ఎనిమిది|తొమ్మిది|పది|ఫైవ్|టూ|త్రీ|ఫోర్|సిక్స్|సెవెన్|ఎయిట్|నైన్|టెన్|एक|एकम|दो|तीन|चार|पाँच|छह|सात|आठ|नौ|दस)\s*(?:kg|kgs|g|gram|grams|kilo|kilos|కేజీ|కిలో|కిలోలు|గ్రామ్|గ్రాములు|किलो|किलोग्राम|किलोग्राम्स|l|litre|litres|liter|liters|ml|लीटर|मिली|లీటర్|లీటర్లు|మిల్లీ|pack|packs|pcs|pc|piece|pieces|dozen|bottle|bottles|box|boxes|bag|bags|पैक|बोतल|डजन|ప్యాక్|ప్యాక్స్|బాటిల్|బాటిల్స్|డజన్)\b)/giu;
+    // LANGUAGE-INDEPENDENT ORDER PARSER
+    // Do not depend on a fixed list of English/Hindi/Telugu units. Speech
+    // recognition can return any script and can also return Unicode digits.
+    // Every quantity number starts a new editable item; commas/newlines and
+    // common spoken separators are also respected.
+    const normalizedRequest=q
+      .replace(/[•·]/g,",")
+      .replace(/[，、؛]/g,",")
+      .replace(/\s+/g," ")
+      .trim();
+
+    const numberToken=/\p{N}+(?:[.,]\p{N}+)?/gu;
     const starts:number[]=[];
-    let m:any;
-    while((m=quantityStart.exec(normalizedRequest))!==null){
-      const matched=String(m[0]||"");
-      starts.push(m.index + (/^\s/.test(matched) ? matched.search(/\S/) : 0));
+    let nm:any;
+    while((nm=numberToken.exec(normalizedRequest))!==null){
+      starts.push(nm.index);
     }
+
     let parts:string[]=[];
     if(starts.length>1){
-      parts=starts.map((start,idx)=>normalizedRequest.slice(start,idx+1<starts.length?starts[idx+1]:normalizedRequest.length).trim()).filter(Boolean);
+      // A number starts the next shopping item. This works regardless of the
+      // language used for the unit/item text: kg, किलो, కిలో, 公斤, กก., etc.
+      parts=starts.map((start,idx)=>
+        normalizedRequest
+          .slice(start,idx+1<starts.length?starts[idx+1]:normalizedRequest.length)
+          .replace(/^[,;|]+|[,;|]+$/g,"")
+          .trim()
+      ).filter(Boolean);
+
+      // If recognition produced a duplicated standalone number immediately
+      // before a quantity phrase (e.g. "1 1 किलो"), merge the stray number
+      // with the following phrase instead of creating a fake item.
+      const cleaned:string[]=[];
+      for(let i=0;i<parts.length;i++){
+        const current=parts[i];
+        const next=parts[i+1]||"";
+        if(/^\p{N}+(?:[.,]\p{N}+)?$/u.test(current) && /\p{L}/u.test(next)){
+          cleaned.push(current+" "+next);
+          i++;
+        }else{
+          cleaned.push(current);
+        }
+      }
+      parts=cleaned;
     }else{
-      parts=normalizedRequest.split(/[,\n]|\band\b|\+|;/i).map(x=>x.trim()).filter(Boolean);
+      // No numeric quantity: preserve punctuation/line/conjunction boundaries.
+      // This keeps voice orders usable even when the speech engine spells
+      // quantities as words in a language not present in our unit dictionary.
+      parts=normalizedRequest
+        .split(/[,\n;]|\s+(?:and|&|plus|with)\s+/iu)
+        .map(x=>x.trim())
+        .filter(Boolean);
     }
-    // Final safety pass: SpeechRecognition can insert a stray number before
-    // Hindi/Telugu units. Extract every quantity+unit phrase independently.
-    const spokenUnit=/(\\d+(?:\\.\\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|ఒక|ఒక్క|రెండు|మూడు|నాలుగు|ఐదు|ఆరు|ఏడు|ఎనిమిది|తొమ్మిది|పది|फाइव|टू|थ्री|फोर|सिक्स|सेवन|एट|नाइन|टेन|एक|दो|तीन|चार|पाँच|छह|सात|आठ|नौ|दस)\\s*(?:kg|kgs|g|gram|grams|kilo|kilos|किलो|किलोग्राम|किलोग्राम्स|కేజీ|కిలో|కిలోలు|గ్రామ్|గ్రాములు|l|litre|litres|liter|liters|लीटर|లీటర్|లీటర్లు|ml|मिली|pack|packs|पैक|pcs|pc|piece|pieces|बोतल|bottle|bottles|dozen|डजन|bag|bags|box|boxes|प్యాక్|ప్యాక్స్|బాటిల్|బాటిల్స్|డజన్)/giu;
-    const extracted:string[]=[];
-    let sm:any;
-    while((sm=spokenUnit.exec(normalizedRequest))!==null){ extracted.push(String(sm[0]).trim()); }
-    if(extracted.length>=2){ parts=extracted; }
+
     setTellGbkItems(parts.length?parts:[q]);
     setShowTellOrderReview(true);
     setTellGbkOrderChecked(false);
