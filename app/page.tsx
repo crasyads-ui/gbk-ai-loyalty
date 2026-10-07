@@ -1884,7 +1884,7 @@ export default function Home() {
             <b>🏪 Active stores that can receive this request</b>
             {tellGbkStores.map((m:any)=><div className="offerPreview" key={"tell-"+m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
               <div><b>{m.business_name}</b><span style={{display:"block"}}>{[m.city,m.country].filter(Boolean).join(" • ")} · {m.category||"Grocery"}</span><small>🟢 Active merchant{m.loyalty_offer_percent ? " · "+m.loyalty_offer_percent+"% GBK" : ""}</small></div>
-              <button className="primary" type="button" disabled={tellGbkBusy} onClick={()=>void sendTellGbkOrder(m)}>{tellGbkOrderSent && tellGbkSelectedStore?.id===m.id ? "✓ Sent" : "Send Order"}</button>
+              <button className="primary" type="button" disabled={tellGbkBusy || !tellGbkOrderChecked} onClick={()=>void sendTellGbkOrder(m)}>{tellGbkOrderSent && tellGbkSelectedStore?.id===m.id ? "✓ Sent" : tellGbkOrderChecked ? "Send Order" : "Check Order First"}</button>
             </div>)}
           </div>}
           {tellGbkOrderSent && tellGbkSelectedStore && <div className="status"><span>🧾 {tellGbkSelectedStore.business_name} will confirm the items, send the final bill, and arrange home delivery. You pay after the bill is confirmed.</span></div>}
