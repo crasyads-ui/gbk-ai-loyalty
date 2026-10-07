@@ -142,6 +142,11 @@ export default function Home() {
   const [founderBusinessWebsite,setFounderBusinessWebsite]=useState("");
   const [founderBusinessCategory,setFounderBusinessCategory]=useState(businessCategories[0]);
   const [founderBusinessOffer,setFounderBusinessOffer]=useState("10%");
+  const [merchantInviteName,setMerchantInviteName]=useState("");
+  const [merchantInviteContact,setMerchantInviteContact]=useState("");
+  const [merchantInviteCity,setMerchantInviteCity]=useState("");
+  const [merchantInviteCategory,setMerchantInviteCategory]=useState(businessCategories[0]);
+  const [merchantInviteNotice,setMerchantInviteNotice]=useState("");
   const [suggestBusinessName,setSuggestBusinessName]=useState("");
   const [suggestBusinessCategory,setSuggestBusinessCategory]=useState(businessCategories[0]);
   const [suggestBusinessCity,setSuggestBusinessCity]=useState("");
@@ -2530,6 +2535,51 @@ export default function Home() {
                   <button className="primary" type="button" onClick={()=>setRole("FounderBusiness")}>🏪 Add Business</button>
                 </div>
                 <button className="secondary" type="button" style={{marginTop:10,width:"100%"}} onClick={()=>loadFounderNetwork()}>↻ Refresh My Network</button>
+                <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
+                  <b>📲 Invite a Merchant Online</b>
+                  <span>Enter a real business lead, then send the owner a ready-to-register invitation. The owner completes wallet verification and GBK funding before becoming ACTIVE.</span>
+                  <input className="modalInput" placeholder="Business name" value={merchantInviteName} onChange={e=>setMerchantInviteName(e.target.value)}/>
+                  <input className="modalInput" placeholder="Owner WhatsApp / phone / email" value={merchantInviteContact} onChange={e=>setMerchantInviteContact(e.target.value)}/>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    <input className="modalInput" placeholder="City" value={merchantInviteCity} onChange={e=>setMerchantInviteCity(e.target.value)}/>
+                    <select className="modalSelect" value={merchantInviteCategory} onChange={e=>setMerchantInviteCategory(e.target.value)}>{businessCategories.filter(x=>x!=="All Products & Services").map(x=><option key={x}>{x}</option>)}</select>
+                  </div>
+                  <button className="primary" type="button" onClick={async()=>{
+                    const name=merchantInviteName.trim();
+                    const contact=merchantInviteContact.trim();
+                    const city=merchantInviteCity.trim();
+                    if(!name||!contact||!city){setMerchantInviteNotice("Enter business name, owner contact and city.");return;}
+                    const base="https://loyalty.gbkai.com";
+                    const params=new URLSearchParams({role:"Merchant",invite:"founder",business:name,city,country,catalog:merchantInviteCategory});
+                    const link=base+"?"+params.toString();
+                    const msg="Hi! "+name+" is invited to join GBKAI Loyalty. Register your business online, connect your own BNB Smart Chain wallet, fund GBK rewards, and become an ACTIVE merchant eligible for customer leads. Register here: "+link;
+                    try{
+                      await navigator.clipboard.writeText(msg);
+                      setMerchantInviteNotice("Invitation message copied. Open WhatsApp or email and send it to the business owner.");
+                    }catch{setMerchantInviteNotice(msg);}
+                    setMerchantInviteName(""); setMerchantInviteContact(""); setMerchantInviteCity("");
+                  }}>📋 Create & Copy Invitation</button>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    <button className="secondary" type="button" onClick={()=>{
+                      const name=merchantInviteName.trim()||"your business";
+                      const city=merchantInviteCity.trim()||"your city";
+                      const params=new URLSearchParams({role:"Merchant",invite:"founder",business:name,city,country,catalog:merchantInviteCategory});
+                      const link="https://loyalty.gbkai.com?"+params.toString();
+                      const msg="Join GBKAI Loyalty for "+name+" in "+city+". Register online and become an ACTIVE merchant eligible for customer leads: "+link;
+                      window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");
+                    }}>💬 Send WhatsApp</button>
+                    <button className="secondary" type="button" onClick={()=>{
+                      const name=merchantInviteName.trim()||"your business";
+                      const city=merchantInviteCity.trim()||"your city";
+                      const params=new URLSearchParams({role:"Merchant",invite:"founder",business:name,city,country,catalog:merchantInviteCategory});
+                      const link="https://loyalty.gbkai.com?"+params.toString();
+                      const subject=encodeURIComponent("GBKAI Loyalty Merchant Invitation");
+                      const body=encodeURIComponent("Please register "+name+" in "+city+" as a GBKAI Loyalty merchant. Become ACTIVE after wallet and GBK funding verification. Register: "+link);
+                      window.location.href="mailto:?subject="+subject+"&body="+body;
+                    }}>✉️ Send Email</button>
+                  </div>
+                  {merchantInviteNotice && <small style={{display:"block"}}>{merchantInviteNotice}</small>}
+                </div>
               </div>
               <div className="offerPreview"><b>👥 My User Referrals ({founderNetwork.users.length})</b>{founderNetwork.users.length===0?<span>No user referrals yet.</span>:founderNetwork.users.slice(0,8).map((u:any)=><div key={u.id}><strong>{u.referred_name}</strong><span>{u.country} · {u.status}</span></div>)}</div>
               <div className="offerPreview"><b>🏪 My Business Referrals ({founderNetwork.businesses.length})</b>{founderNetwork.businesses.length===0?<span>No business referrals yet.</span>:founderNetwork.businesses.slice(0,8).map((b:any)=><div key={b.id}><strong>{b.business_name}</strong><span>{b.city}, {b.country} · {b.listing_status} · {b.invitation_status}</span></div>)}</div>
