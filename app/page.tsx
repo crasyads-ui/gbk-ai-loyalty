@@ -1005,7 +1005,18 @@ export default function Home() {
     const q=String(request ?? tellGbkText).trim();
     if(q.length<3){setAuthNotice("Tell GBKAI what you need, for example: 5 kg rice, 2 litres oil and 1 kg dal.");return;}
     setTellGbkText(q); setTellGbkBusy(true); setTellGbkOrderSent(false); setTellGbkSelectedStore(null); setAuthNotice("");
-    const parts=q.split(/[,\n]|\band\b|\+|;/i).map(x=>x.trim()).filter(Boolean);
+    // Build a real editable order list. Split comma/and-separated requests,
+    // and also split when a new quantity+unit starts (e.g. "25 kg rice bag 5 l oil").
+    const quantityStart=/(?:^|\\s)(\\d+(?:\\.\\d+)?\\s*(?:kg|kgs|g|gram|grams|l|litre|litres|liter|liters|ml|pack|packs|pcs|pc|piece|pieces|dozen|bottle|bottles|box|boxes|bag|bags)\\b)/gi;
+    const starts:number[]=[];
+    let m:any;
+    while((m=quantityStart.exec(q))!==null){ starts.push(m.index + (m[0].startsWith(" ")?1:0)); }
+    let parts:string[]=[];
+    if(starts.length>1){
+      parts=starts.map((start,idx)=>q.slice(start,idx+1<starts.length?starts[idx+1]:q.length).trim()).filter(Boolean);
+    }else{
+      parts=q.split(/[,\\n]|\\band\\b|\\+|;/i).map(x=>x.trim()).filter(Boolean);
+    }
     setTellGbkItems(parts.length?parts:[q]);
     setShowTellOrderReview(false);
     try{
@@ -1134,7 +1145,7 @@ export default function Home() {
       await loyaltyApi(active,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null});
       const created=await loyaltyApi(active,"create_order",{
         merchant_id:m.id, amount_minor:0, currency:String(m.payment_currency||currency||"INR").toUpperCase(),
-        request_text:tellGbkText.trim(), category:m.category||tellGbkCategory, country, order_source:"GBK_AI_TELL", delivery_location:tellGbkLocationMode==="home" ? {type:"home",address:tellGbkHomeAddress.trim()} : (tellGbkLocation ? {type:"current",...tellGbkLocation} : null)
+        request_text:(tellGbkItems.length ? tellGbkItems.join(", ") : tellGbkText.trim()), category:m.category||tellGbkCategory, country, order_source:"GBK_AI_TELL", delivery_location:tellGbkLocationMode==="home" ? {type:"home",address:tellGbkHomeAddress.trim()} : (tellGbkLocation ? {type:"current",...tellGbkLocation} : null)
       });
       setTellGbkOrderSent(true);
       setTellGbkSelectedStore(m);
