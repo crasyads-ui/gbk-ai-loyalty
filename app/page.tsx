@@ -105,6 +105,9 @@ export default function Home() {
   const [creatorReferralCode,setCreatorReferralCode]=useState("");
   const [creatorReferralStatus,setCreatorReferralStatus]=useState<any>(null);
   const [creatorReferralLink,setCreatorReferralLink]=useState("");
+  const [customerReferralCode,setCustomerReferralCode]=useState("");
+  const [customerReferralStatus,setCustomerReferralStatus]=useState<any>(null);
+  const [customerReferralLink,setCustomerReferralLink]=useState("");
   const [founderReferralStatus,setFounderReferralStatus]=useState<any>(null);
   const [merchantOwnerName,setMerchantOwnerName]=useState("");
   const [merchantTermsAccepted,setMerchantTermsAccepted]=useState(false);
@@ -180,6 +183,18 @@ export default function Home() {
       try{
         const active = session || getStoredSession() || await signInAnonymously();
         if(!session) setSession(active);
+        const customer = await loyaltyApi(active,"customer_referral_check",{customer_referral_code:ref});
+        if(customer?.verified){
+          if(!cancelled){
+            setCustomerReferralCode(ref);
+            setCustomerReferralStatus(customer.referrer);
+            setCustomerReferralLink("https://loyalty.gbkai.com/?ref="+ref);
+            setCreatorReferralCode("");
+            setFounderReferralCode("");
+            setAuthNotice("Customer referral link verified. Eligible verified purchases can be attributed to this referrer.");
+          }
+          return;
+        }
         const creator = await loyaltyApi(active,"creator_referral_check",{creator_referral_code:ref});
         if(creator?.verified){
           if(!cancelled){ setCreatorReferralCode(ref); setCreatorReferralStatus(creator.creator); setFounderReferralCode(""); }
@@ -482,8 +497,16 @@ export default function Home() {
           setAuthNotice("Founder wallet connected. Complete Founder verification to activate benefits.");
         }
       } else {
+        try {
+          const referralResult=await loyaltyApi(s,"customer_referral_register",{handle:fullName.trim()||undefined,country:country==="Global"?null:country,language});
+          if(referralResult?.customer_referral_code){
+            setCustomerReferralCode(referralResult.customer_referral_code);
+            setCustomerReferralLink(referralResult.referral_link || ("https://loyalty.gbkai.com/?ref="+referralResult.customer_referral_code));
+            setCustomerReferralStatus(referralResult.customer);
+          }
+        } catch {}
         setRole("Customer");
-        setAuthNotice("Customer wallet connected successfully.");
+        setAuthNotice("Customer wallet connected successfully. Your unique referral link is available below.");
       }
     } catch(e:any) {
       setAuthNotice(e.message || "Wallet connection failed.");
@@ -1155,6 +1178,27 @@ export default function Home() {
     finally { setApiBusy(false); }
   };
 
+  const createCustomerReferral = async () => {
+    setApiBusy(true); setAuthNotice("");
+    try{
+      const active=session || getStoredSession() || await signInAnonymously();
+      setSession(active);
+      const result=await loyaltyApi(active,"customer_referral_register",{handle:fullName.trim()||undefined,country:country==="Global"?null:country,language});
+      if(result?.customer_referral_code){
+        setCustomerReferralStatus(result.customer);
+        setCustomerReferralCode(result.customer_referral_code);
+        setCustomerReferralLink(result.referral_link || ("https://loyalty.gbkai.com/?ref="+result.customer_referral_code));
+        setAuthNotice("Your unique GBK customer referral link is ready.");
+      }
+    }catch(e:any){setAuthNotice(e?.message||"Customer referral link could not be created.");}
+    finally{setApiBusy(false);}
+  };
+  const copyCustomerReferralLink = async () => {
+    const link=customerReferralLink || (customerReferralCode ? "https://loyalty.gbkai.com/?ref="+customerReferralCode : "");
+    if(!link){setAuthNotice("Create your unique customer referral link first.");return;}
+    try{await navigator.clipboard.writeText(link);setShareNotice("Your unique GBK customer referral link was copied.");}
+    catch{setAuthNotice("Referral link: "+link);}
+  };
   const createCreatorReferral = async () => {
     setApiBusy(true); setAuthNotice("");
     try{
@@ -2198,6 +2242,13 @@ export default function Home() {
               <p>Your connected customer wallet is your customer identity and reward destination.</p>
               <button className="primary" onClick={()=>connectWallet("customer")} disabled={apiBusy}>{apiBusy ? "Connecting…" : (activeWalletRole==="customer" && walletAddress ? "Reconnect Customer Wallet" : "Connect Customer Wallet")}</button>
               {activeWalletRole==="customer" && walletAddress && <div className="status"><span>🟢 Customer wallet connected</span><small>{walletAddress.slice(0,6)}…{walletAddress.slice(-4)}</small></div>}
+              {activeWalletRole==="customer" && walletAddress && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
+                <b>🔗 My GBK Referral Link</b>
+                <span>Share your unique link with friends and family. Only eligible verified purchases are attributed.</span>
+                {!customerReferralCode && <button className="primary" type="button" onClick={createCustomerReferral} disabled={apiBusy}>{apiBusy ? "Creating…" : "Create My Referral Link"}</button>}
+                {customerReferralCode && <input className="modalInput" readOnly value={customerReferralLink} />}
+                {customerReferralCode && <button className="secondary" type="button" onClick={copyCustomerReferralLink}>🔗 Copy Link</button>}
+              </div>}
               <button className="secondary" onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Switching…" : "Switch to Merchant Wallet"}</button>
             </div>
           </> : role==="Auth" ? <>
