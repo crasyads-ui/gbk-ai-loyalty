@@ -1029,7 +1029,7 @@ export default function Home() {
     // Support spoken quantities in digits AND common spoken/local-language forms.
     // Telugu speech recognition may return “ఫైవ్ కేజీ”, “ఐదు కేజీ”, etc.
     // Hindi/English speech can similarly return number words instead of digits.
-    const quantityStart=/(?:^|\s)((?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|hundred|ఒక|ఒక్క|రెండు|మూడు|నాలుగు|ఐదు|ఆరు|ఏడు|ఎనిమిది|తొమ్మిది|పది|ఫైవ్|టూ|త్రీ|ఫోర్|సిక్స్|సెవెన్|ఎయిట్|నైన్|టెన్|एक|एकम|दो|तीन|चार|पाँच|छह|सात|आठ|नौ|दस)\s*(?:kg|kgs|g|gram|grams|kilo|kilos|కేజీ|కిలో|కిలోలు|గ్రామ్|గ్రాములు|l|litre|litres|liter|liters|ml|లీటర్|లీటర్లు|మిల్లీ|pack|packs|pcs|pc|piece|pieces|dozen|bottle|bottles|box|boxes|bag|bags|ప్యాక్|ప్యాక్స్|బాటిల్|బాటిల్స్|డజన్)\b)/giu;
+    const quantityStart=/(?:^|\s)((?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|hundred|ఒక|ఒక్క|రెండు|మూడు|నాలుగు|ఐదు|ఆరు|ఏడు|ఎనిమిది|తొమ్మిది|పది|ఫైవ్|టూ|త్రీ|ఫోర్|సిక్స్|సెవెన్|ఎయిట్|నైన్|టెన్|एक|एकम|दो|तीन|चार|पाँच|छह|सात|आठ|नौ|दस)\s*(?:kg|kgs|g|gram|grams|kilo|kilos|కేజీ|కిలో|కిలోలు|గ్రామ్|గ్రాములు|किलो|किलोग्राम|किलोग्राम्स|l|litre|litres|liter|liters|ml|लीटर|मिली|లీటర్|లీటర్లు|మిల్లీ|pack|packs|pcs|pc|piece|pieces|dozen|bottle|bottles|box|boxes|bag|bags|पैक|बोतल|डजन|ప్యాక్|ప్యాక్స్|బాటిల్|బాటిల్స్|డజన్)\b)/giu;
     const starts:number[]=[];
     let m:any;
     while((m=quantityStart.exec(normalizedRequest))!==null){
@@ -1042,6 +1042,13 @@ export default function Home() {
     }else{
       parts=normalizedRequest.split(/[,\n]|\band\b|\+|;/i).map(x=>x.trim()).filter(Boolean);
     }
+    // Final safety pass: SpeechRecognition can insert a stray number before
+    // Hindi/Telugu units. Extract every quantity+unit phrase independently.
+    const spokenUnit=/(\\d+(?:\\.\\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|ఒక|ఒక్క|రెండు|మూడు|నాలుగు|ఐదు|ఆరు|ఏడు|ఎనిమిది|తొమ్మిది|పది|फाइव|टू|थ्री|फोर|सिक्स|सेवन|एट|नाइन|टेन|एक|दो|तीन|चार|पाँच|छह|सात|आठ|नौ|दस)\\s*(?:kg|kgs|g|gram|grams|kilo|kilos|किलो|किलोग्राम|किलोग्राम्स|కేజీ|కిలో|కిలోలు|గ్రామ్|గ్రాములు|l|litre|litres|liter|liters|लीटर|లీటర్|లీటర్లు|ml|मिली|pack|packs|पैक|pcs|pc|piece|pieces|बोतल|bottle|bottles|dozen|डजन|bag|bags|box|boxes|प్యాక్|ప్యాక్స్|బాటిల్|బాటిల్స్|డజన్)/giu;
+    const extracted:string[]=[];
+    let sm:any;
+    while((sm=spokenUnit.exec(normalizedRequest))!==null){ extracted.push(String(sm[0]).trim()); }
+    if(extracted.length>=2){ parts=extracted; }
     setTellGbkItems(parts.length?parts:[q]);
     setShowTellOrderReview(true);
     setTellGbkOrderChecked(false);
