@@ -1058,37 +1058,20 @@ export default function Home() {
     } finally { setOrdersBusy(false); }
   };
 
-  const startTellGbkVoice = async () => {
+  const startTellGbkVoice = () => {
     const w:any = window;
     const SpeechRecognitionCtor = w.SpeechRecognition || w.webkitSpeechRecognition;
     unlockVoice();
     if (!SpeechRecognitionCtor) {
-      setAuthNotice("🎤 Chrome speech recognition is not available in this browser. Use Chrome on Android and allow microphone access.");
+      setAuthNotice("🎤 Chrome speech recognition is not available. Use Chrome on Android and allow microphone access.");
       return;
     }
+    // IMPORTANT: recognition.start() must happen directly inside the tap event.
+    // Do not await getUserMedia/permissions first: Chrome can lose the user
+    // activation after an await, especially after a wallet connection flow.
     try {
       try { speechRecognitionRef.current?.abort?.(); } catch {}
       speechRecognitionRef.current = null;
-      if (navigator.permissions?.query) {
-        try {
-          const permission:any = await navigator.permissions.query({name:"microphone" as PermissionName});
-          if (permission.state === "denied") {
-            setAuthNotice("🎤 Microphone is blocked. Chrome → Site settings → loyalty.gbkai.com → Microphone → Allow, then tap Start Voice again.");
-            return;
-          }
-        } catch {}
-      }
-      // Warm up Chrome's microphone permission from the same user tap.
-      // This is especially important after a wallet/chain-switch flow.
-      if (navigator.mediaDevices?.getUserMedia) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-          stream.getTracks().forEach((track:any)=>track.stop());
-        } catch (e:any) {
-          setAuthNotice("🎤 Microphone access is required. Chrome → Site settings → loyalty.gbkai.com → Microphone → Allow, then try again.");
-          return;
-        }
-      }
       const recognition = new SpeechRecognitionCtor();
       speechRecognitionRef.current = recognition;
       recognition.lang = speechLangMap[language] || "en-IN";
@@ -1109,35 +1092,37 @@ export default function Home() {
         if (transcript) { setTellGbkVoiceTranscript(transcript); setTellGbkText(transcript); }
         const last = event.results?.[event.results.length - 1];
         if (last?.isFinal && transcript) {
-          setTellGbkVoiceListening(false); setVoiceListening(false);
-          setAuthNotice("⏳ Voice captured. GBKAI is finding active merchants…");
-          window.setTimeout(() => { void tellGbkAi(transcript); }, 200);
+          setTellGbkVoiceListening(false);
+          setVoiceListening(false);
+          setAuthNotice("⏳ Voice captured. GBKAI is checking your complete order…");
+          window.setTimeout(() => { void tellGbkAi(transcript); }, 150);
         }
       };
       recognition.onerror = (event:any) => {
-        setTellGbkVoiceListening(false); setVoiceListening(false);
+        setTellGbkVoiceListening(false);
+        setVoiceListening(false);
         const code = String(event?.error || "");
-        if (code === "not-allowed" || code === "service-not-allowed") setAuthNotice("🎤 Microphone permission is blocked. Chrome → Site settings → loyalty.gbkai.com → Microphone → Allow.");
+        if (code === "not-allowed" || code === "service-not-allowed") setAuthNotice("🎤 Microphone permission is blocked. Chrome → Site settings → loyalty.gbkai.com → Microphone → Allow, then tap Start Voice.");
         else if (code === "audio-capture") setAuthNotice("🎤 Chrome cannot access the microphone. Close other apps using the microphone and try again.");
         else if (code === "no-speech") setAuthNotice("🎙️ I did not hear speech. Tap Start Voice and speak clearly.");
         else if (code === "network") setAuthNotice("🌐 Chrome speech service is unavailable. Check internet and try again.");
-        else if (code === "aborted") setAuthNotice("🎙️ Voice stopped. Tap Start Voice to try again.");
+        else if (code === "aborted") setAuthNotice("🎙️ Voice stopped. Tap Start Voice again.");
         else setAuthNotice("🎙️ Voice input could not start. Please try again.");
       };
       recognition.onend = () => {
-        setTellGbkVoiceListening(false); setVoiceListening(false);
+        setTellGbkVoiceListening(false);
+        setVoiceListening(false);
         speechRecognitionRef.current = null;
       };
-      window.setTimeout(() => {
-        try { recognition.start(); }
-        catch { try { recognition.abort(); } catch {} speechRecognitionRef.current=null; setTellGbkVoiceListening(false); setVoiceListening(false); setAuthNotice("🎙️ Chrome voice could not start. Tap Start Voice again."); }
-      }, 80);
+      // Directly from the user's button tap — critical for Chrome mobile.
+      recognition.start();
     } catch {
-      setTellGbkVoiceListening(false); setVoiceListening(false); speechRecognitionRef.current=null;
-      setAuthNotice("🎙️ Voice input could not start. Check Chrome microphone permission and try again.");
+      setTellGbkVoiceListening(false);
+      setVoiceListening(false);
+      speechRecognitionRef.current = null;
+      setAuthNotice("🎙️ Chrome voice could not start. Tap Start Voice again and allow microphone access.");
     }
   };
-
   const sendTellGbkOrder = async (m:any) => {
     if(!m?.id || !tellGbkText.trim()) return;
     if(!tellGbkItems.length || !tellGbkOrderChecked){ setShowTellOrderReview(true); setAuthNotice("🧾 Please check the complete order list before sending."); return; }
