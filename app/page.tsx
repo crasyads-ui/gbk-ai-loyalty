@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserQRCodeReader } from "@zxing/browser";
 import QRCode from "qrcode";
-import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, getConnectedEvmWallet, approveMerchantRewardDistributor, getGbkWalletStatus, loyaltyReviewApi, type LoyaltySession } from "../lib/loyalty";
+import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, getConnectedEvmWallet, approveMerchantRewardDistributor, getGbkWalletStatus, getWalletAssetBalances, loyaltyReviewApi, type LoyaltySession } from "../lib/loyalty";
 
 const businessCategories = ["All Products & Services","Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries & Supermarkets","Fashion & Apparel","Electronics","Pharmacies & Health Stores","Salons & Beauty","AC Repair","Plumbing & Electrical","Home Services","Automotive & EV","Fuel & Charging","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education & Courses","Spoken English","Healthcare & Clinics","Real Estate","Agriculture & Farm Services","Seeds & Fertilizer","Farm Equipment","Crop Advisory","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops","Wholesale & Distribution","Manufacturing","Construction","Cleaning Services","Pet Services"];
 
@@ -160,6 +160,8 @@ export default function Home() {
   const [merchantStatus,setMerchantStatus]=useState<any>(null);
   const [merchantChainStatus,setMerchantChainStatus] = useState<{balanceRaw:string;allowanceRaw:string}|null>(null);
   const [merchantChainBusy,setMerchantChainBusy] = useState(false);
+  const [walletAssetStatus,setWalletAssetStatus] = useState<{gbkRaw:string;usdtRaw:string;bnbRaw:string}|null>(null);
+  const [walletAssetBusy,setWalletAssetBusy] = useState(false);
   const [reviewQueue,setReviewQueue] = useState<any[]>([]);
   const [reviewBusy,setReviewBusy] = useState(false);
   const [claimQueue,setClaimQueue] = useState<any[]>([]);
@@ -451,6 +453,7 @@ export default function Home() {
             ]);
             setMerchantStatus({...live, merchant_orders:dataWithOrders?.merchant_orders || []});
             await refreshMerchantChainStatus(address);
+            await refreshWalletAssetStatus(address);
           } catch {}
           setRole("MerchantWallet");
           setAuthNotice(`Existing merchant found: ${lookup.merchant.business_name || "Registered business"}. Merchant Wallet opened.`);
@@ -475,6 +478,7 @@ export default function Home() {
       });
 
       setActiveWalletRole(targetRole);
+      await refreshWalletAssetStatus(address);
       try { localStorage.setItem("gbk_loyalty_active_role", targetRole); } catch {}
 
       if (targetRole === "founder") {
@@ -601,6 +605,18 @@ export default function Home() {
       setMerchantChainStatus(null);
       setAuthNotice(e.message || "Live GBK wallet balance could not be read.");
     } finally { setMerchantChainBusy(false); }
+  };
+  const refreshWalletAssetStatus = async (address?:string) => {
+    const target = String(address || walletAddress || merchantWallet || "").trim();
+    if (!/^0x[a-fA-F0-9]{40}$/.test(target)) return;
+    setWalletAssetBusy(true);
+    try {
+      const live = await getWalletAssetBalances(target);
+      setWalletAssetStatus(live);
+    } catch (e:any) {
+      setWalletAssetStatus(null);
+      setAuthNotice(e.message || "Live wallet balances could not be read.");
+    } finally { setWalletAssetBusy(false); }
   };
 
   const openMerchantWallet = async () => {
@@ -2178,6 +2194,15 @@ export default function Home() {
                 <small>UPI payments use INR. GBK reward release still requires verified payment confirmation.</small>
               </>}
             </div>
+            <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
+              <b>💰 LIVE USDT + BNB BALANCE</b>
+              <span>USDT and native BNB are read directly from BNB Smart Chain for this merchant wallet.</span>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div><small>USDT</small><strong style={{display:"block"}}>{walletAssetStatus ? (Number(walletAssetStatus.usdtRaw)/1e18).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</strong></div>
+                <div><small>BNB (gas)</small><strong style={{display:"block"}}>{walletAssetStatus ? (Number(walletAssetStatus.bnbRaw)/1e18).toLocaleString(undefined,{minimumFractionDigits:4,maximumFractionDigits:6}) : "—"}</strong></div>
+              </div>
+              <button className="secondary" type="button" onClick={()=>refreshWalletAssetStatus()} disabled={walletAssetBusy}>{walletAssetBusy ? "Reading blockchain…" : "↻ Refresh USDT + BNB"}</button>
+            </div>
             <div className="merchantWalletLive">
               <div className="merchantWalletPrimary">
                 <span>LIVE ON-CHAIN GBK BALANCE</span>
@@ -2332,6 +2357,17 @@ export default function Home() {
               <p>Your connected customer wallet is your customer identity and reward destination.</p>
               <button className="primary" onClick={()=>connectWallet("customer")} disabled={apiBusy}>{apiBusy ? "Connecting…" : (activeWalletRole==="customer" && walletAddress ? "Reconnect Customer Wallet" : "Connect Customer Wallet")}</button>
               {activeWalletRole==="customer" && walletAddress && <div className="status"><span>🟢 Customer wallet connected</span><small>{walletAddress.slice(0,6)}…{walletAddress.slice(-4)}</small></div>}
+              {activeWalletRole==="customer" && walletAddress && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
+                <b>💰 LIVE ON-CHAIN WALLET</b>
+                <span>Read directly from BNB Smart Chain — not from the database.</span>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+                  <div><small>GBK</small><strong style={{display:"block"}}>{walletAssetStatus ? (Number(walletAssetStatus.gbkRaw)/1e8).toLocaleString(undefined,{maximumFractionDigits:2}) : "—"}</strong></div>
+                  <div><small>USDT</small><strong style={{display:"block"}}>{walletAssetStatus ? (Number(walletAssetStatus.usdtRaw)/1e18).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</strong></div>
+                  <div><small>BNB</small><strong style={{display:"block"}}>{walletAssetStatus ? (Number(walletAssetStatus.bnbRaw)/1e18).toLocaleString(undefined,{minimumFractionDigits:4,maximumFractionDigits:6}) : "—"}</strong></div>
+                </div>
+                <button className="secondary" type="button" onClick={()=>refreshWalletAssetStatus()} disabled={walletAssetBusy}>{walletAssetBusy ? "Reading blockchain…" : "↻ Refresh live balances"}</button>
+                <a className="secondary" href={"https://bscscan.com/address/"+walletAddress} target="_blank" rel="noreferrer" style={{textAlign:"center",textDecoration:"none"}}>View wallet on BscScan ↗</a>
+              </div>}
               <button className="secondary" onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Switching…" : "Switch to Merchant Wallet"}</button>
             </div>
           </> : role==="Auth" ? <>
@@ -2555,6 +2591,17 @@ export default function Home() {
                   catch { setAuthNotice(link); }
                 }}>🔗 Copy Founder Referral Link</button>
               </div>}
+            </div>}
+            {founderStatus?.founder_verified && walletAddress && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
+              <b>💰 LIVE ON-CHAIN FOUNDER WALLET</b>
+              <span>GBK, USDT and native BNB are read directly from BNB Smart Chain.</span>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+                <div><small>GBK</small><strong style={{display:"block"}}>{walletAssetStatus ? (Number(walletAssetStatus.gbkRaw)/1e8).toLocaleString(undefined,{maximumFractionDigits:2}) : "—"}</strong></div>
+                <div><small>USDT</small><strong style={{display:"block"}}>{walletAssetStatus ? (Number(walletAssetStatus.usdtRaw)/1e18).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</strong></div>
+                <div><small>BNB</small><strong style={{display:"block"}}>{walletAssetStatus ? (Number(walletAssetStatus.bnbRaw)/1e18).toLocaleString(undefined,{minimumFractionDigits:4,maximumFractionDigits:6}) : "—"}</strong></div>
+              </div>
+              <button className="secondary" type="button" onClick={()=>refreshWalletAssetStatus()} disabled={walletAssetBusy}>{walletAssetBusy ? "Reading blockchain…" : "↻ Refresh live balances"}</button>
+              <a className="secondary" href={"https://bscscan.com/address/"+walletAddress} target="_blank" rel="noreferrer" style={{textAlign:"center",textDecoration:"none"}}>View wallet on BscScan ↗</a>
             </div>}
             {founderStatus?.founder_verified && <div className="offerPreview" style={{marginTop:12}}>
               <b>🛡️ Business Review Center</b>
