@@ -51,6 +51,7 @@ export default function Home() {
   const [speaking,setSpeaking] = useState(false);
   const speechRecognitionRef = useRef<any>(null);
   const speechUnlockedRef = useRef(false);
+  const lastSpokenTextRef = useRef("");
   const [askQuery,setAskQuery] = useState("");
   const [askAnswer,setAskAnswer] = useState("");
   const [askResults,setAskResults] = useState<any[]>([]);
@@ -781,38 +782,50 @@ export default function Home() {
     "Français":"fr-FR","Português":"pt-BR","中文":"zh-CN"
   };
   const speakText = (text:string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window) || !text.trim()) {
-      setAuthNotice("🔊 Voice playback is not available in this browser. Try Chrome/Android or use the text result.");
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setAuthNotice("🔊 Voice playback is not available on this device. Try Chrome on Android.");
       return;
     }
+    const clean = String(text || "").replace(/Sources[\\s\\S]*/i, "").replace(/https?:\\/\\/\\S+/g, "").trim();
+    if (!clean) return;
+    lastSpokenTextRef.current = clean;
     try {
       const synth = window.speechSynthesis;
       synth.cancel();
       synth.resume();
       const wanted = (speechLangMap[language] || "en-IN").toLowerCase();
-      const utter = new SpeechSynthesisUtterance(text.trim());
+      const greetingMap:Record<string,string> = {
+        "English":"Namaste / Hello","हिन्दी":"नमस्कार","తెలుగు":"నమస్కారం","தமிழ்":"வணக்கம்",
+        "ಕನ್ನಡ":"ನಮಸ್ಕಾರ","മലയാളം":"നമസ്കാരം","বাংলা":"নমস্কার","मराठी":"नमस्कार",
+        "Español":"Hola","Français":"Bonjour","Português":"Olá","العربية":"مرحبًا","中文":"您好"
+      };
+      const full = (greetingMap[language] || "Namaste / Hello") + ". " + clean;
+      const utter = new SpeechSynthesisUtterance(full);
       utter.lang = wanted;
-      utter.rate = 0.9;
+      utter.rate = 0.92;
       utter.pitch = 1;
       utter.volume = 1;
-      utter.onstart = () => setSpeaking(true);
-      utter.onend = () => setSpeaking(false);
-      utter.onerror = () => setSpeaking(false);
       const voices = synth.getVoices();
       const voice = voices.find(v => v.lang.toLowerCase() === wanted)
         || voices.find(v => v.lang.toLowerCase().startsWith(wanted.split("-")[0]))
         || voices.find(v => v.default);
       if (voice) utter.voice = voice;
+      utter.onstart = () => {
+        setSpeaking(true);
+        setAuthNotice("🔊 GBK AI is speaking in your selected language…");
+      };
+      utter.onend = () => {
+        setSpeaking(false);
+        setAuthNotice("🔊 Voice explanation complete.");
+      };
+      utter.onerror = () => {
+        setSpeaking(false);
+        setAuthNotice("🔊 Voice playback could not start. Tap Speak again or use Read aloud.");
+      };
       synth.speak(utter);
-      window.setTimeout(() => {
-        if (!synth.speaking && !synth.pending) {
-          setSpeaking(false);
-          setAuthNotice("🔊 Tap “Read results aloud” once to enable voice playback on this device.");
-        }
-      }, 700);
     } catch {
       setSpeaking(false);
-      setAuthNotice("🔊 Voice playback could not start. Tap “Read results aloud” again.");
+      setAuthNotice("🔊 Voice playback could not start. Tap Speak again.");
     }
   };
 
@@ -964,20 +977,24 @@ export default function Home() {
       speechRecognitionRef.current = recognition;
       recognition.lang = speechLangMap[language] || "en-IN";
       recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
       recognition.maxAlternatives = 3;
       recognition.onstart = () => {
         setVoiceListening(true);
         setAuthNotice("🎙️ Listening… speak your request now.");
       };
       recognition.onresult = (event:any) => {
-        const transcript = String(event.results?.[0]?.[0]?.transcript || "").trim();
-        if (transcript) {
-          setQuery(transcript);
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += String(event.results[i]?.[0]?.transcript || "");
+        }
+        transcript = transcript.trim();
+        if (transcript) setQuery(transcript);
+        const last = event.results?.[event.results.length - 1];
+        if (last?.isFinal && transcript) {
           setVoiceListening(false);
-          void doSearch(transcript);
-        } else {
-          setAuthNotice("🎙️ I did not hear a request. Tap Speak and try again.");
+          setAuthNotice("⏳ Voice captured. Finding active GBK Loyalty businesses…");
+          window.setTimeout(() => { void doSearch(transcript); }, 250);
         }
       };
       recognition.onerror = (event:any) => {
