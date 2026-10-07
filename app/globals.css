@@ -234,3 +234,18 @@ input,select,.modal input,.modalSelect{font-size:16px}
 
 /* Back to top */
 .backToTop{position:fixed;right:16px;bottom:82px;z-index:19;border:1px solid #d8c5f5;background:#fff;color:#6d28d9;box-shadow:0 8px 24px rgba(52,35,68,.16);border-radius:999px;padding:10px 14px;min-height:44px;font-weight:900;cursor:pointer}@media(max-width:520px){.backToTop{right:14px;bottom:78px}}
+
+/* Tell GBKAI mobile shopping card */
+.tellGbkPanel{width:100%;min-width:0;overflow:hidden}
+.tellGbkPanel>*{min-width:0;max-width:100%}
+.tellGbkSearch{width:100%!important;max-width:100%!important;min-width:0!important;overflow:hidden!important}
+.tellGbkSearch input{min-width:0!important;width:100%;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.tellGbkSearch button{flex:0 0 auto;white-space:nowrap}
+@media(max-width:520px){
+  .tellGbkPanel{padding:10px!important}
+  .tellGbkSearch{gap:3px!important;padding:5px!important}
+  .tellGbkSearch span{flex:0 0 28px;padding:0 2px!important;font-size:20px}
+  .tellGbkSearch input{font-size:14px!important;min-width:0!important}
+  .tellGbkSearch .voiceBtn{flex:0 0 44px!important;width:44px!important;min-width:44px!important;padding:8px 4px!important}
+  .tellGbkSearch>button:last-child{flex:0 0 auto!important;min-width:0!important;padding:9px 8px!important;font-size:11px!important}
+}
