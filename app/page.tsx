@@ -1152,6 +1152,35 @@ export default function Home() {
           transcript += String(event.results[i]?.[0]?.transcript || "") + " ";
         }
         transcript = transcript.replace(/\s+/g," ").trim();
+
+        // Chrome/Android speech recognition can repeat the same spoken phrase
+        // many times during a long continuous Telugu/Hindi/other-language
+        // session. Remove only strong consecutive repetitions (3+ repeats),
+        // while preserving normal intentional repeated products.
+        const dedupeRepeatedSpeech = (input:string) => {
+          let out=input;
+          for(let pass=0; pass<3; pass++){
+            const words=out.split(/\s+/).filter(Boolean);
+            let changed=false;
+            for(let len=Math.min(14,Math.floor(words.length/3)); len>=2 && !changed; len--){
+              for(let i=0;i+len*3<=words.length;i++){
+                const chunk=words.slice(i,i+len).join(" ");
+                const n1=words.slice(i+len,i+len*2).join(" ");
+                const n2=words.slice(i+len*2,i+len*3).join(" ");
+                if(chunk===n1 && chunk===n2){
+                  let end=i+len;
+                  while(end+len<=words.length && words.slice(end,end+len).join(" ")===chunk) end+=len;
+                  words.splice(i,end-i,chunk);
+                  out=words.join(" ");
+                  changed=true;
+                  break;
+                }
+              }
+            }
+          }
+          return out;
+        };
+        transcript = dedupeRepeatedSpeech(transcript);
         if (transcript) {
           tellGbkVoiceBufferRef.current = transcript;
           setTellGbkVoiceTranscript(transcript);
