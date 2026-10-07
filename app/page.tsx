@@ -1023,9 +1023,6 @@ export default function Home() {
     const q=String(request ?? tellGbkText).trim();
     if(q.length<3){setAuthNotice("Tell GBKAI what you need, for example: 5 kg rice, 2 litres oil and 1 kg dal.");return;}
     setTellGbkText(q); setTellGbkBusy(true); setTellGbkOrderSent(false); setTellGbkSelectedStore(null); setAuthNotice("");
-    // Build a real editable order list. Split commas/conjunctions and every
-    // new quantity+unit boundary so a complete 5-item voice order stays intact.
-    const normalizedRequest=q.replace(/[•·]/g,",").replace(/\s+/g," ").trim();
     // LANGUAGE-INDEPENDENT ORDER PARSER
     // Do not depend on a fixed list of English/Hindi/Telugu units. Speech
     // recognition can return any script and can also return Unicode digits.
