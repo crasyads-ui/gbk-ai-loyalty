@@ -70,6 +70,8 @@ export default function Home() {
   const [tellGbkOrderSent,setTellGbkOrderSent] = useState(false);
   const [tellGbkVoiceListening,setTellGbkVoiceListening] = useState(false);
   const [tellGbkVoiceTranscript,setTellGbkVoiceTranscript] = useState("");
+  const [customerOrders,setCustomerOrders] = useState<any[]>([]);
+  const [ordersBusy,setOrdersBusy] = useState(false);
   const [language,setLanguage] = useState("English");
   const [country,setCountry] = useState("Global");
   const [currency,setCurrency] = useState("USD");
@@ -1020,6 +1022,23 @@ export default function Home() {
       if(!all.length) setAuthNotice("No active Kirana/grocery store is available for this request yet.");
     }catch(e:any){setTellGbkStores([]);setAuthNotice(e?.message||"GBKAI could not find an active grocery store.");}
     finally{setTellGbkBusy(false);}
+  };
+
+  const loadCustomerOrders = async () => {
+    setOrdersBusy(true);
+    try {
+      let active=session||getStoredSession();
+      if(!active){active=await signInAnonymously();setSession(active);}
+      const data=await loyaltyApi(active,"my_data",{});
+      const orders=data?.customer_orders || data?.orders || data?.my_orders || [];
+      setCustomerOrders(Array.isArray(orders) ? orders : []);
+      setRole("Orders");
+      setAuthNotice(orders?.length ? "" : "No orders yet. Your Tell GBKAI orders will appear here.");
+    } catch(e:any) {
+      setCustomerOrders([]);
+      setRole("Orders");
+      setAuthNotice(e?.message || "Could not load your orders.");
+    } finally { setOrdersBusy(false); }
   };
 
   const startTellGbkVoice = () => {
@@ -2884,7 +2903,7 @@ export default function Home() {
       </div>}
 
       {showBackToTop && <button className="backToTop" type="button" aria-label="Back to top" onClick={()=>window.scrollTo({top:0,behavior:"smooth"})}>↑ Top</button>}
-      <nav className={`bottomNav${searchFocused ? " searchFocused" : ""}`}><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={()=>setRole("Customer")}>🎁<span>Rewards</span></a><a onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : activeWalletRole==="customer" ? setRole("Customer") : activeWalletRole==="founder" ? setRole("Founder") : connectWallet("merchant")}>👛<span>Wallet</span></a><a onClick={()=>setAskAiOpen(true)}>🤖<span>Ask AI</span></a></nav>
+      <nav className={`bottomNav${searchFocused ? " searchFocused" : ""}`}><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={loadCustomerOrders}>🧾<span>Orders</span></a><a onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : activeWalletRole==="customer" ? setRole("Customer") : activeWalletRole==="founder" ? setRole("Founder") : connectWallet("merchant")}>👛<span>Wallet</span></a><a onClick={()=>setAskAiOpen(true)}>🤖<span>Ask AI</span></a></nav>
     </main>
   );
 }
