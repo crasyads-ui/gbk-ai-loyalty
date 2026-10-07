@@ -1004,7 +1004,7 @@ export default function Home() {
     try{
       let active=session||getStoredSession();
       if(!active){active=await signInAnonymously();setSession(active);}
-      const categoryHints:any={Grocery:"kirana grocery supermarket store",Food:"restaurant food cafe bakery",Restaurants:"restaurant dining food",Hotels:"hotel accommodation resort",Travel:"travel tours flights hotels",Services:"local services repair professionals",Real Estate:"apartments villas plots commercial real estate"};
+      const categoryHints:any={Grocery:"kirana grocery supermarket store",Food:"restaurant food cafe bakery",Restaurants:"restaurant dining food",Hotels:"hotel accommodation resort",Travel:"travel tours flights hotels",Services:"local services repair professionals","Real Estate":"apartments villas plots commercial real estate"};
       const categoryHint=categoryHints[tellGbkCategory]||tellGbkCategory;
       const r=await loyaltyApi(active,"search",{query:q+" "+categoryHint,country});
       const all=(r?.results||[]).filter((x:any)=>!x?.unclaimed);
