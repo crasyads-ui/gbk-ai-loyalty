@@ -72,6 +72,7 @@ export default function Home() {
   const [tellGbkVoiceTranscript,setTellGbkVoiceTranscript] = useState("");
   const [customerOrders,setCustomerOrders] = useState<any[]>([]);
   const [showTellOrderReview,setShowTellOrderReview] = useState(false);
+  const [tellGbkOrderChecked,setTellGbkOrderChecked] = useState(false);
   const [ordersBusy,setOrdersBusy] = useState(false);
   const [language,setLanguage] = useState("English");
   const [country,setCountry] = useState("Global");
@@ -1018,7 +1019,8 @@ export default function Home() {
       parts=q.split(/[,\\n]|\\band\\b|\\+|;/i).map(x=>x.trim()).filter(Boolean);
     }
     setTellGbkItems(parts.length?parts:[q]);
-    setShowTellOrderReview(false);
+    setShowTellOrderReview(true);
+    setTellGbkOrderChecked(false);
     try{
       let active=session||getStoredSession();
       if(!active){active=await signInAnonymously();setSession(active);}
@@ -1138,6 +1140,7 @@ export default function Home() {
 
   const sendTellGbkOrder = async (m:any) => {
     if(!m?.id || !tellGbkText.trim()) return;
+    if(!tellGbkItems.length || !tellGbkOrderChecked){ setShowTellOrderReview(true); setAuthNotice("🧾 Please check the complete order list before sending."); return; }
     setTellGbkBusy(true); setAuthNotice("");
     try{
       let active=session||getStoredSession();
@@ -1876,7 +1879,7 @@ export default function Home() {
             <button className="voiceBtn tellGbkVoiceBtn" type="button" onClick={tellGbkVoiceListening ? stopTellGbkVoice : startTellGbkVoice} disabled={tellGbkBusy} aria-label={tellGbkVoiceListening ? "Stop voice" : "Start voice"}>{tellGbkVoiceListening ? "⏹️ Stop" : "🎤 Start Voice"}</button>
             <button type="button" onClick={()=>void tellGbkAi()} disabled={tellGbkBusy}>{tellGbkBusy ? "Finding…" : "Tell GBKAI →"}</button>
           </div>
-          <div className="tellGbkHearRow">{(tellGbkItems.length>0 || tellGbkVoiceTranscript) && <button type="button" className="secondary tellGbkHearBtn" onClick={()=>{unlockVoice(); const items=tellGbkItems.length?tellGbkItems.join(", "):tellGbkText; speakText("Your order request is: "+items+". Review the order list, choose an active merchant, then send the order.");}}>🔊 Hear GBKAI aloud</button>}</div>{tellGbkVoiceListening && <div className="tellGbkListening" aria-live="polite"><span className="tellGbkPulse">🎙️</span><b>Listening…</b><span>Speak naturally in {language}</span></div>}{tellGbkVoiceTranscript && <div className="tellGbkTranscript" aria-live="polite"><b>📝 You said</b><span>{tellGbkVoiceTranscript}</span></div>}{tellGbkItems.length>0 && <><div className="tellGbkReviewBar"><b>🧾 Order list ready</b><button type="button" className="secondary" onClick={()=>setShowTellOrderReview(v=>!v)}>{showTellOrderReview ? "Hide order list" : "View order list"}</button></div>{showTellOrderReview && <div className="tellGbkOrderReview"><div className="tellGbkOrderReviewHead"><b>Review before sending</b><span>{tellGbkItems.length} item{tellGbkItems.length===1?"":"s"}</span></div>{tellGbkItems.slice(0,20).map((x,i)=><div className="tellGbkOrderItem" key={i}><span>✓</span><input value={x} onChange={e=>setTellGbkItems(prev=>prev.map((v,j)=>j===i?e.target.value:v))} aria-label={"Order item "+(i+1)} /><button type="button" onClick={()=>setTellGbkItems(prev=>prev.filter((_,j)=>j!==i))} aria-label={"Remove item "+(i+1)}>×</button></div>)}<div className="tellGbkReviewNote">You can review or edit the list before choosing a merchant and sending the order.</div></div>}</>}
+          <div className="tellGbkHearRow">{(tellGbkItems.length>0 || tellGbkVoiceTranscript) && <button type="button" className="secondary tellGbkHearBtn" onClick={()=>{unlockVoice(); const items=tellGbkItems.length?tellGbkItems.join(", "):tellGbkText; speakText("Your order request is: "+items+". Review the order list, choose an active merchant, then send the order.");}}>🔊 Hear GBKAI aloud</button>}</div>{tellGbkVoiceListening && <div className="tellGbkListening" aria-live="polite"><span className="tellGbkPulse">🎙️</span><b>Listening…</b><span>Speak naturally in {language}</span></div>}{tellGbkVoiceTranscript && <div className="tellGbkTranscript" aria-live="polite"><b>📝 You said</b><span>{tellGbkVoiceTranscript}</span></div>}{tellGbkItems.length>0 && <><div className="tellGbkReviewBar"><b>🧾 Order list ready</b><button type="button" className="secondary" onClick={()=>setShowTellOrderReview(v=>!v)}>{showTellOrderReview ? "Hide order list" : "View order list"}</button></div>{showTellOrderReview && <div className="tellGbkOrderReview"><div className="tellGbkOrderReviewHead"><b>Review before sending</b><span>{tellGbkItems.length} item{tellGbkItems.length===1?"":"s"}</span></div>{tellGbkItems.slice(0,20).map((x,i)=><div className="tellGbkOrderItem" key={i}><span>✓</span><input value={x} onChange={e=>setTellGbkItems(prev=>prev.map((v,j)=>j===i?e.target.value:v))} aria-label={"Order item "+(i+1)} /><button type="button" onClick={()=>setTellGbkItems(prev=>prev.filter((_,j)=>j!==i))} aria-label={"Remove item "+(i+1)}>×</button></div>)}<div className="tellGbkReviewNote">You can review or edit every item before sending.</div><button type="button" className={tellGbkOrderChecked ? "orderCheckedBtn checked" : "orderCheckedBtn"} onClick={()=>setTellGbkOrderChecked(v=>!v)}>{tellGbkOrderChecked ? "✓ Order checked — ready to send" : "☐ I checked my complete order"}</button></div>}</>}
           {tellGbkStores.length>0 && <div style={{display:"grid",gap:8}}>
             <b>🏪 Active stores that can receive this request</b>
             {tellGbkStores.map((m:any)=><div className="offerPreview" key={"tell-"+m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
