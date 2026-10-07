@@ -58,6 +58,8 @@ export default function Home() {
   const [askBusy,setAskBusy] = useState(false);
   const [askAiOpen,setAskAiOpen] = useState(false);
   const [tellGbkText,setTellGbkText] = useState("");
+  const [tellGbkLocation,setTellGbkLocation] = useState<{lat:number;lng:number;accuracy:number}|null>(null);
+  const [tellGbkLocationBusy,setTellGbkLocationBusy] = useState(false);
   const [tellGbkCategory,setTellGbkCategory] = useState("Grocery");
   const [tellGbkBusy,setTellGbkBusy] = useState(false);
   const [tellGbkItems,setTellGbkItems] = useState<string[]>([]);
@@ -975,6 +977,16 @@ export default function Home() {
     setAuthNotice("Voice shopping stopped.");
   };
 
+  const captureTellGbkLocation = () => {
+    if(!navigator.geolocation){setAuthNotice("📍 Location is not available in this browser.");return;}
+    setTellGbkLocationBusy(true); setAuthNotice("📍 Getting your location…");
+    navigator.geolocation.getCurrentPosition(
+      p=>{setTellGbkLocation({lat:p.coords.latitude,lng:p.coords.longitude,accuracy:Math.round(p.coords.accuracy)});setTellGbkLocationBusy(false);setAuthNotice("📍 Your delivery location is ready to send with the request.");},
+      e=>{setTellGbkLocationBusy(false);setAuthNotice(e.code===1?"📍 Location permission was denied. Allow location access for delivery.":"📍 Could not get your location. Please try again.");},
+      {enableHighAccuracy:true,timeout:10000,maximumAge:60000}
+    );
+  };
+
   const tellGbkAi = async (request?:string) => {
     const q=String(request ?? tellGbkText).trim();
     if(q.length<3){setAuthNotice("Tell GBKAI what you need, for example: 5 kg rice, 2 litres oil and 1 kg dal.");return;}
@@ -1008,7 +1020,7 @@ export default function Home() {
       await loyaltyApi(active,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null});
       const created=await loyaltyApi(active,"create_order",{
         merchant_id:m.id, amount_minor:0, currency:String(m.payment_currency||currency||"INR").toUpperCase(),
-        request_text:tellGbkText.trim(), category:m.category||tellGbkCategory, country, order_source:"GBK_AI_TELL"
+        request_text:tellGbkText.trim(), category:m.category||tellGbkCategory, country, order_source:"GBK_AI_TELL", delivery_location:tellGbkLocation||null
       });
       setTellGbkOrderSent(true);
       setTellGbkSelectedStore(m);
@@ -1716,6 +1728,10 @@ export default function Home() {
           <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}>
             <div><b>🗣️ Tell GBKAI — New Local Shopping</b><span style={{display:"block",marginTop:3}}>Don't search products. Just tell GBKAI what you need.</span></div>
             <span className="roleTag">🛒 Kirana • Grocery</span>
+          </div>
+          <div className="tellGbkLocationRow">
+            <button type="button" className={tellGbkLocation ? "locationBtn ready" : "locationBtn"} onClick={captureTellGbkLocation} disabled={tellGbkLocationBusy}>{tellGbkLocationBusy ? "📍 Getting location…" : tellGbkLocation ? "📍 Location ready" : "📍 Send my location"}</button>
+            {tellGbkLocation && <span>Location will be shared with the selected merchant for delivery.</span>}
           </div>
           <div className="tellGbkCategories" aria-label="Tell GBKAI category">
             {["Grocery","Food","Restaurants","Hotels","Travel","Services","Real Estate"].map((cat)=><button key={cat} type="button" className={tellGbkCategory===cat ? "active" : ""} onClick={()=>{setTellGbkCategory(cat);setTellGbkStores([]);setTellGbkOrderSent(false);}}>{cat==="Grocery"?"🛒":cat==="Food"?"🍱":cat==="Restaurants"?"🍽️":cat==="Hotels"?"🏨":cat==="Travel"?"✈️":cat==="Services"?"🔧":"🏠"} {cat}</button>)}
