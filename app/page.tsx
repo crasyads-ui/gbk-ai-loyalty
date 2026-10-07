@@ -93,6 +93,7 @@ export default function Home() {
   const [orderAmount,setOrderAmount] = useState("");
   const [currentOrderReference,setCurrentOrderReference] = useState("");
   const [upiPayment,setUpiPayment] = useState<any|null>(null);
+  const [upiQrDataUrl,setUpiQrDataUrl] = useState("");
   const [paymentUtr,setPaymentUtr] = useState("");
   const [paymentSuccess,setPaymentSuccess] = useState<any>(null);
   const [merchantBusinessName,setMerchantBusinessName]=useState("");
@@ -972,7 +973,7 @@ export default function Home() {
           const params = new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tr:ref,tid:ref,tn:"GBK Loyalty "+ref});
           const upiUrl = upiId ? "upi://pay?" + params.toString() : "";
           const links = upiId ? {
-            generic: upiUrl,
+            generic:buildAndroidUpiIntent(params),
             phonepe:buildAndroidUpiIntent(params),
             googlepay:buildAndroidUpiIntent(params),
             paytm:buildAndroidUpiIntent(params),
@@ -1038,6 +1039,24 @@ export default function Home() {
       }
     } catch(e:any){setAuthNotice(e.message||"Payment setup failed");} finally {setApiBusy(false);}
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    const buildQr = async () => {
+      const upiId = String(upiPayment?.upi_id || "").trim();
+      const amount = String(upiPayment?.amount_major || "").trim();
+      const ref = String(upiPayment?.order_reference || "").trim();
+      const currencyCode = String(upiPayment?.currency || "INR").toUpperCase();
+      if (!upiId || !amount || !ref) { setUpiQrDataUrl(""); return; }
+      try {
+        const params = new URLSearchParams({pa:upiId,pn:String(upiPayment?.merchant_name || "GBK Merchant"),am:amount,cu:currencyCode,tr:ref,tid:ref,tn:"GBK Loyalty "+ref});
+        const dataUrl = await QRCode.toDataURL("upi://pay?" + params.toString(), {width:360,margin:2});
+        if (!cancelled) setUpiQrDataUrl(dataUrl);
+      } catch { if (!cancelled) setUpiQrDataUrl(""); }
+    };
+    buildQr();
+    return () => { cancelled = true; };
+  }, [upiPayment?.upi_id,upiPayment?.amount_major,upiPayment?.order_reference,upiPayment?.currency,upiPayment?.merchant_name]);
 
   const launchUpiApp = (appLink:string, appName:string) => {
     setAuthNotice("Opening "+appName+"… Return to GBK Loyalty after payment; automatic confirmation will be checked.");
@@ -1616,7 +1635,12 @@ export default function Home() {
             {upiPayment.upi_links.paytm && <a className="secondary" href={upiPayment.upi_links.paytm} onClick={()=>launchUpiApp(upiPayment.upi_links.paytm,"UPI")}>🔵 Open Paytm / UPI</a>}
             {upiPayment.upi_links.bhim && <a className="secondary" href={upiPayment.upi_links.bhim}>🏦 Open BHIM / UPI</a>}
             {upiPayment.upi_links.generic && <a className="secondary" href={upiPayment.upi_links.generic}>📱 Open UPI / Other app</a>}
-            <small>Android uses the standard UPI deeplink so the device can choose an installed UPI app. Payment app opening is not payment verification; GBK reward is released only after verified payment confirmation.</small>
+            {upiQrDataUrl && <div className="offerPreview" style={{display:"grid",justifyItems:"center",gap:8,marginTop:10}}>
+              <b>▣ Scan this QR with any UPI app</b>
+              <img src={upiQrDataUrl} alt="GBK Loyalty UPI payment QR" style={{width:240,height:240,borderRadius:12,border:"1px solid #ddd",background:"#fff",padding:8}} />
+              <small>Amount ₹{upiPayment.amount_major} · Order {upiPayment.order_reference}</small>
+            </div>}
+            <small>Use the app buttons or scan the universal QR. Opening a payment app is not payment verification; GBK reward is released only after verified payment confirmation.</small>
           </div>}
           {paymentSuccess ? <div className="offerPreview" style={{display:"grid",gap:10,margin:"12px 0",textAlign:"center",padding:"20px",border:"2px solid #22c55e"}}>
             <div style={{fontSize:52}}>{paymentSuccess.status==="SETTLED" ? "✅" : "⏳"}</div>
