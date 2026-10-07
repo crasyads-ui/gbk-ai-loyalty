@@ -1065,6 +1065,17 @@ export default function Home() {
           }
         } catch {}
       }
+      // Warm up Chrome's microphone permission from the same user tap.
+      // This is especially important after a wallet/chain-switch flow.
+      if (navigator.mediaDevices?.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+          stream.getTracks().forEach((track:any)=>track.stop());
+        } catch (e:any) {
+          setAuthNotice("🎤 Microphone access is required. Chrome → Site settings → loyalty.gbkai.com → Microphone → Allow, then try again.");
+          return;
+        }
+      }
       const recognition = new SpeechRecognitionCtor();
       speechRecognitionRef.current = recognition;
       recognition.lang = speechLangMap[language] || "en-IN";
