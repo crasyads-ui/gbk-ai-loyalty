@@ -923,10 +923,10 @@ export default function Home() {
       const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor,cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tr:currentOrderReference,tid:currentOrderReference,tn:"GBK Loyalty "+currentOrderReference});
       const links = {
         generic:"upi://pay?"+params.toString(),
-        phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end",
-        googlepay:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end",
-        paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
-        bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end"
+        phonepe:"upi://pay?"+params.toString(),
+        googlepay:"upi://pay?"+params.toString(),
+        paytm:"upi://pay?"+params.toString(),
+        bhim:"upi://pay?"+params.toString()"
       };
       setUpiPayment({provider:"DIRECT",method:merchant.payment_method||"LOCAL_CURRENCY",currency:String(merchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:merchant.business_name||"GBK Merchant",gbk_order_id:upiPayment?.gbk_order_id||null,order_reference:currentOrderReference,amount_major:amountMajor,upi_id:upiId,upi_links:links});
       setAuthNotice("Payment options are ready. Choose your UPI app below.");
@@ -971,10 +971,10 @@ export default function Home() {
           const upiUrl = upiId ? "upi://pay?" + params.toString() : "";
           const links = upiId ? {
             generic: upiUrl,
-            phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
-            googlepay:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end",
-            paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
-            bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
+            phonepe:"upi://pay?"+params.toString(),
+            googlepay:"upi://pay?"+params.toString(),
+            paytm:"upi://pay?"+params.toString(),
+            bhim:"upi://pay?"+params.toString()"
           } : null;
           setCurrentOrderReference(ref);
           setUpiPayment({
@@ -997,10 +997,10 @@ export default function Home() {
         const params = upiId ? new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:ref}) : null;
         const links = upiId && params ? {
           generic:"upi://pay?"+params.toString(),
-          phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
-          googlepay:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end",
-          paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
-          bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
+          phonepe:"upi://pay?"+params.toString(),
+          googlepay:"upi://pay?"+params.toString(),
+          paytm:"upi://pay?"+params.toString(),
+          bhim:"upi://pay?"+params.toString()"
         } : null;
         setCurrentOrderReference(ref);
         setUpiPayment({...paid.payment,gbk_order_id:created?.order?.id,order_reference:ref,amount_major:amountMajor,upi_id:upiId||null,upi_links:links});
@@ -1609,12 +1609,12 @@ export default function Home() {
           {upiPayment?.upi_links && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>📲 Pay ₹{upiPayment.amount_major} by UPI</b>
             <small>{upiPayment.upi_id ? `Merchant UPI: ${upiPayment.upi_id}` : "Merchant UPI payment details are not configured."}</small>
-            {upiPayment.upi_links.phonepe && <a className="primary" href={upiPayment.upi_links.phonepe} onClick={()=>launchUpiApp(upiPayment.upi_links.phonepe,"PhonePe")}>🟣 Pay with PhonePe</a>}
-            {upiPayment.upi_links.googlepay && <a className="primary" href={upiPayment.upi_links.googlepay} onClick={()=>launchUpiApp(upiPayment.upi_links.googlepay,"Google Pay")}>🟢 Pay with Google Pay</a>}
-            {upiPayment.upi_links.paytm && <a className="primary" href={upiPayment.upi_links.paytm} onClick={()=>launchUpiApp(upiPayment.upi_links.paytm,"Paytm")}>🔵 Pay with Paytm</a>}
-            {upiPayment.upi_links.bhim && <a className="secondary" href={upiPayment.upi_links.bhim}>🏦 Pay with BHIM</a>}
+            {upiPayment.upi_links.phonepe && <a className="primary" href={upiPayment.upi_links.phonepe} onClick={()=>launchUpiApp(upiPayment.upi_links.phonepe,"UPI")}>📱 Pay with UPI — PhonePe / Google Pay / Paytm</a>}
+            {upiPayment.upi_links.googlepay && <a className="secondary" href={upiPayment.upi_links.googlepay} onClick={()=>launchUpiApp(upiPayment.upi_links.googlepay,"UPI")}>🟢 Open Google Pay / UPI</a>}
+            {upiPayment.upi_links.paytm && <a className="secondary" href={upiPayment.upi_links.paytm} onClick={()=>launchUpiApp(upiPayment.upi_links.paytm,"UPI")}>🔵 Open Paytm / UPI</a>}
+            {upiPayment.upi_links.bhim && <a className="secondary" href={upiPayment.upi_links.bhim}>🏦 Open BHIM / UPI</a>}
             {upiPayment.upi_links.generic && <a className="secondary" href={upiPayment.upi_links.generic}>📱 Open UPI / Other app</a>}
-            <small>Payment app opening is not payment verification. GBK reward is released only after verified payment confirmation.</small>
+            <small>Android uses the standard UPI deeplink so the device can choose an installed UPI app. Payment app opening is not payment verification; GBK reward is released only after verified payment confirmation.</small>
           </div>}
           {paymentSuccess ? <div className="offerPreview" style={{display:"grid",gap:10,margin:"12px 0",textAlign:"center",padding:"20px",border:"2px solid #22c55e"}}>
             <div style={{fontSize:52}}>{paymentSuccess.status==="SETTLED" ? "✅" : "⏳"}</div>
