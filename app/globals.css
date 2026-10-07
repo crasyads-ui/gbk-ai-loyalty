@@ -351,3 +351,27 @@ input,select,.modal input,.modalSelect{font-size:16px}
 @media(max-width:520px){
   .tellGbkCategories button{min-height:46px;font-size:12px;padding:9px 12px}
 }
+
+
+/* Customer order history */
+.orderListModal{width:min(680px,100%)}
+.orderListModal .sectionHead{display:flex;align-items:center;gap:10px}
+.orderListModal .sectionHead .secondary{width:auto;margin:0}
+.orderList{display:grid;gap:10px;margin-top:14px}
+.orderCard{background:#faf8fd;border:1px solid #e7def1;border-radius:18px;padding:15px}
+.orderTop{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.orderTop b{font-size:16px;color:#30243a}
+.orderStatus{font-size:10px;font-weight:900;color:#6d28d9;background:#eee5ff;border-radius:999px;padding:6px 9px}
+.orderRef{font-size:10px;color:#8a8191;margin-top:5px}
+.orderRequest{font-size:14px;font-weight:700;line-height:1.4;margin:9px 0;color:#3d3248}
+.orderBottom{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #e9e2f0;padding-top:9px;font-size:11px;color:#756d80}
+.orderEmpty{display:grid;gap:9px;text-align:center;padding:20px;background:#faf8fd;border:1px solid #e7def1;border-radius:18px}
+.orderEmpty .primary{width:100%;border:0;background:#7c3aed;color:#fff;border-radius:13px;padding:13px;font-weight:900}
+@media(max-width:520px){
+ .orderListModal{padding:18px 14px}
+ .orderListModal .sectionHead{align-items:flex-start}
+ .orderListModal .sectionHead .secondary{min-height:44px}
+ .orderTop{align-items:flex-start}
+ .orderBottom{display:grid;gap:4px}
+ .orderRequest{font-size:15px}
+}
