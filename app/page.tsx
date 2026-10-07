@@ -1062,11 +1062,22 @@ export default function Home() {
     setAuthNotice("Opening "+appName+"… Return to GBK Loyalty after payment; automatic confirmation will be checked.");
   };
   const checkAutomaticPaymentStatus = async (silent=false) => {
-    const orderId=String(upiPayment?.gbk_order_id||"").trim(); if(!orderId) return false;
+    const orderId=String(upiPayment?.gbk_order_id||"").trim();
+    if(!orderId) {
+      if(!silent) setAuthNotice("GBK Order ID is missing. Please create the order again.");
+      return false;
+    }
     try {
       const active=session||getStoredSession()||await signInAnonymously(); if(!session) setSession(active);
       const result=await loyaltyApi(active,"payment_status",{order_id:orderId});
-      if(String(result?.payment_status||"").toUpperCase()!=="VERIFIED") return false;
+      const paymentStatus=String(result?.payment_status||"").toUpperCase();
+      if(paymentStatus!=="VERIFIED") {
+        if(!silent) {
+          const statusText = paymentStatus==="NOT_STARTED" ? "Payment is not confirmed yet. Complete the UPI payment first, then tap Check payment status again." : "Payment is still pending confirmation. Please complete the payment and try again.";
+          setAuthNotice("⏳ "+statusText);
+        }
+        return false;
+      }
       let settlement:any=null; try { settlement=await loyaltyApi(active,"reward_settle",{order_id:orderId}); } catch {}
       const status=settlement?.status||"REWARD_SETTLEMENT_PENDING";
       const customerRaw=String(settlement?.calculation?.customer_raw||"0");
