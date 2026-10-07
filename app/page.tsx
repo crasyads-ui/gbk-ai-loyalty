@@ -59,6 +59,8 @@ export default function Home() {
   const [askAiOpen,setAskAiOpen] = useState(false);
   const [tellGbkText,setTellGbkText] = useState("");
   const [tellGbkLocation,setTellGbkLocation] = useState<{lat:number;lng:number;accuracy:number}|null>(null);
+  const [tellGbkLocationMode,setTellGbkLocationMode] = useState<"home"|"current">("home");
+  const [tellGbkHomeAddress,setTellGbkHomeAddress] = useState("");
   const [tellGbkLocationBusy,setTellGbkLocationBusy] = useState(false);
   const [tellGbkCategory,setTellGbkCategory] = useState("Grocery");
   const [tellGbkBusy,setTellGbkBusy] = useState(false);
@@ -977,6 +979,12 @@ export default function Home() {
     setAuthNotice("Voice shopping stopped.");
   };
 
+  useEffect(()=>{try{const a=localStorage.getItem("gbk_loyalty_home_address")||"";if(a)setTellGbkHomeAddress(a);}catch{}},[]);
+  const saveTellGbkHomeAddress = (value:string) => {
+    setTellGbkHomeAddress(value);
+    try{localStorage.setItem("gbk_loyalty_home_address",value);}catch{}
+  };
+
   const captureTellGbkLocation = () => {
     if(!navigator.geolocation){setAuthNotice("📍 Location is not available in this browser.");return;}
     setTellGbkLocationBusy(true); setAuthNotice("📍 Getting your location…");
@@ -1020,7 +1028,7 @@ export default function Home() {
       await loyaltyApi(active,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null});
       const created=await loyaltyApi(active,"create_order",{
         merchant_id:m.id, amount_minor:0, currency:String(m.payment_currency||currency||"INR").toUpperCase(),
-        request_text:tellGbkText.trim(), category:m.category||tellGbkCategory, country, order_source:"GBK_AI_TELL", delivery_location:tellGbkLocation||null
+        request_text:tellGbkText.trim(), category:m.category||tellGbkCategory, country, order_source:"GBK_AI_TELL", delivery_location:tellGbkLocationMode==="home" ? {type:"home",address:tellGbkHomeAddress.trim()} : (tellGbkLocation ? {type:"current",...tellGbkLocation} : null)
       });
       setTellGbkOrderSent(true);
       setTellGbkSelectedStore(m);
@@ -1729,9 +1737,18 @@ export default function Home() {
             <div><b>🗣️ Tell GBKAI — New Local Shopping</b><span style={{display:"block",marginTop:3}}>Don't search products. Just tell GBKAI what you need.</span></div>
             <span className="roleTag">🛒 Kirana • Grocery</span>
           </div>
-          <div className="tellGbkLocationRow">
-            <button type="button" className={tellGbkLocation ? "locationBtn ready" : "locationBtn"} onClick={captureTellGbkLocation} disabled={tellGbkLocationBusy}>{tellGbkLocationBusy ? "📍 Getting location…" : tellGbkLocation ? "📍 Location ready" : "📍 Send my location"}</button>
-            {tellGbkLocation && <span>Location will be shared with the selected merchant for delivery.</span>}
+          <div className="tellGbkLocationBox">
+            <div className="tellGbkLocationChoices">
+              <button type="button" className={tellGbkLocationMode==="home" ? "locationChoice active" : "locationChoice"} onClick={()=>setTellGbkLocationMode("home")}>🏠 Home</button>
+              <button type="button" className={tellGbkLocationMode==="current" ? "locationChoice active" : "locationChoice"} onClick={()=>setTellGbkLocationMode("current")}>📍 Current location</button>
+            </div>
+            {tellGbkLocationMode==="home" ? <div className="homeAddressBox">
+              <input value={tellGbkHomeAddress} onChange={e=>saveTellGbkHomeAddress(e.target.value)} placeholder="Enter your home delivery address" aria-label="Home delivery address" />
+              <span>🏠 Saved on this device for your next order.</span>
+            </div> : <div className="tellGbkLocationRow">
+              <button type="button" className={tellGbkLocation ? "locationBtn ready" : "locationBtn"} onClick={captureTellGbkLocation} disabled={tellGbkLocationBusy}>{tellGbkLocationBusy ? "📍 Getting location…" : tellGbkLocation ? "📍 Location ready" : "📍 Use my current location"}</button>
+              {tellGbkLocation && <span>Current location will be shared with the selected merchant for delivery.</span>}
+            </div>}
           </div>
           <div className="tellGbkCategories" aria-label="Tell GBKAI category">
             {["Grocery","Food","Restaurants","Hotels","Travel","Services","Real Estate"].map((cat)=><button key={cat} type="button" className={tellGbkCategory===cat ? "active" : ""} onClick={()=>{setTellGbkCategory(cat);setTellGbkStores([]);setTellGbkOrderSent(false);}}>{cat==="Grocery"?"🛒":cat==="Food"?"🍱":cat==="Restaurants"?"🍽️":cat==="Hotels"?"🏨":cat==="Travel"?"✈️":cat==="Services"?"🔧":"🏠"} {cat}</button>)}
