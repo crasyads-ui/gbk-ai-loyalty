@@ -183,18 +183,6 @@ export default function Home() {
       try{
         const active = session || getStoredSession() || await signInAnonymously();
         if(!session) setSession(active);
-        const customer = await loyaltyApi(active,"universal_referral_check",{referral_code:ref});
-        if(customer?.verified){
-          if(!cancelled){
-            setUniversalReferralCode(ref);
-            setUniversalReferralStatus(customer.referrer);
-            setUniversalReferralLink("https://loyalty.gbkai.com/?ref="+ref);
-            setCreatorReferralCode("");
-            setFounderReferralCode("");
-            setAuthNotice("Customer referral link verified. Eligible verified purchases can be attributed to this referrer.");
-          }
-          return;
-        }
         const creator = await loyaltyApi(active,"creator_referral_check",{creator_referral_code:ref});
         if(creator?.verified){
           if(!cancelled){ setCreatorReferralCode(ref); setCreatorReferralStatus(creator.creator); setFounderReferralCode(""); }
@@ -1190,7 +1178,7 @@ export default function Home() {
         setUniversalReferralLink(result.referral_link || ("https://loyalty.gbkai.com/?ref="+result.referral_code));
         setAuthNotice("Your unique GBK referral link is ready.");
       }
-    }catch(e:any){setAuthNotice(e?.message||"Customer referral link could not be created.");}
+    }catch(e:any){setAuthNotice(e?.message||"Referral link could not be created.");}
     finally{setApiBusy(false);}
   };
   const copyUniversalReferralLink = async () => {
@@ -1471,7 +1459,7 @@ export default function Home() {
       if (!activeSession) activeSession = await signInAnonymously();
       setSession(activeSession);
       await ensureProfile(activeSession, "merchant");
-      const referralCheck = founderReferralCode.trim() && !universalReferralCode.trim()
+      const referralCheck = founderReferralCode.trim()
         ? await loyaltyApi(activeSession, "founder_referral_check", {founder_referral_code:founderReferralCode.trim(), country})
         : {verified:false};
       if(founderReferralCode.trim() && !referralCheck?.verified){
@@ -1498,7 +1486,6 @@ export default function Home() {
         payment_method: paymentMethod,
         payment_details: { details: paymentDetails, owner: merchantOwnerName, offer: { type: merchantOfferType, description: merchantOfferDescription.trim() || null, amount: merchantOfferAmount.trim() ? Number(merchantOfferAmount) : null, currency: paymentCurrency, loyalty_pool_percent: selectedOffer, customer_percent: customerShare, founder_percent: founderShare, platform_percent: platformShare }, supported_methods: country === "United States" ? ["APPLE_PAY","GOOGLE_PAY","CARD","PAYPAL","VENMO","SQUARE","GBK_QR"] : country === "India" ? ["UPI","CARD","GBK_QR"] : country === "Thailand" ? ["THAI_QR","THAI_BANK","CARD","GBK_QR"] : country === "Malaysia" ? ["MY_QR","MY_BANK","CARD","GBK_QR"] : country === "Philippines" ? ["PH_QR","PH_BANK","CARD","GBK_QR"] : country === "United Arab Emirates" ? ["UAE_QR","UAE_BANK","CARD","GBK_QR"] : ["LOCAL_CURRENCY","CARD","GBK_QR"], terms_accepted: merchantTermsAccepted },
         founder_referral_code: founderReferralCode.trim() || null,
-        customer_referral_code: universalReferralCode.trim() || null,
         creator_referral_code: creatorReferralCode.trim() || null,
         terms_accepted: merchantTermsAccepted,
       });
@@ -2261,13 +2248,6 @@ export default function Home() {
               <p>Your connected customer wallet is your customer identity and reward destination.</p>
               <button className="primary" onClick={()=>connectWallet("customer")} disabled={apiBusy}>{apiBusy ? "Connecting…" : (activeWalletRole==="customer" && walletAddress ? "Reconnect Customer Wallet" : "Connect Customer Wallet")}</button>
               {activeWalletRole==="customer" && walletAddress && <div className="status"><span>🟢 Customer wallet connected</span><small>{walletAddress.slice(0,6)}…{walletAddress.slice(-4)}</small></div>}
-              {activeWalletRole==="customer" && walletAddress && !founderStatus?.founder_verified && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
-                <b>🔗 My GBK Referral Link</b>
-                <span>Share your unique link with real merchants/businesses. Earn 10% of the merchant loyalty reward pool from eligible verified transactions when no Founder allocation applies.</span>
-                {!universalReferralCode && <button className="primary" type="button" onClick={createUniversalReferral} disabled={apiBusy}>{apiBusy ? "Creating…" : "Create My Referral Link"}</button>}
-                {universalReferralCode && <input className="modalInput" readOnly value={universalReferralLink} />}
-                {universalReferralCode && <button className="secondary" type="button" onClick={copyUniversalReferralLink}>🔗 Copy Link</button>}
-              </div>}
               <button className="secondary" onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Switching…" : "Switch to Merchant Wallet"}</button>
             </div>
           </> : role==="Auth" ? <>
