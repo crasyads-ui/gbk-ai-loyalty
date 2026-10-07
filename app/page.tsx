@@ -57,6 +57,12 @@ export default function Home() {
   const [askResults,setAskResults] = useState<any[]>([]);
   const [askBusy,setAskBusy] = useState(false);
   const [askAiOpen,setAskAiOpen] = useState(false);
+  const [tellGbkText,setTellGbkText] = useState("");
+  const [tellGbkBusy,setTellGbkBusy] = useState(false);
+  const [tellGbkItems,setTellGbkItems] = useState<string[]>([]);
+  const [tellGbkStores,setTellGbkStores] = useState<any[]>([]);
+  const [tellGbkSelectedStore,setTellGbkSelectedStore] = useState<any|null>(null);
+  const [tellGbkOrderSent,setTellGbkOrderSent] = useState(false);
   const [language,setLanguage] = useState("English");
   const [country,setCountry] = useState("Global");
   const [currency,setCurrency] = useState("USD");
@@ -962,6 +968,47 @@ export default function Home() {
     } catch(e:any){setAuthNotice(e.message||"Search failed"); if(requestedQuery) speakText("Search failed. Please try again.");}
     finally {setApiBusy(false); }
   };
+  const tellGbkAi = async (request?:string) => {
+    const q=String(request ?? tellGbkText).trim();
+    if(q.length<3){setAuthNotice("Tell GBKAI what you need, for example: 5 kg rice, 2 litres oil and 1 kg dal.");return;}
+    setTellGbkText(q); setTellGbkBusy(true); setTellGbkOrderSent(false); setTellGbkSelectedStore(null); setAuthNotice("");
+    const parts=q.split(/[,\n]|\band\b|\+|;/i).map(x=>x.trim()).filter(Boolean);
+    setTellGbkItems(parts.length?parts:[q]);
+    try{
+      let active=session||getStoredSession();
+      if(!active){active=await signInAnonymously();setSession(active);}
+      const r=await loyaltyApi(active,"search",{query:q+" kirana grocery store",country});
+      const all=(r?.results||[]).filter((x:any)=>!x?.unclaimed);
+      const matches=all.filter((x:any)=>{
+        const s=String(x.category||"").toLowerCase();
+        const n=String(x.business_name||"").toLowerCase();
+        return /grocery|kirana|supermarket|store|grocer/.test(s+" "+n);
+      }).slice(0,6);
+      setTellGbkStores(matches.length ? matches : all.slice(0,6));
+      if(!all.length) setAuthNotice("No active Kirana/grocery store is available for this request yet.");
+    }catch(e:any){setTellGbkStores([]);setAuthNotice(e?.message||"GBKAI could not find an active grocery store.");}
+    finally{setTellGbkBusy(false);}
+  };
+
+  const sendTellGbkOrder = async (m:any) => {
+    if(!m?.id || !tellGbkText.trim()) return;
+    setTellGbkBusy(true); setAuthNotice("");
+    try{
+      let active=session||getStoredSession();
+      if(!active){active=await signInAnonymously();setSession(active);}
+      await loyaltyApi(active,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null});
+      const created=await loyaltyApi(active,"create_order",{
+        merchant_id:m.id, amount_minor:0, currency:String(m.payment_currency||currency||"INR").toUpperCase(),
+        request_text:tellGbkText.trim(), category:m.category||"Groceries & Supermarkets", country, order_source:"GBK_AI_TELL"
+      });
+      setTellGbkOrderSent(true);
+      setTellGbkSelectedStore(m);
+      setAuthNotice("Order request sent to "+m.business_name+". The store will confirm availability, prepare the items and send the final bill before delivery.");
+      setCurrentOrderReference(created?.order?.order_reference||created?.order_reference||"");
+    }catch(e:any){setAuthNotice(e?.message||"Order request could not be sent. Please try again.");}
+    finally{setTellGbkBusy(false);}
+  };
+
   const startVoiceSearch = () => {
     const w:any = window;
     const SpeechRecognitionCtor = w.SpeechRecognition || w.webkitSpeechRecognition;
@@ -1656,6 +1703,28 @@ export default function Home() {
         <div className="search"><span>⌕</span><input id="searchInput" value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{setSearchFocused(true);setTimeout(()=>document.querySelector(".search")?.scrollIntoView({behavior:"smooth",block:"center"}),120)}} onBlur={()=>setTimeout(()=>setSearchFocused(false),250)} placeholder={language==="తెలుగు" ? "మీకు ఏమి కావాలి?" : language==="हिन्दी" ? "आज आपको क्या चाहिए?" : "What do you need today?"}/><button className="voiceBtn" onMouseDown={()=>setSearchFocused(true)} onClick={startVoiceSearch} disabled={apiBusy || voiceListening} aria-label="Speak your request">{voiceListening ? "🎙️ Listening" : "🎤 Speak"}</button><button onMouseDown={()=>setSearchFocused(true)} onClick={()=>doSearch()} disabled={apiBusy}>{apiBusy ? "Searching…" : "Find businesses"}</button></div>
 <div className="voiceStatus">{voiceSupported ? (voiceListening ? "🎙️ GBK AI is listening in " + language : "🎤 Speak in your selected language") : "⌨️ Type your request or use your device voice input"}</div>
         <div className="askHint"><span>Hotels • Restaurants • Shopping • Services • Travel</span></div>
+        <div className="offerPreview" style={{display:"grid",gap:10,marginTop:16,border:"1px solid rgba(34,197,94,.35)",background:"linear-gradient(135deg,rgba(34,197,94,.08),rgba(59,130,246,.08))"}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+            <div><b>🗣️ Tell GBKAI — New Local Shopping</b><span style={{display:"block",marginTop:3}}>Don't search products. Just tell GBKAI what you need.</span></div>
+            <span className="roleTag">🛒 Kirana • Grocery</span>
+          </div>
+          <div className="search" style={{marginTop:2}}>
+            <span>🛒</span>
+            <input value={tellGbkText} onChange={e=>setTellGbkText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void tellGbkAi()}} placeholder={language==="తెలుగు" ? "నాకు 5 కిలోల బియ్యం, 2 లీటర్ల నూనె కావాలి" : language==="हिन्दी" ? "मुझे 5 किलो चावल और 2 लीटर तेल चाहिए" : "Tell GBKAI: 5 kg rice, 2 litres oil, 1 kg dal…"} />
+            <button className="voiceBtn" type="button" onClick={startVoiceSearch} aria-label="Speak grocery request">🎤</button>
+            <button type="button" onClick={()=>void tellGbkAi()} disabled={tellGbkBusy}>{tellGbkBusy ? "Finding…" : "Tell GBKAI →"}</button>
+          </div>
+          {tellGbkItems.length>0 && <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tellGbkItems.slice(0,12).map((x,i)=><span className="roleTag" key={i}>✓ {x}</span>)}</div>}
+          {tellGbkStores.length>0 && <div style={{display:"grid",gap:8}}>
+            <b>🏪 Active stores that can receive this request</b>
+            {tellGbkStores.map((m:any)=><div className="offerPreview" key={"tell-"+m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+              <div><b>{m.business_name}</b><span style={{display:"block"}}>{[m.city,m.country].filter(Boolean).join(" • ")} · {m.category||"Grocery"}</span><small>🟢 Active merchant{m.loyalty_offer_percent ? " · "+m.loyalty_offer_percent+"% GBK" : ""}</small></div>
+              <button className="primary" type="button" disabled={tellGbkBusy} onClick={()=>void sendTellGbkOrder(m)}>{tellGbkOrderSent && tellGbkSelectedStore?.id===m.id ? "✓ Sent" : "Send Order"}</button>
+            </div>)}
+          </div>}
+          {tellGbkOrderSent && tellGbkSelectedStore && <div className="status"><span>🧾 {tellGbkSelectedStore.business_name} will confirm the items, send the final bill, and arrange home delivery. You pay after the bill is confirmed.</span></div>}
+        </div>
+
         <div className="suggestions">
           <button onClick={()=>setQuery("restaurants with GBK rewards")}>🍽️ Restaurants</button>
           <button onClick={()=>setQuery("hotels with GBK offers")}>🏨 Hotels</button>
