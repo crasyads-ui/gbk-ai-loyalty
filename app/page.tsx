@@ -1471,7 +1471,7 @@ export default function Home() {
       if (!activeSession) activeSession = await signInAnonymously();
       setSession(activeSession);
       await ensureProfile(activeSession, "merchant");
-      const referralCheck = founderReferralCode.trim()
+      const referralCheck = founderReferralCode.trim() && !universalReferralCode.trim()
         ? await loyaltyApi(activeSession, "founder_referral_check", {founder_referral_code:founderReferralCode.trim(), country})
         : {verified:false};
       if(founderReferralCode.trim() && !referralCheck?.verified){
@@ -1498,6 +1498,7 @@ export default function Home() {
         payment_method: paymentMethod,
         payment_details: { details: paymentDetails, owner: merchantOwnerName, offer: { type: merchantOfferType, description: merchantOfferDescription.trim() || null, amount: merchantOfferAmount.trim() ? Number(merchantOfferAmount) : null, currency: paymentCurrency, loyalty_pool_percent: selectedOffer, customer_percent: customerShare, founder_percent: founderShare, platform_percent: platformShare }, supported_methods: country === "United States" ? ["APPLE_PAY","GOOGLE_PAY","CARD","PAYPAL","VENMO","SQUARE","GBK_QR"] : country === "India" ? ["UPI","CARD","GBK_QR"] : country === "Thailand" ? ["THAI_QR","THAI_BANK","CARD","GBK_QR"] : country === "Malaysia" ? ["MY_QR","MY_BANK","CARD","GBK_QR"] : country === "Philippines" ? ["PH_QR","PH_BANK","CARD","GBK_QR"] : country === "United Arab Emirates" ? ["UAE_QR","UAE_BANK","CARD","GBK_QR"] : ["LOCAL_CURRENCY","CARD","GBK_QR"], terms_accepted: merchantTermsAccepted },
         founder_referral_code: founderReferralCode.trim() || null,
+        customer_referral_code: universalReferralCode.trim() || null,
         creator_referral_code: creatorReferralCode.trim() || null,
         terms_accepted: merchantTermsAccepted,
       });
@@ -2260,7 +2261,7 @@ export default function Home() {
               <p>Your connected customer wallet is your customer identity and reward destination.</p>
               <button className="primary" onClick={()=>connectWallet("customer")} disabled={apiBusy}>{apiBusy ? "Connecting…" : (activeWalletRole==="customer" && walletAddress ? "Reconnect Customer Wallet" : "Connect Customer Wallet")}</button>
               {activeWalletRole==="customer" && walletAddress && <div className="status"><span>🟢 Customer wallet connected</span><small>{walletAddress.slice(0,6)}…{walletAddress.slice(-4)}</small></div>}
-              {activeWalletRole==="customer" && walletAddress && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
+              {activeWalletRole==="customer" && walletAddress && !founderStatus?.founder_verified && <div className="offerPreview" style={{display:"grid",gap:8,marginTop:12}}>
                 <b>🔗 My GBK Referral Link</b>
                 <span>Share your unique link with real merchants/businesses. Earn 10% of the merchant loyalty reward pool from eligible verified transactions when no Founder allocation applies.</span>
                 {!universalReferralCode && <button className="primary" type="button" onClick={createUniversalReferral} disabled={apiBusy}>{apiBusy ? "Creating…" : "Create My Referral Link"}</button>}
@@ -2479,8 +2480,8 @@ export default function Home() {
           </>} 
             {authNotice && <div className="status" style={{marginTop:12}}><span>{authNotice}</span></div>}
             {founderStatus?.founder_verified && <div className="offerPreview" style={{marginTop:12}}>
-              <b>Founder referral code</b>
-              <span>Share this code with businesses you personally refer to GBK Loyalty.</span>
+              <b>👑 My Founder Referral Link</b>
+              <span>Share your Founder link with businesses and users you personally bring to GBK Loyalty. Founder attribution has priority only when no earlier valid customer referral is already locked.</span>
               <strong style={{fontSize:20,letterSpacing:1}}>{founderStatus.founder_referral_code || "Generated for your Founder account"}</strong>
               {founderStatus.founder_referral_code && <div style={{display:"grid",gap:8,marginTop:8}}>
                 <input className="modalInput" readOnly value={`https://app.gbkai.com/?ref=${founderStatus.founder_referral_code}`} onFocus={e=>e.currentTarget.select()} />
