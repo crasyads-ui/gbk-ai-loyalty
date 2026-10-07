@@ -1037,7 +1037,34 @@ export default function Home() {
     } catch(e:any){setAuthNotice(e.message||"Payment setup failed");} finally {setApiBusy(false);}
   };
 
-  const launchUpiApp = (appLink:string, appName:string) => {\n    try { setAuthNotice("Opening "+appName+"… Return to GBK Loyalty after payment; automatic confirmation will be checked."); window.location.href = appLink; }\n    catch { setAuthNotice("Could not open "+appName+". Use Open UPI / Other app instead."); }\n  };\n  const checkAutomaticPaymentStatus = async (silent=false) => {\n    const orderId=String(upiPayment?.gbk_order_id||"").trim(); if(!orderId) return false;\n    try {\n      const active=session||getStoredSession()||await signInAnonymously(); if(!session) setSession(active);\n      const result=await loyaltyApi(active,"payment_status",{order_id:orderId});\n      if(String(result?.payment_status||"").toUpperCase()!=="VERIFIED") return false;\n      let settlement:any=null; try { settlement=await loyaltyApi(active,"reward_settle",{order_id:orderId}); } catch {}\n      const status=settlement?.status||"REWARD_SETTLEMENT_PENDING";\n      const customerRaw=String(settlement?.calculation?.customer_raw||"0");\n      const rewardGbk=customerRaw!=="0" ? (Number(customerRaw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : "";\n      setPaymentSuccess({status,orderReference:result?.order_reference||currentOrderReference,txHash:settlement?.tx_hash||"",rewardGbk}); setPaymentUtr("");\n      setAuthNotice(status==="SETTLED" ? "Payment verified automatically. GBK reward released successfully." : "Payment verified automatically. GBK reward settlement is processing."); return true;\n    } catch(e:any) { if(!silent) setAuthNotice(e?.message||"Automatic payment confirmation is still pending."); return false; }\n  };\n\n  useEffect(() => {\n    if(!upiPayment?.gbk_order_id || paymentSuccess) return; let stopped=false,attempts=0;\n    const poll=async()=>{ if(stopped) return; attempts++; const done=await checkAutomaticPaymentStatus(true); if(done||attempts>=40){stopped=true;return;} window.setTimeout(poll,3000); };\n    const onVisible=()=>{ if(document.visibilityState==="visible") checkAutomaticPaymentStatus(true); };\n    document.addEventListener("visibilitychange",onVisible); const timer=window.setTimeout(poll,1500);\n    return()=>{stopped=true;window.clearTimeout(timer);document.removeEventListener("visibilitychange",onVisible);};\n  },[upiPayment?.gbk_order_id,paymentSuccess]);\n\n  const verifyCustomerDirectPayment = async () => {
+  const launchUpiApp = (appLink:string, appName:string) => {
+    try { setAuthNotice("Opening "+appName+"… Return to GBK Loyalty after payment; automatic confirmation will be checked."); window.location.href = appLink; }
+    catch { setAuthNotice("Could not open "+appName+". Use Open UPI / Other app instead."); }
+  };
+  const checkAutomaticPaymentStatus = async (silent=false) => {
+    const orderId=String(upiPayment?.gbk_order_id||"").trim(); if(!orderId) return false;
+    try {
+      const active=session||getStoredSession()||await signInAnonymously(); if(!session) setSession(active);
+      const result=await loyaltyApi(active,"payment_status",{order_id:orderId});
+      if(String(result?.payment_status||"").toUpperCase()!=="VERIFIED") return false;
+      let settlement:any=null; try { settlement=await loyaltyApi(active,"reward_settle",{order_id:orderId}); } catch {}
+      const status=settlement?.status||"REWARD_SETTLEMENT_PENDING";
+      const customerRaw=String(settlement?.calculation?.customer_raw||"0");
+      const rewardGbk=customerRaw!=="0" ? (Number(customerRaw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : "";
+      setPaymentSuccess({status,orderReference:result?.order_reference||currentOrderReference,txHash:settlement?.tx_hash||"",rewardGbk}); setPaymentUtr("");
+      setAuthNotice(status==="SETTLED" ? "Payment verified automatically. GBK reward released successfully." : "Payment verified automatically. GBK reward settlement is processing."); return true;
+    } catch(e:any) { if(!silent) setAuthNotice(e?.message||"Automatic payment confirmation is still pending."); return false; }
+  };
+
+  useEffect(() => {
+    if(!upiPayment?.gbk_order_id || paymentSuccess) return; let stopped=false,attempts=0;
+    const poll=async()=>{ if(stopped) return; attempts++; const done=await checkAutomaticPaymentStatus(true); if(done||attempts>=40){stopped=true;return;} window.setTimeout(poll,3000); };
+    const onVisible=()=>{ if(document.visibilityState==="visible") checkAutomaticPaymentStatus(true); };
+    document.addEventListener("visibilitychange",onVisible); const timer=window.setTimeout(poll,1500);
+    return()=>{stopped=true;window.clearTimeout(timer);document.removeEventListener("visibilitychange",onVisible);};
+  },[upiPayment?.gbk_order_id,paymentSuccess]);
+
+  const verifyCustomerDirectPayment = async () => {
     const txId = paymentUtr.trim();
     setPaymentSuccess(null);
     const orderId = String(upiPayment?.gbk_order_id || "").trim();
