@@ -920,13 +920,13 @@ export default function Home() {
       const upiId = typeof details === "string" ? details.trim() : "";
       if (!upiId) { setAuthNotice("Merchant UPI payment details are not configured."); return; }
       const amountMajor = Number(orderAmount || 0).toFixed(2);
-      const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor,cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tn:currentOrderReference});
+      const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor,cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tr:currentOrderReference,tid:currentOrderReference,tn:"GBK Loyalty "+currentOrderReference});
       const links = {
         generic:"upi://pay?"+params.toString(),
-        phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;end",
-        googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end",
-        paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;end",
-        bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;end"
+        phonepe:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=com.phonepe.app;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end",
+        googlepay:"intent://upi/pay?"+params.toString()+"#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end",
+        paytm:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=net.one97.paytm;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end",
+        bhim:"intent://pay?"+params.toString()+"#Intent;scheme=upi;package=in.org.npci.upiapp;S.browser_fallback_url="+encodeURIComponent(window.location.href)+";end"
       };
       setUpiPayment({provider:"DIRECT",method:merchant.payment_method||"LOCAL_CURRENCY",currency:String(merchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:merchant.business_name||"GBK Merchant",gbk_order_id:upiPayment?.gbk_order_id||null,order_reference:currentOrderReference,amount_major:amountMajor,upi_id:upiId,upi_links:links});
       setAuthNotice("Payment options are ready. Choose your UPI app below.");
@@ -967,7 +967,7 @@ export default function Home() {
           const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
           const upiId = typeof details === "string" ? details.trim() : "";
           const amountMajor = Number(amount).toFixed(2);
-          const params = new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:ref});
+          const params = new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tr:ref,tid:ref,tn:"GBK Loyalty "+ref});
           const upiUrl = upiId ? "upi://pay?" + params.toString() : "";
           const links = upiId ? {
             generic: upiUrl,
@@ -1037,7 +1037,7 @@ export default function Home() {
     } catch(e:any){setAuthNotice(e.message||"Payment setup failed");} finally {setApiBusy(false);}
   };
 
-  const verifyCustomerDirectPayment = async () => {
+  const launchUpiApp = (appLink:string, appName:string) => {\n    try { setAuthNotice("Opening "+appName+"… Return to GBK Loyalty after payment; automatic confirmation will be checked."); window.location.href = appLink; }\n    catch { setAuthNotice("Could not open "+appName+". Use Open UPI / Other app instead."); }\n  };\n  const checkAutomaticPaymentStatus = async (silent=false) => {\n    const orderId=String(upiPayment?.gbk_order_id||"").trim(); if(!orderId) return false;\n    try {\n      const active=session||getStoredSession()||await signInAnonymously(); if(!session) setSession(active);\n      const result=await loyaltyApi(active,"payment_status",{order_id:orderId});\n      if(String(result?.payment_status||"").toUpperCase()!=="VERIFIED") return false;\n      let settlement:any=null; try { settlement=await loyaltyApi(active,"reward_settle",{order_id:orderId}); } catch {}\n      const status=settlement?.status||"REWARD_SETTLEMENT_PENDING";\n      const customerRaw=String(settlement?.calculation?.customer_raw||"0");\n      const rewardGbk=customerRaw!=="0" ? (Number(customerRaw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : "";\n      setPaymentSuccess({status,orderReference:result?.order_reference||currentOrderReference,txHash:settlement?.tx_hash||"",rewardGbk}); setPaymentUtr("");\n      setAuthNotice(status==="SETTLED" ? "Payment verified automatically. GBK reward released successfully." : "Payment verified automatically. GBK reward settlement is processing."); return true;\n    } catch(e:any) { if(!silent) setAuthNotice(e?.message||"Automatic payment confirmation is still pending."); return false; }\n  };\n\n  useEffect(() => {\n    if(!upiPayment?.gbk_order_id || paymentSuccess) return; let stopped=false,attempts=0;\n    const poll=async()=>{ if(stopped) return; attempts++; const done=await checkAutomaticPaymentStatus(true); if(done||attempts>=40){stopped=true;return;} window.setTimeout(poll,3000); };\n    const onVisible=()=>{ if(document.visibilityState==="visible") checkAutomaticPaymentStatus(true); };\n    document.addEventListener("visibilitychange",onVisible); const timer=window.setTimeout(poll,1500);\n    return()=>{stopped=true;window.clearTimeout(timer);document.removeEventListener("visibilitychange",onVisible);};\n  },[upiPayment?.gbk_order_id,paymentSuccess]);\n\n  const verifyCustomerDirectPayment = async () => {
     const txId = paymentUtr.trim();
     setPaymentSuccess(null);
     const orderId = String(upiPayment?.gbk_order_id || "").trim();
@@ -1583,33 +1583,14 @@ export default function Home() {
           {upiPayment?.upi_links && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>📲 Pay ₹{upiPayment.amount_major} by UPI</b>
             <small>{upiPayment.upi_id ? `Merchant UPI: ${upiPayment.upi_id}` : "Merchant UPI payment details are not configured."}</small>
-            {upiPayment.upi_links.phonepe && <a className="primary" href={upiPayment.upi_links.phonepe}>🟣 Pay with PhonePe</a>}
+            {upiPayment.upi_links.phonepe && <button className="primary" type="button" onClick={()=>launchUpiApp(upiPayment.upi_links.phonepe,"PhonePe")}>🟣 Pay with PhonePe</button>}
             {upiPayment.upi_links.googlepay && <button className="primary" type="button" onClick={async()=>{ try { await navigator.clipboard?.writeText(upiPayment.upi_id||""); } catch {} setAuthNotice(`Google Pay is ready. Open Google Pay manually and pay ₹${upiPayment.amount_major} to ${upiPayment.upi_id}. The UPI ID has been copied.`); }}>🟢 Pay with Google Pay</button>}
             {upiPayment.upi_links.paytm && <a className="primary" href={upiPayment.upi_links.paytm}>🔵 Pay with Paytm</a>}
             {upiPayment.upi_links.bhim && <a className="secondary" href={upiPayment.upi_links.bhim}>🏦 Pay with BHIM</a>}
             {upiPayment.upi_links.generic && <a className="secondary" href={upiPayment.upi_links.generic}>📱 Open UPI / Other app</a>}
             <small>Payment app opening is not payment verification. GBK reward is released only after verified payment confirmation.</small>
           </div>}
-          {paymentSuccess ? <div className="offerPreview" style={{display:"grid",gap:10,margin:"12px 0",textAlign:"center",padding:"20px",border:"2px solid #22c55e"}}>
-            <div style={{fontSize:52}}>{paymentSuccess.status==="SETTLED" ? "✅" : "⏳"}</div>
-            <b style={{fontSize:22}}>{paymentSuccess.status==="SETTLED" ? "Payment Successful" : "GBK Reward Pending"}</b>
-            {paymentSuccess.rewardGbk && <div style={{fontSize:28,fontWeight:800}}>+{paymentSuccess.rewardGbk} GBK</div>}
-            <div>{paymentSuccess.status==="SETTLED"
-              ? "Payment verified and the GBK reward has been released successfully."
-              : "Payment verified. Your eligible GBK reward is reserved and will be released automatically after the merchant adds sufficient GBK funding."}</div>
-            <small>GBK Order: {paymentSuccess.orderReference}</small>
-            {paymentSuccess.status!=="SETTLED" && <small>Merchant action: Add GBK balance to complete the reward settlement.</small>}
-            {paymentSuccess.txHash && <small>Reward transaction: {paymentSuccess.txHash.slice(0,10)}…{paymentSuccess.txHash.slice(-8)}</small>}
-            <button className="primary" type="button" onClick={()=>{setPaymentSuccess(null);setUpiPayment(null);setCurrentOrderReference("");setOrderAmount("");}}>Done ✓</button>
-          </div> : upiPayment?.upi_links && upiPayment?.gbk_order_id && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
-            <b>✅ After payment: verify your UTR</b>
-            <input className="modalInput" inputMode="text" value={paymentUtr} onChange={e=>setPaymentUtr(e.target.value)} placeholder="Enter UPI Transaction ID / UTR"/>
-            <button className="primary" type="button" onClick={verifyCustomerDirectPayment} disabled={apiBusy || !paymentUtr.trim()}>
-              {apiBusy ? "Verifying payment…" : "Verify Payment & Receive GBK Reward →"}
-            </button>
-            <small>Enter the transaction ID shown by your UPI app. The GBK reward is released only after the payment is verified against this GBK Order.</small>
-          </div>}
-          <small>{selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH"
+          {paymentSuccess ? <div className="offerPreview" style={{display:"grid",gap:10,margin:"12px 0",textAlign:"center",padding:"20px",border:"2px solid #22c55e"}}>\n            <div style={{fontSize:52}}>{paymentSuccess.status==="SETTLED" ? "✅" : "⏳"}</div>\n            <b style={{fontSize:22}}>{paymentSuccess.status==="SETTLED" ? "Payment Successful" : "GBK Reward Pending"}</b>\n            {paymentSuccess.rewardGbk && <div style={{fontSize:28,fontWeight:800}}>+{paymentSuccess.rewardGbk} GBK</div>}\n            <div>{paymentSuccess.status==="SETTLED" ? "Payment verified and the GBK reward has been released successfully." : "Payment verified. Your eligible GBK reward is reserved and will be released automatically after the merchant adds sufficient GBK funding."}</div>\n            <small>GBK Order: {paymentSuccess.orderReference}</small>\n            {paymentSuccess.status!=="SETTLED" && <small>Merchant action: Add GBK balance to complete the reward settlement.</small>}\n            {paymentSuccess.txHash && <small>Reward transaction: {paymentSuccess.txHash.slice(0,10)}…{paymentSuccess.txHash.slice(-8)}</small>}\n            <button className="primary" type="button" onClick={()=>{setPaymentSuccess(null);setUpiPayment(null);setCurrentOrderReference("");setOrderAmount("");}}>Done ✓</button>\n          </div> : upiPayment?.upi_links && upiPayment?.gbk_order_id && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>\n            <b>🔄 Automatic payment verification</b>\n            <span>After PhonePe/UPI payment, return to GBK Loyalty. We automatically check the GBK Order for verified payment and release the reward when confirmed.</span>\n            <button className="secondary" type="button" onClick={()=>checkAutomaticPaymentStatus(false)} disabled={apiBusy}>↻ Check payment status</button>\n            <details>\n              <summary style={{cursor:"pointer",fontWeight:700}}>Having trouble? Enter UTR manually</summary>\n              <input className="modalInput" inputMode="text" value={paymentUtr} onChange={e=>setPaymentUtr(e.target.value)} placeholder="UPI Transaction ID / UTR"/>\n              <button className="primary" type="button" onClick={verifyCustomerDirectPayment} disabled={apiBusy || !paymentUtr.trim()}>\n                {apiBusy ? "Verifying payment…" : "Verify Payment & Receive GBK Reward →"}\n              </button>\n            </details>\n          </div>}\n          <small>{selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH"
             ? "Pay the merchant directly. Payment confirmation must match this GBK Order ID before any GBK reward is released."
             : "Continue to the merchant's configured payment method."}</small>
           <button className="primary" disabled={apiBusy || !orderAmount} onClick={()=>currentOrderReference ? continueCurrentPayment() : createOrderFor(selectedMerchant)}>{apiBusy ? "Creating order…" : currentOrderReference ? "Continue to Payment ↓" : (selectedMerchant.payment_provider==="DIRECT" || selectedMerchant.payment_method==="CASH" ? "Create GBK Order → Pay" : "Continue & Pay")}</button>
