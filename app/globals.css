@@ -528,3 +528,24 @@ input,select,.modal input,.modalSelect{font-size:16px}
   .tellGbkSearch .tellGbkVoiceBtn{width:auto!important;min-width:96px!important}
   .tellGbkSearch>button:not(.tellGbkVoiceBtn){width:auto!important;min-width:116px!important}
 }
+
+
+.orderCheckedBtn{
+  width:100%;
+  min-height:48px;
+  border:1px solid #d9c8ef;
+  border-radius:13px;
+  background:#f4ecff;
+  color:#6d28d9;
+  font-weight:900;
+  font-size:14px;
+  cursor:pointer;
+}
+.orderCheckedBtn.checked{
+  background:#effaf1;
+  border-color:#b9dfc0;
+  color:#18733a;
+}
+@media(max-width:520px){
+  .orderCheckedBtn{font-size:15px;min-height:50px}
+}
