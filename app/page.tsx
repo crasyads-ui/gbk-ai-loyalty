@@ -29,6 +29,10 @@ const roles = [
 ];
 
 const buildAndroidUpiIntent = (params: URLSearchParams) => { const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com"; return "intent://pay?" + params.toString() + "#Intent;scheme=upi;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end"; };
+const buildPhonePeIntent = (params: URLSearchParams) => {
+  const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com";
+  return "intent://pay?" + params.toString() + "#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end";
+};
 
 export default function Home() {
   const [query,setQuery] = useState("");
@@ -926,7 +930,7 @@ export default function Home() {
       const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor,cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tr:currentOrderReference,tid:currentOrderReference,tn:"GBK Loyalty "+currentOrderReference});
       const links = {
         generic:buildAndroidUpiIntent(params),
-        phonepe:buildAndroidUpiIntent(params),
+        phonepe:buildPhonePeIntent(params),
         googlepay:buildAndroidUpiIntent(params),
         paytm:buildAndroidUpiIntent(params),
         bhim:buildAndroidUpiIntent(params)
@@ -1059,7 +1063,7 @@ export default function Home() {
   }, [upiPayment?.upi_id,upiPayment?.amount_major,upiPayment?.order_reference,upiPayment?.currency,upiPayment?.merchant_name]);
 
   const launchUpiApp = (appLink:string, appName:string) => {
-    setAuthNotice("Opening "+appName+"… Return to GBK Loyalty after payment; automatic confirmation will be checked.");
+    setAuthNotice("Opening "+appName+"… If the app does not open, use the UPI QR below.");
   };
   const checkAutomaticPaymentStatus = async (silent=false) => {
     const orderId=String(upiPayment?.gbk_order_id||"").trim();
@@ -1641,7 +1645,7 @@ export default function Home() {
           {upiPayment?.upi_links && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>📲 Pay ₹{upiPayment.amount_major} by UPI</b>
             <small>{upiPayment.upi_id ? `Merchant UPI: ${upiPayment.upi_id}` : "Merchant UPI payment details are not configured."}</small>
-            {upiPayment.upi_links.phonepe && <a className="primary" href={upiPayment.upi_links.phonepe} onClick={()=>launchUpiApp(upiPayment.upi_links.phonepe,"UPI")}>📱 Pay with UPI — PhonePe / Google Pay / Paytm</a>}
+            {upiPayment.upi_links.phonepe && <a className="primary" href={upiPayment.upi_links.phonepe} onClick={()=>launchUpiApp(upiPayment.upi_links.phonepe,"PhonePe")}>📱 Pay directly with PhonePe</a>}
             {upiPayment.upi_links.googlepay && <a className="secondary" href={upiPayment.upi_links.googlepay} onClick={()=>launchUpiApp(upiPayment.upi_links.googlepay,"UPI")}>🟢 Open Google Pay / UPI</a>}
             {upiPayment.upi_links.paytm && <a className="secondary" href={upiPayment.upi_links.paytm} onClick={()=>launchUpiApp(upiPayment.upi_links.paytm,"UPI")}>🔵 Open Paytm / UPI</a>}
             {upiPayment.upi_links.bhim && <a className="secondary" href={upiPayment.upi_links.bhim}>🏦 Open BHIM / UPI</a>}
