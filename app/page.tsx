@@ -921,12 +921,13 @@ export default function Home() {
       if (!upiId) { setAuthNotice("Merchant UPI payment details are not configured."); return; }
       const amountMajor = Number(orderAmount || 0).toFixed(2);
       const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor,cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tr:currentOrderReference,tid:currentOrderReference,tn:"GBK Loyalty "+currentOrderReference});
+      const buildAndroidUpiIntent = (params: URLSearchParams) => { const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com"; return "intent://pay?" + params.toString() + "#Intent;scheme=upi;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end"; };
       const links = {
-        generic:"upi://pay?"+params.toString(),
-        phonepe:"upi://pay?"+params.toString(),
-        googlepay:"upi://pay?"+params.toString(),
-        paytm:"upi://pay?"+params.toString(),
-        bhim:"upi://pay?"+params.toString()
+        generic:buildAndroidUpiIntent(params),
+        phonepe:buildAndroidUpiIntent(params),
+        googlepay:buildAndroidUpiIntent(params),
+        paytm:buildAndroidUpiIntent(params),
+        bhim:buildAndroidUpiIntent(params)
       };
       setUpiPayment({provider:"DIRECT",method:merchant.payment_method||"LOCAL_CURRENCY",currency:String(merchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:merchant.business_name||"GBK Merchant",gbk_order_id:upiPayment?.gbk_order_id||null,order_reference:currentOrderReference,amount_major:amountMajor,upi_id:upiId,upi_links:links});
       setAuthNotice("Payment options are ready. Choose your UPI app below.");
@@ -971,10 +972,10 @@ export default function Home() {
           const upiUrl = upiId ? "upi://pay?" + params.toString() : "";
           const links = upiId ? {
             generic: upiUrl,
-            phonepe:"upi://pay?"+params.toString(),
-            googlepay:"upi://pay?"+params.toString(),
-            paytm:"upi://pay?"+params.toString(),
-            bhim:"upi://pay?"+params.toString()
+            phonepe:buildAndroidUpiIntent(params),
+            googlepay:buildAndroidUpiIntent(params),
+            paytm:buildAndroidUpiIntent(params),
+            bhim:buildAndroidUpiIntent(params)
           } : null;
           setCurrentOrderReference(ref);
           setUpiPayment({
@@ -996,11 +997,11 @@ export default function Home() {
         const amountMajor = Number(amount).toFixed(2);
         const params = upiId ? new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:ref}) : null;
         const links = upiId && params ? {
-          generic:"upi://pay?"+params.toString(),
-          phonepe:"upi://pay?"+params.toString(),
-          googlepay:"upi://pay?"+params.toString(),
-          paytm:"upi://pay?"+params.toString(),
-          bhim:"upi://pay?"+params.toString()
+          generic:buildAndroidUpiIntent(params),
+          phonepe:buildAndroidUpiIntent(params),
+          googlepay:buildAndroidUpiIntent(params),
+          paytm:buildAndroidUpiIntent(params),
+          bhim:buildAndroidUpiIntent(params)
         } : null;
         setCurrentOrderReference(ref);
         setUpiPayment({...paid.payment,gbk_order_id:created?.order?.id,order_reference:ref,amount_major:amountMajor,upi_id:upiId||null,upi_links:links});
