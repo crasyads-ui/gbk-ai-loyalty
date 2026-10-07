@@ -28,6 +28,15 @@ const roles = [
   {icon:"🌍",title:"Founder",text:"Country or Global Founder Members can onboard businesses and receive the Founder allocation from verified loyalty sales.",items:["Add users","Add businesses","Track earnings"]},
 ];
 
+const priorityCities: Record<string,string[]> = {
+  India:["Mumbai","Delhi","Bengaluru","Hyderabad","Chennai","Kolkata","Pune","Ahmedabad","Jaipur","Surat","Lucknow","Kanpur","Nagpur","Indore","Thane","Bhopal","Visakhapatnam","Patna","Vadodara","Ghaziabad","Ludhiana","Agra","Nashik","Faridabad","Meerut","Rajkot","Varanasi","Srinagar","Aurangabad","Dhanbad","Amritsar","Navi Mumbai","Allahabad","Ranchi","Howrah","Coimbatore","Vijayawada","Jodhpur","Madurai","Raipur","Kota","Guwahati","Chandigarh","Solapur","Hubballi","Mysuru","Tiruchirappalli","Bareilly","Aligarh","Tiruppur"],
+  "United States":["New York","Los Angeles","Chicago","Houston","Phoenix","Philadelphia","San Antonio","San Diego","Dallas","San Jose","Austin","Jacksonville","Fort Worth","Columbus","Charlotte","Indianapolis","Seattle","Denver","Washington","Boston","Nashville","Detroit","Oklahoma City","Portland","Las Vegas","Memphis","Louisville","Baltimore","Milwaukee","Albuquerque","Tucson","Fresno","Sacramento","Atlanta","Kansas City","Mesa","Raleigh","Omaha","Miami","Long Beach","Virginia Beach","Oakland","Minneapolis","Tulsa","Tampa","Arlington","New Orleans","Wichita","Cleveland","Bakersfield"],
+  "United Arab Emirates":["Dubai","Abu Dhabi","Sharjah","Al Ain","Ajman","Ras Al Khaimah","Fujairah","Umm Al Quwain","Khor Fakkan","Dibba Al-Fujairah"],
+  Thailand:["Bangkok","Chiang Mai","Pattaya","Phuket","Nonthaburi","Hat Yai","Nakhon Ratchasima","Chiang Rai","Udon Thani","Hua Hin"],
+  Malaysia:["Kuala Lumpur","George Town","Johor Bahru","Ipoh","Kota Kinabalu","Shah Alam","Malacca City","Kuching","Petaling Jaya","Kota Bharu"],
+  Philippines:["Manila","Quezon City","Davao City","Cebu City","Zamboanga City","Antipolo","Pasig","Taguig","Cagayan de Oro","Parañaque"]
+};
+
 const buildAndroidUpiIntent = (params: URLSearchParams) => { const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com"; return "intent://pay?" + params.toString() + "#Intent;scheme=upi;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end"; };
 const buildPhonePeIntent = (params: URLSearchParams) => {
   const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com";
@@ -1918,6 +1927,36 @@ export default function Home() {
         <div><span className="eyebrow">DIRECT MERCHANT ACTIVE PROGRAM</span><h2>Activate real merchants city by city.</h2><p>Directly invite legitimate businesses, send the owner a Claim & Activate link, connect the merchant wallet, add a live GBK balance, create the loyalty offer and make the business ACTIVE for real customer transactions.</p></div>
         <button onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Connecting…" : "Connect / Register Merchant →"}</button>
       </section>
+      <section className="cityActivation" style={{marginTop:18}}>
+        <div className="sectionHead">
+          <div><span className="eyebrow">🌍 GBKAI CITY 50 PROGRAM</span><h2>50 real ACTIVE merchants in every priority city.</h2></div>
+          <button className="textBtn" type="button" onClick={loadBusinessDirectory} disabled={directoryLoading}>{directoryLoading ? "Refreshing…" : "↻ Refresh"}</button>
+        </div>
+        <p style={{marginTop:-4}}>Only verified ACTIVE merchants count. Customer referral is not used for merchant onboarding: merchants enter through Founder onboarding or direct merchant registration. Once active, relevant GBKAI customer searches can be routed to them.</p>
+        <div className="offerGrid" style={{marginTop:14}}>
+          <div className="offerPreview" style={{display:"grid",gap:7}}>
+            <b>🎯 Country target</b>
+            <span><strong>50 priority cities × 50 ACTIVE merchants = 2,500 ACTIVE merchants</strong> for each country.</span>
+            <span>Registrations, unclaimed businesses and inactive wallets do not count.</span>
+          </div>
+          <div className="offerPreview" style={{display:"grid",gap:7}}>
+            <b>📲 Lead engine</b>
+            <span>Customer searches are matched to ACTIVE merchants by country, city and business category.</span>
+            <span>Track <strong>lead → response → verified transaction</strong>, not registrations alone.</span>
+          </div>
+        </div>
+        <div className="cityGrid" style={{marginTop:14}}>
+          {(priorityCities[country] || priorityCities.India).slice(0,50).map((city)=>{
+            const activeCount=directoryResults.filter((m:any)=>String(m.city||"").trim().toLowerCase()===city.toLowerCase() && String(m.status||"").toUpperCase()==="ACTIVE").length;
+            const pct=Math.min(100,Math.round(activeCount/50*100));
+            return <article className="offerPreview" key={city} style={{display:"grid",gap:6}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:8}}><b>📍 {city}</b><strong>{activeCount}/50</strong></div>
+              <div style={{height:7,borderRadius:99,background:"rgba(127,127,127,.18)",overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",borderRadius:99,background:"currentColor"}}/></div>
+              <small>{activeCount>=50 ? "🟢 City Activated" : activeCount>0 ? "🟡 Building active merchant network" : "🔴 Needs real merchants"}</small>
+            </article>;
+          })}
+        </div>
+      </section>
       <section className="offerGrid" style={{marginTop:18}}>
         <div className="offerPreview" style={{display:"grid",gap:8}}>
           <b>🏙️ City activation target</b>
@@ -1927,7 +1966,7 @@ export default function Home() {
         <div className="offerPreview" style={{display:"grid",gap:8}}>
           <b>📲 Direct owner activation</b>
           <span>Business added → owner invited → owner claims → payment method → GBK balance → offer → 🟢 ACTIVE.</span>
-          <button className="secondary" type="button" onClick={()=>setRole("SuggestBusiness")}>➕ Add Business & Send Owner Invite</button>
+          <button className="secondary" type="button" onClick={()=>setRole("SuggestBusiness")}>➕ Founder: Add Real Business Lead</button>
         </div>
       </section>
 
@@ -1937,7 +1976,7 @@ export default function Home() {
           <div className="roleIcon">{role==="MerchantWallet" ? "👛" : role==="SuggestBusiness" || role==="ClaimBusiness" ? "🏪" : (roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍"))}</div>
           <h2>{role==="MerchantWallet" ? "Merchant Wallet" : role==="WalletChooser" ? "Choose Your Wallet" : role==="SuggestBusiness" ? "Suggest a Business" : role==="ClaimBusiness" ? "Claim This Business" : role==="Creator" ? "GBKAI Merchant Referral" : `${role} registration`}</h2>
           {role==="SuggestBusiness" ? <>
-            <p>Help GBK Loyalty grow faster globally. Anyone can suggest a legitimate business — no Founder is required and no wallet is required to submit the suggestion.</p>
+            <p>Merchant onboarding now has only two routes: a verified Founder referral or direct merchant registration. Customers do not refer merchants. Founders can add legitimate business leads, and the business owner completes activation before it becomes ACTIVE.</p>
             <div className="status"><span>🟡 Unclaimed first</span><small>The suggestion is reviewed before publication. The business owner must claim and activate the merchant profile before customers can place reward-eligible orders.</small></div>
             <input placeholder="Business name *" value={suggestBusinessName} onChange={e=>setSuggestBusinessName(e.target.value)}/>
             <select className="modalSelect" value={suggestBusinessCategory} onChange={e=>setSuggestBusinessCategory(e.target.value)}>{businessCategories.map(x=><option key={x}>{x}</option>)}</select>
