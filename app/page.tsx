@@ -544,6 +544,20 @@ export default function Home() {
       setAuthNotice(e.message || "Wallet connection failed.");
     } finally { setApiBusy(false); }
   };
+  const disconnectWallet = () => {
+    try { speechRecognitionRef.current?.abort?.(); } catch {}
+    speechRecognitionRef.current = null;
+    try { localStorage.removeItem("gbk_loyalty_session"); localStorage.removeItem("gbk_loyalty_active_role"); } catch {}
+    setSession(null);
+    setWalletAddress("");
+    setMerchantWallet("");
+    setActiveWalletRole(null);
+    setWalletAssetStatus(null);
+    setRole("Customer");
+    setTellGbkVoiceListening(false);
+    setVoiceListening(false);
+    setAuthNotice("🔌 Wallet disconnected from GBKAI Loyalty. Reconnect when you are ready.");
+  };
   const doAuth = async () => connectWallet("customer");
   const loadFounderNetwork = async (s?: LoyaltySession) => {
     const active=s||session||getStoredSession(); if(!active)return;
@@ -2598,7 +2612,7 @@ export default function Home() {
                   <div><small>BNB</small><strong style={{display:"block"}}>{walletAssetStatus ? (Number(walletAssetStatus.bnbRaw)/1e18).toLocaleString(undefined,{minimumFractionDigits:4,maximumFractionDigits:6}) : "—"}</strong></div>
                 </div>
                 <button className="secondary" type="button" onClick={()=>refreshWalletAssetStatus()} disabled={walletAssetBusy}>{walletAssetBusy ? "Reading blockchain…" : "↻ Refresh live balances"}</button>
-                <a className="secondary" href={"https://bscscan.com/address/"+walletAddress} target="_blank" rel="noreferrer" style={{textAlign:"center",textDecoration:"none"}}>View wallet on BscScan ↗</a>
+                <a className="secondary" href={"https://bscscan.com/address/"+walletAddress} target="_blank" rel="noreferrer" style={{textAlign:"center",textDecoration:"none"}}>View wallet on BscScan ↗</a><button className="secondary" type="button" onClick={disconnectWallet}>🔌 Disconnect Wallet</button><small>Disconnects this wallet from GBKAI Loyalty. Your wallet app itself may remain connected in Chrome.</small>
               </div>}
               <button className="secondary" onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Switching…" : "Switch to Merchant Wallet"}</button>
             </div>
