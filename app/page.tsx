@@ -968,6 +968,12 @@ export default function Home() {
     } catch(e:any){setAuthNotice(e.message||"Search failed"); if(requestedQuery) speakText("Search failed. Please try again.");}
     finally {setApiBusy(false); }
   };
+  const stopTellGbkVoice = () => {
+    try{speechRecognitionRef.current?.stop?.();}catch{}
+    setVoiceListening(false);
+    setAuthNotice("Voice shopping stopped.");
+  };
+
   const tellGbkAi = async (request?:string) => {
     const q=String(request ?? tellGbkText).trim();
     if(q.length<3){setAuthNotice("Tell GBKAI what you need, for example: 5 kg rice, 2 litres oil and 1 kg dal.");return;}
