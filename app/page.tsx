@@ -1216,6 +1216,69 @@ export default function Home() {
       setAuthNotice("🎙️ Chrome voice could not start. Tap Start Voice again and allow microphone access.");
     }
   };
+  const startTellGbkSingleItemVoice = () => {
+    const w:any = window;
+    const SpeechRecognitionCtor = w.SpeechRecognition || w.webkitSpeechRecognition;
+    unlockVoice();
+    if (!SpeechRecognitionCtor) {
+      setAuthNotice("🎤 Voice recognition is not available. Use Chrome on Android and allow microphone access.");
+      return;
+    }
+    try {
+      try { speechRecognitionRef.current?.abort?.(); } catch {}
+      speechRecognitionRef.current = null;
+      tellGbkVoiceStopRequestedRef.current = false;
+      tellGbkVoiceBufferRef.current = "";
+      const recognition = new SpeechRecognitionCtor();
+      speechRecognitionRef.current = recognition;
+      recognition.lang = speechLangMap[language] || "en-IN";
+      // One tap = one item. Stop after the first final speech result so
+      // Chrome cannot concatenate/repeat several items into one transcript.
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 3;
+      let captured = "";
+      recognition.onstart = () => {
+        setTellGbkVoiceListening(true);
+        setVoiceListening(true);
+        setAuthNotice("🎙️ Listening for ONE item… Say quantity and product, then pause.");
+      };
+      recognition.onresult = (event:any) => {
+        captured = String(event.results?.[0]?.[0]?.transcript || "").replace(/\s+/g," ").trim();
+        if (captured) {
+          tellGbkVoiceBufferRef.current = captured;
+          setTellGbkVoiceTranscript(captured);
+          setTellGbkText(prev => prev ? prev : captured);
+        }
+      };
+      recognition.onerror = (event:any) => {
+        setTellGbkVoiceListening(false);
+        setVoiceListening(false);
+        const code=String(event?.error||"");
+        if(code==="not-allowed" || code==="service-not-allowed") setAuthNotice("🎤 Microphone permission is blocked. Allow microphone access for loyalty.gbkai.com and try again.");
+        else if(code!=="aborted") setAuthNotice("🎙️ I could not capture that item. Tap Add more and try again.");
+      };
+      recognition.onend = () => {
+        setTellGbkVoiceListening(false);
+        setVoiceListening(false);
+        speechRecognitionRef.current = null;
+        const item=(captured || tellGbkVoiceBufferRef.current).trim();
+        if (!tellGbkVoiceStopRequestedRef.current && item.length>=2) {
+          setTellGbkItems(prev => [...prev, item]);
+          setShowTellOrderReview(true);
+          setTellGbkOrderChecked(false);
+          setAuthNotice("✅ Item added. Tap 🎙️ Add more for the next item, or review your complete order.");
+        }
+      };
+      recognition.start();
+    } catch {
+      setTellGbkVoiceListening(false);
+      setVoiceListening(false);
+      speechRecognitionRef.current = null;
+      setAuthNotice("🎙️ Voice could not start. Tap Add more again and allow microphone access.");
+    }
+  };
+
   const sendTellGbkOrder = async (m:any) => {
     if(!m?.id || !tellGbkText.trim()) return;
     if(!tellGbkItems.length || !tellGbkOrderChecked){ setShowTellOrderReview(true); setAuthNotice("🧾 Please check the complete order list before sending."); return; }
@@ -1964,7 +2027,7 @@ export default function Home() {
   <button type="button" className="secondary" onClick={()=>{unlockVoice(); speakText("Hello GBK AI. Tell me your complete order, including quantities and items. For example: I need my monthly grocery order, 20 kilograms rice, 5 litres oil, 5 kilograms dal, 2 kilograms sugar and 10 soap packs. Please find one active store and send the complete order.");}}>🔊 Hear instructions</button>
 </div><div className="tellGbkHearRow">{(tellGbkItems.length>0 || tellGbkVoiceTranscript) && <button type="button" className="secondary tellGbkHearBtn" onClick={()=>{unlockVoice(); const items=tellGbkItems.length?tellGbkItems.join(", "):tellGbkText; speakText("Your order request is: "+items+". Review the order list, choose an active merchant, then send the order.");}}>🔊 Hear GBKAI aloud</button>}</div>{tellGbkVoiceListening && <div className="tellGbkListening" aria-live="polite"><span className="tellGbkPulse">🎙️</span><b>Listening…</b><span>Speak naturally in {language}</span></div>}{tellGbkVoiceTranscript && <div className="tellGbkTranscript" aria-live="polite"><b>📝 You said</b><span>{tellGbkVoiceTranscript}</span></div>}{tellGbkItems.length>0 && <><div className="tellGbkReviewBar"><b>🧾 Order list ready</b><button type="button" className="secondary" onClick={()=>setShowTellOrderReview(v=>!v)}>{showTellOrderReview ? "Hide order list" : "View order list"}</button></div>{showTellOrderReview && <div className="tellGbkOrderReview"><div className="tellGbkOrderReviewHead"><b>Review before sending</b><span>{tellGbkItems.length} item{tellGbkItems.length===1?"":"s"}</span></div>{tellGbkItems.slice(0,100).map((x,i)=><div className="tellGbkOrderItem" key={i}><span>✓</span><input value={x} onChange={e=>setTellGbkItems(prev=>prev.map((v,j)=>j===i?e.target.value:v))} aria-label={"Order item "+(i+1)} /><button type="button" onClick={()=>setTellGbkItems(prev=>prev.filter((_,j)=>j!==i))} aria-label={"Remove item "+(i+1)}>×</button></div>)}<div className="tellGbkReviewActions">
 <button type="button" className="secondary" onClick={()=>{setTellGbkItems(prev=>[...prev,""]);setTellGbkOrderChecked(false);}}>➕ Add item</button>
-<button type="button" className="secondary" onClick={()=>{setTellGbkOrderChecked(false);setAuthNotice("You can add the missing item manually, or use Start Voice again to capture the complete order.");}}>🎙️ Add more</button>
+<button type="button" className="secondary" disabled={tellGbkVoiceListening} onClick={()=>startTellGbkSingleItemVoice()}>🎙️ Add more</button>
 </div>
 <div className="tellGbkReviewNote">Review, edit, remove or add every item before sending.</div><button type="button" className={tellGbkOrderChecked ? "orderCheckedBtn checked" : "orderCheckedBtn"} onClick={()=>setTellGbkOrderChecked(v=>!v)}>{tellGbkOrderChecked ? "✓ Order checked — ready to send" : "☐ I checked my complete order"}</button></div>}</>}
           {tellGbkStores.length>0 && <div style={{display:"grid",gap:8}}>
