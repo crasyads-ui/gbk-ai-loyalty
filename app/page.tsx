@@ -28,6 +28,8 @@ const roles = [
   {icon:"🌍",title:"Founder",text:"Country or Global Founder Members can onboard businesses and receive the Founder allocation from verified loyalty sales.",items:["Add users","Add businesses","Track earnings"]},
 ];
 
+const buildAndroidUpiIntent = (params: URLSearchParams) => { const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com"; return "intent://pay?" + params.toString() + "#Intent;scheme=upi;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end"; };
+
 export default function Home() {
   const [query,setQuery] = useState("");
   const [searchFocused,setSearchFocused] = useState(false);
@@ -921,7 +923,6 @@ export default function Home() {
       if (!upiId) { setAuthNotice("Merchant UPI payment details are not configured."); return; }
       const amountMajor = Number(orderAmount || 0).toFixed(2);
       const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor,cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tr:currentOrderReference,tid:currentOrderReference,tn:"GBK Loyalty "+currentOrderReference});
-      const buildAndroidUpiIntent = (params: URLSearchParams) => { const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com"; return "intent://pay?" + params.toString() + "#Intent;scheme=upi;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end"; };
       const links = {
         generic:buildAndroidUpiIntent(params),
         phonepe:buildAndroidUpiIntent(params),
