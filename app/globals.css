@@ -255,3 +255,10 @@ input,select,.modal input,.modalSelect{font-size:16px}
 .tellGbkCategories button{border:1px solid rgba(255,255,255,.38);background:rgba(255,255,255,.14);color:inherit;border-radius:999px;padding:8px 11px;font-size:11px;font-weight:800;cursor:pointer}
 .tellGbkCategories button.active{background:#fff;color:#6d28d9;border-color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.1)}
 @media(max-width:520px){.tellGbkCategories{gap:5px}.tellGbkCategories button{min-height:40px;padding:7px 9px;font-size:10px}}
+
+/* Tell GBKAI delivery location */
+.tellGbkLocationRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0}
+.locationBtn{border:1px solid rgba(255,255,255,.42);background:rgba(255,255,255,.14);color:inherit;border-radius:999px;padding:8px 12px;font-size:11px;font-weight:900;cursor:pointer}
+.locationBtn.ready{background:#fff;color:#16803b;border-color:#fff}
+.tellGbkLocationRow>span{font-size:10px;opacity:.9}
+@media(max-width:520px){.tellGbkLocationRow{display:grid;grid-template-columns:1fr}.locationBtn{width:100%;min-height:42px}}
