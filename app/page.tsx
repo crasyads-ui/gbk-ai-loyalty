@@ -1667,8 +1667,8 @@ export default function Home() {
             {paymentSuccess.txHash && <small>Reward transaction: {paymentSuccess.txHash.slice(0,10)}…{paymentSuccess.txHash.slice(-8)}</small>}
             <button className="primary" type="button" onClick={()=>{setPaymentSuccess(null);setUpiPayment(null);setCurrentOrderReference("");setOrderAmount("");}}>Done ✓</button>
           </div> : upiPayment?.upi_links && upiPayment?.gbk_order_id && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
-            <b>🔄 Automatic payment verification</b>
-            <span>After PhonePe/UPI payment, return to GBK Loyalty. We automatically check the GBK Order for verified payment and release the reward when confirmed.</span>
+            <b>🔄 Payment verification</b>
+            <span>After PhonePe/UPI payment, return to GBK Loyalty. We check the GBK Order for trusted payment confirmation. Gateway payments can be confirmed automatically; merchant-direct UPI payments use UTR verification when automatic confirmation is not available.</span>
             <button className="secondary" type="button" onClick={()=>checkAutomaticPaymentStatus(false)} disabled={apiBusy}>↻ Check payment status</button>
             <details>
               <summary style={{cursor:"pointer",fontWeight:700}}>Having trouble? Enter UTR manually</summary>
