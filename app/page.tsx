@@ -1024,11 +1024,9 @@ export default function Home() {
     if(q.length<3){setAuthNotice("Tell GBKAI what you need, for example: 5 kg rice, 2 litres oil and 1 kg dal.");return;}
     setTellGbkText(q); setTellGbkBusy(true); setTellGbkOrderSent(false); setTellGbkSelectedStore(null); setAuthNotice("");
     // LANGUAGE-INDEPENDENT ORDER PARSER
-    // Convert a natural spoken shopping list into clean, editable items.
-    // The parser deliberately separates quantity from pack/weight/volume so
-    // phrases such as "10 25 kg rice bag" become "25 kg rice bag × 10".
-    // Repeated recognition of the same phrase is merged instead of creating
-    // duplicate rows.
+    // Keep product size/weight separate from quantity, then merge equivalent
+    // products. This is intentionally deterministic so voice recognition cannot
+    // turn "10 25 kg rice bag" into a separate product from "25 kg rice bag".
     const normalizeOrderText = (input:string) => String(input || "")
       .replace(/[•·]/g,",")
       .replace(/[，、؛]/g,",")
@@ -1039,6 +1037,17 @@ export default function Home() {
     const numberToken=/\p{N}+(?:[.,]\p{N}+)?/gu;
     const unitToken=/^(?:kg|kgs|kilogram|kilograms|g|gram|grams|l|lt|ltr|litre|litres|liter|liters|ml|pack|packs|packet|packets|bag|bags|bottle|bottles|box|boxes|piece|pieces|pcs|dozen)$/iu;
 
+    const canonicalProduct = (value:string) => {
+      let product=normalizeOrderText(value).toLowerCase();
+      product=product
+        .replace(/\\bba?smati\\s+rice\\b/gi,"basmati rice")
+        .replace(/\\bbasmati\\b/gi,"basmati rice")
+        .replace(/\\brice\\s+rice\\b/gi,"rice")
+        .replace(/\\s+/g," ")
+        .trim();
+      return product;
+    };
+
     const parseOrderItem = (raw:string) => {
       const text=normalizeOrderText(raw).replace(/^[,;|]+|[,;|]+$/g,"").trim();
       if(!text) return null;
@@ -1046,75 +1055,81 @@ export default function Home() {
       if(!matches.length) return {product:text,quantity:1,explicit:false};
 
       const first=matches[0];
+      const firstValue=Number(String(first[0]).replace(",",".")) || 1;
       const firstEnd=(first.index||0)+first[0].length;
       const afterFirst=text.slice(firstEnd).trim();
       const nextWord=afterFirst.split(/\s+/)[0] || "";
 
       // "10 25 kg rice bag" => quantity 10, product "25 kg rice bag".
-      const secondAtStart=/^\p{N}+(?:[.,]\p{N}+)?\b/u.test(afterFirst);
-      if(secondAtStart){
-        const quantity=Number(String(first[0]).replace(",",".")) || 1;
-        const product=afterFirst;
-        return {product,quantity,explicit:true};
+      if(/^\p{N}+(?:[.,]\p{N}+)?\b/u.test(afterFirst)){
+        return {product:afterFirst,quantity:firstValue,explicit:true};
       }
 
-      // "25 kg rice bag" => the 25 kg is the product size, not quantity.
+      // "25 kg rice bag" / "10 kg basmati rice" => number is pack size,
+      // not quantity. Quantity defaults to one.
       if(unitToken.test(nextWord)){
         return {product:text,quantity:1,explicit:false};
       }
 
-      // "5 soap packs", "3 bottles oil", etc. => leading number is quantity.
-      const quantity=Number(String(first[0]).replace(",",".")) || 1;
-      const product=afterFirst || text;
-      return {product,quantity,explicit:true};
+      // "5 soap packs" / "3 bottles oil" => leading number is quantity.
+      return {product:afterFirst || text,quantity:firstValue,explicit:true};
     };
 
-    const rawParts:string[]=[];
     const normalizedRequest=normalizeOrderText(q);
-    const starts:number[]=[];
-    let nm:any;
-    while((nm=numberToken.exec(normalizedRequest))!==null) starts.push(nm.index);
+    const rawParts:string[]=[];
 
-    if(starts.length>1){
-      for(let i=0;i<starts.length;i++){
-        const part=normalizedRequest
-          .slice(starts[i],i+1<starts.length?starts[i+1]:normalizedRequest.length)
-          .replace(/^[,;|]+|[,;|]+$/g,"")
-          .trim();
-        if(part) rawParts.push(part);
-      }
-
-      // A standalone quantity produced by speech recognition belongs to the
-      // following phrase: "25 25 kg rice" should remain one item.
-      for(let i=0;i<rawParts.length-1;){
-        if(/^\p{N}+(?:[.,]\p{N}+)?$/u.test(rawParts[i]) && /\p{L}/u.test(rawParts[i+1])){
-          rawParts[i]=rawParts[i]+" "+rawParts[i+1];
-          rawParts.splice(i+1,1);
-        }else i++;
-      }
-    }else{
+    // Prefer natural speech separators. Only fall back to number boundaries
+    // when the speaker gives a shopping list without commas or "and".
+    const hasNaturalSeparators=/[,;\\n]|\\s+(?:and|&|plus|with)\\s+/iu.test(normalizedRequest);
+    if(hasNaturalSeparators){
       rawParts.push(...normalizedRequest
-        .split(/[,\n;]|\s+(?:and|&|plus|with)\s+/iu)
+        .split(/[,;\\n]|\\s+(?:and|&|plus|with)\\s+/iu)
         .map(x=>x.trim())
         .filter(Boolean));
+    }else{
+      const starts:number[]=[];
+      let nm:any;
+      while((nm=numberToken.exec(normalizedRequest))!==null) starts.push(nm.index);
+
+      if(starts.length>1){
+        for(let i=0;i<starts.length;i++){
+          const part=normalizedRequest
+            .slice(starts[i],i+1<starts.length?starts[i+1]:normalizedRequest.length)
+            .replace(/^[,;|]+|[,;|]+$/g,"")
+            .trim();
+          if(part) rawParts.push(part);
+        }
+
+        // A standalone quantity belongs to the following size/product:
+        // "5 25 kg rice bag" => one item, quantity 5, size 25 kg.
+        for(let i=0;i<rawParts.length-1;){
+          if(/^\p{N}+(?:[.,]\p{N}+)?$/u.test(rawParts[i]) && /\p{L}/u.test(rawParts[i+1])){
+            rawParts[i]=rawParts[i]+" "+rawParts[i+1];
+            rawParts.splice(i+1,1);
+          }else i++;
+        }
+      }else{
+        rawParts.push(normalizedRequest);
+      }
     }
 
     const grouped=new Map<string,{product:string,quantity:number,explicit:boolean,count:number}>();
     for(const raw of rawParts){
       const parsed=parseOrderItem(raw);
       if(!parsed) continue;
-      const key=parsed.product.toLowerCase().replace(/\s+/g," ").trim();
+      const displayProduct=normalizeOrderText(parsed.product);
+      const key=canonicalProduct(displayProduct);
       const existing=grouped.get(key);
       if(!existing){
-        grouped.set(key,{...parsed,count:1});
+        grouped.set(key,{product:displayProduct,quantity:parsed.quantity,explicit:parsed.explicit,count:1});
       }else{
         existing.count+=1;
-        // Speech recognition often repeats a phrase with its quantity. Do not
-        // multiply the explicit quantity on every repeated recognition result.
-        // For explicit quantities use the largest stated quantity; for plain
-        // repeated products count the repetitions.
+        // Recognition can repeat the same item. For explicit quantities use
+        // the largest stated quantity; for plain repeated products count them.
         existing.quantity=Math.max(existing.quantity,parsed.quantity);
         existing.explicit=existing.explicit || parsed.explicit;
+        // Prefer the more complete product wording when speech adds a word.
+        if(displayProduct.length>existing.product.length) existing.product=displayProduct;
       }
     }
 
