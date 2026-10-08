@@ -1024,60 +1024,107 @@ export default function Home() {
     if(q.length<3){setAuthNotice("Tell GBKAI what you need, for example: 5 kg rice, 2 litres oil and 1 kg dal.");return;}
     setTellGbkText(q); setTellGbkBusy(true); setTellGbkOrderSent(false); setTellGbkSelectedStore(null); setAuthNotice("");
     // LANGUAGE-INDEPENDENT ORDER PARSER
-    // Do not depend on a fixed list of English/Hindi/Telugu units. Speech
-    // recognition can return any script and can also return Unicode digits.
-    // Every quantity number starts a new editable item; commas/newlines and
-    // common spoken separators are also respected.
-    const normalizedRequest=q
+    // Convert a natural spoken shopping list into clean, editable items.
+    // The parser deliberately separates quantity from pack/weight/volume so
+    // phrases such as "10 25 kg rice bag" become "25 kg rice bag × 10".
+    // Repeated recognition of the same phrase is merged instead of creating
+    // duplicate rows.
+    const normalizeOrderText = (input:string) => String(input || "")
       .replace(/[•·]/g,",")
       .replace(/[，、؛]/g,",")
+      .replace(/[\u00A0]/g," ")
       .replace(/\s+/g," ")
       .trim();
 
     const numberToken=/\p{N}+(?:[.,]\p{N}+)?/gu;
+    const unitToken=/^(?:kg|kgs|kilogram|kilograms|g|gram|grams|l|lt|ltr|litre|litres|liter|liters|ml|pack|packs|packet|packets|bag|bags|bottle|bottles|box|boxes|piece|pieces|pcs|dozen)$/iu;
+
+    const parseOrderItem = (raw:string) => {
+      const text=normalizeOrderText(raw).replace(/^[,;|]+|[,;|]+$/g,"").trim();
+      if(!text) return null;
+      const matches=[...text.matchAll(numberToken)];
+      if(!matches.length) return {product:text,quantity:1,explicit:false};
+
+      const first=matches[0];
+      const firstEnd=(first.index||0)+first[0].length;
+      const afterFirst=text.slice(firstEnd).trim();
+      const nextWord=afterFirst.split(/\s+/)[0] || "";
+
+      // "10 25 kg rice bag" => quantity 10, product "25 kg rice bag".
+      const secondAtStart=/^\p{N}+(?:[.,]\p{N}+)?\b/u.test(afterFirst);
+      if(secondAtStart){
+        const quantity=Number(String(first[0]).replace(",",".")) || 1;
+        const product=afterFirst;
+        return {product,quantity,explicit:true};
+      }
+
+      // "25 kg rice bag" => the 25 kg is the product size, not quantity.
+      if(unitToken.test(nextWord)){
+        return {product:text,quantity:1,explicit:false};
+      }
+
+      // "5 soap packs", "3 bottles oil", etc. => leading number is quantity.
+      const quantity=Number(String(first[0]).replace(",",".")) || 1;
+      const product=afterFirst || text;
+      return {product,quantity,explicit:true};
+    };
+
+    const rawParts:string[]=[];
+    const normalizedRequest=normalizeOrderText(q);
     const starts:number[]=[];
     let nm:any;
-    while((nm=numberToken.exec(normalizedRequest))!==null){
-      starts.push(nm.index);
-    }
+    while((nm=numberToken.exec(normalizedRequest))!==null) starts.push(nm.index);
 
-    let parts:string[]=[];
     if(starts.length>1){
-      // A number starts the next shopping item. This works regardless of the
-      // language used for the unit/item text: kg, किलो, కిలో, 公斤, กก., etc.
-      parts=starts.map((start,idx)=>
-        normalizedRequest
-          .slice(start,idx+1<starts.length?starts[idx+1]:normalizedRequest.length)
+      for(let i=0;i<starts.length;i++){
+        const part=normalizedRequest
+          .slice(starts[i],i+1<starts.length?starts[i+1]:normalizedRequest.length)
           .replace(/^[,;|]+|[,;|]+$/g,"")
-          .trim()
-      ).filter(Boolean);
-
-      // If recognition produced a duplicated standalone number immediately
-      // before a quantity phrase (e.g. "1 1 किलो"), merge the stray number
-      // with the following phrase instead of creating a fake item.
-      const cleaned:string[]=[];
-      for(let i=0;i<parts.length;i++){
-        const current=parts[i];
-        const next=parts[i+1]||"";
-        if(/^\p{N}+(?:[.,]\p{N}+)?$/u.test(current) && /\p{L}/u.test(next)){
-          cleaned.push(current+" "+next);
-          i++;
-        }else{
-          cleaned.push(current);
-        }
+          .trim();
+        if(part) rawParts.push(part);
       }
-      parts=cleaned;
+
+      // A standalone quantity produced by speech recognition belongs to the
+      // following phrase: "25 25 kg rice" should remain one item.
+      for(let i=0;i<rawParts.length-1;){
+        if(/^\p{N}+(?:[.,]\p{N}+)?$/u.test(rawParts[i]) && /\p{L}/u.test(rawParts[i+1])){
+          rawParts[i]=rawParts[i]+" "+rawParts[i+1];
+          rawParts.splice(i+1,1);
+        }else i++;
+      }
     }else{
-      // No numeric quantity: preserve punctuation/line/conjunction boundaries.
-      // This keeps voice orders usable even when the speech engine spells
-      // quantities as words in a language not present in our unit dictionary.
-      parts=normalizedRequest
+      rawParts.push(...normalizedRequest
         .split(/[,\n;]|\s+(?:and|&|plus|with)\s+/iu)
         .map(x=>x.trim())
-        .filter(Boolean);
+        .filter(Boolean));
     }
 
-    setTellGbkItems(parts.length?parts:[q]);
+    const grouped=new Map<string,{product:string,quantity:number,explicit:boolean,count:number}>();
+    for(const raw of rawParts){
+      const parsed=parseOrderItem(raw);
+      if(!parsed) continue;
+      const key=parsed.product.toLowerCase().replace(/\s+/g," ").trim();
+      const existing=grouped.get(key);
+      if(!existing){
+        grouped.set(key,{...parsed,count:1});
+      }else{
+        existing.count+=1;
+        // Speech recognition often repeats a phrase with its quantity. Do not
+        // multiply the explicit quantity on every repeated recognition result.
+        // For explicit quantities use the largest stated quantity; for plain
+        // repeated products count the repetitions.
+        existing.quantity=Math.max(existing.quantity,parsed.quantity);
+        existing.explicit=existing.explicit || parsed.explicit;
+      }
+    }
+
+    const cleanItems=Array.from(grouped.values()).map(item=>{
+      const quantity=item.explicit ? item.quantity : item.count;
+      const qtyText=Number.isInteger(quantity) ? String(quantity) : String(quantity);
+      return item.product+" × "+qtyText;
+    });
+
+    setTellGbkItems(cleanItems.length?cleanItems:[q]);
     setShowTellOrderReview(true);
     setTellGbkOrderChecked(false);
     try{
@@ -1264,7 +1311,26 @@ export default function Home() {
         speechRecognitionRef.current = null;
         const item=(captured || tellGbkVoiceBufferRef.current).trim();
         if (!tellGbkVoiceStopRequestedRef.current && item.length>=2) {
-          setTellGbkItems(prev => [...prev, item]);
+          const parsedNew=normalizeOrderText(item);
+          setTellGbkItems(prev => {
+            const next=[...prev,parsedNew].filter(Boolean);
+            // Merge an added item with an existing identical item instead of
+            // creating another duplicate row.
+            const groups=new Map<string,string>();
+            for(const value of next){
+              const match=value.match(/^(.*) × (\d+(?:\.\d+)?)$/);
+              const product=(match?match[1]:value).trim();
+              const qty=match?Number(match[2]):1;
+              const key=product.toLowerCase().replace(/\s+/g," ");
+              if(groups.has(key)){
+                const oldValue=groups.get(key)!;
+                const oldMatch=oldValue.match(/ × (\d+(?:\.\d+)?)$/);
+                const oldQty=oldMatch?Number(oldMatch[1]):1;
+                groups.set(key,product+" × "+Math.max(oldQty,qty));
+              }else groups.set(key,product+" × "+qty);
+            }
+            return Array.from(groups.values());
+          });
           setShowTellOrderReview(true);
           setTellGbkOrderChecked(false);
           setAuthNotice("✅ Item added. Tap 🎙️ Add more for the next item, or review your complete order.");
