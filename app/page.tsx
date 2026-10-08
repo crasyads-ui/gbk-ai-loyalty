@@ -1373,6 +1373,48 @@ export default function Home() {
     }
   };
 
+  const findAndSendTellGbkOrder = async () => {
+    if(!tellGbkItems.length || !tellGbkOrderChecked){
+      setShowTellOrderReview(true);
+      setAuthNotice("🧾 Check your complete order first.");
+      return;
+    }
+    if(tellGbkLocationMode==="home" && !tellGbkHomeAddress.trim()){
+      setAuthNotice("🏠 Please enter your home delivery address before sending.");
+      return;
+    }
+    if(tellGbkLocationMode==="current" && !tellGbkLocation){
+      setAuthNotice("📍 Please select Current location before sending.");
+      return;
+    }
+    setTellGbkBusy(true); setAuthNotice("");
+    try{
+      let active=session||getStoredSession();
+      if(!active){active=await signInAnonymously();setSession(active);}
+      const categoryHints:any={Grocery:"kirana grocery supermarket store",Food:"restaurant food cafe bakery",Restaurants:"restaurant dining food",Hotels:"hotel accommodation resort",Travel:"travel tours flights hotels",Services:"local services repair professionals","Real Estate":"apartments villas plots commercial real estate"};
+      const categoryHint=categoryHints[tellGbkCategory]||tellGbkCategory;
+      const r=await loyaltyApi(active,"search",{query:tellGbkText.trim()+" "+categoryHint,country});
+      const all=(r?.results||[]).filter((x:any)=>!x?.unclaimed && String(x?.status||x?.merchant_status||"ACTIVE").toUpperCase()==="ACTIVE");
+      const matches=all.filter((x:any)=>{
+        const s=String(x.category||"").toLowerCase();
+        const n=String(x.business_name||"").toLowerCase();
+        return tellGbkCategory==="Grocery" ? /grocery|kirana|supermarket|store|grocer/.test(s+" "+n) : new RegExp(categoryHint.replace(/s+/g,"|"),"i").test(s+" "+n+" "+tellGbkText);
+      });
+      const store=(matches.length?matches:all)[0];
+      if(!store){
+        setAuthNotice("No active store is available for this order yet.");
+        speakText("No active store is available for this order yet.");
+        return;
+      }
+      setTellGbkStores((matches.length?matches:all).slice(0,6));
+      await sendTellGbkOrder(store);
+    }catch(e:any){
+      setAuthNotice(e?.message||"Could not find an active store.");
+    }finally{
+      setTellGbkBusy(false);
+    }
+  };
+
   const sendTellGbkOrder = async (m:any) => {
     if(!m?.id || !tellGbkText.trim()) return;
     if(!tellGbkItems.length || !tellGbkOrderChecked){ setShowTellOrderReview(true); setAuthNotice("🧾 Please check the complete order list before sending."); return; }
@@ -2120,7 +2162,7 @@ export default function Home() {
 <button type="button" className="secondary" onClick={()=>{setTellGbkItems(prev=>[...prev,""]);setTellGbkOrderChecked(false);}}>➕ Add item</button>
 <button type="button" className="secondary" disabled={tellGbkVoiceListening} onClick={()=>startTellGbkSingleItemVoice()}>🎙️ Add more</button>
 </div>
-<div className="tellGbkReviewNote">Review, edit, remove or add every item before sending.</div><button type="button" className={tellGbkOrderChecked ? "orderCheckedBtn checked" : "orderCheckedBtn"} onClick={()=>setTellGbkOrderChecked(v=>!v)}>{tellGbkOrderChecked ? "✓ Order checked — ready to send" : "☐ I checked my complete order"}</button></div>}</>}
+<div className="tellGbkReviewNote">Review, edit, remove or add every item before sending.</div><button type="button" className={tellGbkOrderChecked ? "orderCheckedBtn checked" : "orderCheckedBtn"} onClick={()=>setTellGbkOrderChecked(v=>!v)}>{tellGbkOrderChecked ? "✓ Order checked — ready to send" : "☐ I checked my complete order"}</button>{tellGbkOrderChecked && <button type="button" className="primary" style={{width:"100%",marginTop:10}} disabled={tellGbkBusy} onClick={()=>void findAndSendTellGbkOrder()}>{tellGbkBusy ? "Finding store…" : "🏪 Find Active Store & Send Order"}</button>}</div>}</>}
           {tellGbkStores.length>0 && <div style={{display:"grid",gap:8}}>
             <b>🏪 Active stores that can receive this request</b>
             {tellGbkStores.map((m:any)=><div className="offerPreview" key={"tell-"+m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
