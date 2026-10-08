@@ -6,6 +6,9 @@ import { BrowserQRCodeReader } from "@zxing/browser";
 import QRCode from "qrcode";
 import { getStoredSession, loyaltyApi, signInAnonymously, connectEvmWallet, getConnectedEvmWallet, approveMerchantRewardDistributor, getGbkWalletStatus, getWalletAssetBalances, loyaltyReviewApi, type LoyaltySession } from "../lib/loyalty";
 
+const DIRECT_SUPABASE_URL = "https://yjwgnapymqetxvksqacd.supabase.co";
+const DIRECT_SUPABASE_KEY = "sb_publishable_Y3n5bVO3xveBnyt4LKbCPg_f5ilMSuz";
+
 const businessCategories = ["All Products & Services","Hotels & Resorts","Restaurants & Cafés","Stores & Supermarkets","Groceries & Supermarkets","Vegetables & Fruits","Chicken & Fish","Fashion & Apparel","Electronics","Pharmacies & Health Stores","Salons & Beauty","AC Repair","Plumbing & Electrical","Home Services","Automotive & EV","Fuel & Charging","Travel Agencies","Flights & Holidays","Taxis & Transport","Parcel & Logistics","Education & Courses","Spoken English","Healthcare & Clinics","Real Estate","Agriculture & Farm Services","Seeds & Fertilizer","Farm Equipment","Crop Advisory","Legal Services","Accounting","Insurance","IT & Web Development","Digital Marketing","Events & Weddings","Fitness & Sports","Professional Services","Local Shops","Wholesale & Distribution","Manufacturing","Construction","Cleaning Services","Pet Services"];
 
 const offers = [
@@ -1035,8 +1038,46 @@ export default function Home() {
       let activeSession=session||getStoredSession();
       if(!activeSession){ activeSession=await signInAnonymously(); setSession(activeSession); }
       const r=await loyaltyApi(activeSession,"directory",{country});
-      setDirectoryResults(r.results||[]);
-      setDirectoryCounts(r.counts||{active:0,unclaimed:0,total:(r.results||[]).length});
+      const apiResults = Array.isArray(r.results) ? r.results : [];
+      // Also surface approved real-business prospects from business_suggestions.
+      // These are intentionally unclaimed/PENDING and must still go through owner claim,
+      // wallet connection, GBK funding and activation before becoming ACTIVE.
+      let prospectResults:any[] = [];
+      try {
+        const q = new URLSearchParams({
+          select: "id,business_name,category,city,country,address,phone,website,maps_url,status,source",
+          country: "eq."+country,
+          status: "eq.PENDING",
+          order: "created_at.desc"
+        });
+        const pr = await fetch(DIRECT_SUPABASE_URL+"/rest/v1/business_suggestions?"+q.toString(), {
+          headers: { apikey: DIRECT_SUPABASE_KEY, Authorization: "Bearer "+(activeSession?.access_token || DIRECT_SUPABASE_KEY) }
+        });
+        if (pr.ok) {
+          const rows = await pr.json();
+          prospectResults = (Array.isArray(rows) ? rows : []).map((x:any)=>({
+            ...x,
+            unclaimed: true,
+            listing_type: "UNCLAIMED",
+            listing_status: "PENDING",
+            reward_active: false,
+            id: "suggestion-"+x.id
+          }));
+        }
+      } catch {}
+      const merged = [...apiResults, ...prospectResults].filter((m:any, i:number, arr:any[]) =>
+        i === arr.findIndex((x:any) =>
+          String(x.business_name||"").trim().toLowerCase() === String(m.business_name||"").trim().toLowerCase() &&
+          String(x.city||"").trim().toLowerCase() === String(m.city||"").trim().toLowerCase()
+        )
+      );
+      setDirectoryResults(merged);
+      setDirectoryCounts({
+        ...(r.counts||{}),
+        active: (r.counts?.active||0),
+        unclaimed: merged.filter((x:any)=>x.unclaimed).length,
+        total: merged.length
+      });
     } catch(e:any) {
       setAuthNotice(e.message||"Business Directory could not be loaded");
     } finally { setDirectoryLoading(false); }
