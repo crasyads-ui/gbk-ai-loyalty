@@ -1311,7 +1311,7 @@ export default function Home() {
         speechRecognitionRef.current = null;
         const item=(captured || tellGbkVoiceBufferRef.current).trim();
         if (!tellGbkVoiceStopRequestedRef.current && item.length>=2) {
-          const parsedNew=normalizeOrderText(item);
+          const parsedNew=String(item || "").replace(/\\s+/g," ").trim();
           setTellGbkItems(prev => {
             const next=[...prev,parsedNew].filter(Boolean);
             // Merge an added item with an existing identical item instead of
