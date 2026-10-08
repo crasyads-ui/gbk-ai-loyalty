@@ -23,6 +23,7 @@ const currencyMap: Record<string,string> = {India:"INR", "United Arab Emirates":
 const currencyForCountry = (value:string) => currencyMap[value] || "USD";
 const areaMap: Record<string,Record<string,string[]>> = {
   India: {
+    Hinganghat:["All Areas","Main Market","Old Hinganghat","New Hinganghat"],
     Hyderabad:["All Areas","Ameerpet","Banjara Hills","Begumpet","Hitech City","Gachibowli","Jubilee Hills","Kukatpally","Madhapur","Secunderabad","Somajiguda","Kondapur","Charminar","Mehdipatnam","Miyapur","LB Nagar","Dilsukhnagar","Abids"],
     Mumbai:["All Areas","Andheri","Bandra","Borivali","Dadar","Powai","Thane","Vashi"],
     Bengaluru:["All Areas","Whitefield","Koramangala","Indiranagar","HSR Layout","Jayanagar","Electronic City"],
@@ -42,7 +43,7 @@ const roles = [
 ];
 
 const priorityCities: Record<string,string[]> = {
-  India:["Mumbai","Delhi","Bengaluru","Hyderabad","Chennai","Kolkata","Pune","Ahmedabad","Jaipur","Surat","Lucknow","Kanpur","Nagpur","Indore","Thane","Bhopal","Visakhapatnam","Patna","Vadodara","Ghaziabad","Ludhiana","Agra","Nashik","Faridabad","Meerut","Rajkot","Varanasi","Srinagar","Aurangabad","Dhanbad","Amritsar","Navi Mumbai","Allahabad","Ranchi","Howrah","Coimbatore","Vijayawada","Jodhpur","Madurai","Raipur","Kota","Guwahati","Chandigarh","Solapur","Hubballi","Mysuru","Tiruchirappalli","Bareilly","Aligarh","Tiruppur"],
+  India:["Hinganghat","Mumbai","Delhi","Bengaluru","Hyderabad","Chennai","Kolkata","Pune","Ahmedabad","Jaipur","Surat","Lucknow","Kanpur","Nagpur","Indore","Thane","Bhopal","Visakhapatnam","Patna","Vadodara","Ghaziabad","Ludhiana","Agra","Nashik","Faridabad","Meerut","Rajkot","Varanasi","Srinagar","Aurangabad","Dhanbad","Amritsar","Navi Mumbai","Allahabad","Ranchi","Howrah","Coimbatore","Vijayawada","Jodhpur","Madurai","Raipur","Kota","Guwahati","Chandigarh","Solapur","Hubballi","Mysuru","Tiruchirappalli","Bareilly","Aligarh","Tiruppur"],
   "United States":["New York","Los Angeles","Chicago","Houston","Phoenix","Philadelphia","San Antonio","San Diego","Dallas","San Jose","Austin","Jacksonville","Fort Worth","Columbus","Charlotte","Indianapolis","Seattle","Denver","Washington","Boston","Nashville","Detroit","Oklahoma City","Portland","Las Vegas","Memphis","Louisville","Baltimore","Milwaukee","Albuquerque","Tucson","Fresno","Sacramento","Atlanta","Kansas City","Mesa","Raleigh","Omaha","Miami","Long Beach","Virginia Beach","Oakland","Minneapolis","Tulsa","Tampa","Arlington","New Orleans","Wichita","Cleveland","Bakersfield"],
   "United Arab Emirates":["Dubai","Abu Dhabi","Sharjah","Al Ain","Ajman","Ras Al Khaimah","Fujairah","Umm Al Quwain","Khor Fakkan","Dibba Al-Fujairah"],
   Thailand:["Bangkok","Chiang Mai","Pattaya","Phuket","Nonthaburi","Hat Yai","Nakhon Ratchasima","Chiang Rai","Udon Thani","Hua Hin"],
