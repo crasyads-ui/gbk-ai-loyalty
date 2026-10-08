@@ -2153,6 +2153,22 @@ export default function Home() {
   const founderShare = selectedOffer * 0.2;
   const platformShare = selectedOffer * 0.2;
 
+  const directoryStateCities = directoryState !== "All States" ? (indiaCitiesByState[directoryState] || []) : [];
+  const matchesDirectoryState = (m:any) => {
+    if (country !== "India" || directoryState === "All States") return true;
+    const businessState = String(m.state || "").trim().toLowerCase();
+    if (businessState) return businessState === directoryState.toLowerCase();
+    const businessCity = String(m.city || "").trim().toLowerCase();
+    return directoryStateCities.some(city => city.toLowerCase() === businessCity);
+  };
+  const filteredDirectoryResults = directoryResults.filter((m:any) =>
+    m.unclaimed &&
+    matchesDirectoryState(m) &&
+    (directoryCity === "All Cities" || String(m.city || "").trim().toLowerCase() === directoryCity.toLowerCase()) &&
+    (directoryArea === "All Areas" || String(m.area || "").trim().toLowerCase() === directoryArea.toLowerCase() || String(m.address || "").toLowerCase().includes(directoryArea.toLowerCase())) &&
+    (directoryCategory === "All Products & Services" || String(m.category || "").trim().toLowerCase() === directoryCategory.toLowerCase())
+  );
+
   return (
     <main className="shell">
       <header className="topbar">
@@ -2235,9 +2251,9 @@ export default function Home() {
           <button className="secondary" type="button" onClick={loadBusinessDirectory} disabled={directoryLoading}>{directoryLoading ? "Refreshing…" : "↻ Refresh Directory"}</button>
         </div>
         {directoryLoading && <div className="status"><span>Loading Business Directory…</span></div>}
-        {!directoryLoading && directoryResults.filter((m:any)=>m.unclaimed && (directoryCity==="All Cities" || String(m.city||"").trim().toLowerCase()===directoryCity.toLowerCase()) && (directoryArea==="All Areas" || String(m.area||"").trim().toLowerCase()===directoryArea.toLowerCase() || String(m.address||"").toLowerCase().includes(directoryArea.toLowerCase())) && (directoryCategory==="All Products & Services" || String(m.category||"").trim().toLowerCase()===directoryCategory.toLowerCase())).length===0 && <div className="offerPreview"><b>No unclaimed businesses found</b><span>Try another city, area or category.</span></div>}
+        {!directoryLoading && filteredDirectoryResults.length===0 && <div className="offerPreview"><b>No unclaimed businesses found</b><span>Try another city, area or category.</span></div>}
         <div className="roleGrid">
-          {directoryResults.filter((m:any)=>m.unclaimed && (directoryCity==="All Cities" || String(m.city||"").trim().toLowerCase()===directoryCity.toLowerCase()) && (directoryArea==="All Areas" || String(m.area||"").trim().toLowerCase()===directoryArea.toLowerCase() || String(m.address||"").toLowerCase().includes(directoryArea.toLowerCase())) && (directoryCategory==="All Products & Services" || String(m.category||"").trim().toLowerCase()===directoryCategory.toLowerCase())).map((m:any)=>
+          {filteredDirectoryResults.map((m:any)=>
             <div className="roleCard" key={"directory-"+m.id}>
               <div className="roleIcon">🏪</div>
               <h3>{m.business_name}</h3>
