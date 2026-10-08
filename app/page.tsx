@@ -24,7 +24,7 @@ const currencyForCountry = (value:string) => currencyMap[value] || "USD";
 
 const roles = [
   {icon:"👤",title:"Customer",text:"Find businesses, pay normally and earn eligible GBK Loyalty rewards.",items:["Earn GBK","Hold • Use • Transfer"]},
-  {icon:"🏪",title:"Merchant",text:"Register or claim your business, connect the merchant wallet, add GBK and activate. A live GBK balance is required before the business becomes ACTIVE.",items:["5%–20% or Custom","Automatic rewards"]},
+  {icon:"🏪",title:"Merchant",text:"Register or claim your business, connect the merchant wallet, add GBK and activate. Once ACTIVE, GBK AI can advertise your business and help customers discover your store.",items:["Activate quickly","Ask GBK AI for live help"]},
   {icon:"🌍",title:"Founder",text:"Country or Global Founder Members can onboard businesses and receive the Founder allocation from verified loyalty sales.",items:["Add users","Add businesses","Track earnings"]},
 ];
 
@@ -2096,7 +2096,7 @@ export default function Home() {
     const langAnswer=answers[language] || answers.English;
     let prefix="";
     if(key.includes("claim") || key.includes("unclaimed") || key.includes("owner")) prefix=language==="English"?"To claim a business: open the Unclaimed listing → Claim This Business → submit owner/contact details → wait for verification → connect the Merchant Wallet → accept terms and activate.":langAnswer;
-    else if(key.includes("merchant") || key.includes("shop") || key.includes("business")) prefix=language==="English"?"Merchant path: register or claim the business → verify ownership → complete the merchant profile → add UPI/payment details → connect the GBK wallet → choose the loyalty offer → activate.":langAnswer;
+    else if(key.includes("merchant") || key.includes("shop") || key.includes("business")) prefix=language==="English"?"Merchant path: register or claim the business → verify ownership → complete the merchant profile → add payment details → connect the GBK wallet → add the required live GBK balance → accept the terms → choose the loyalty offer → activate. Once ACTIVE, GBK AI can advertise the business. Need help? Ask GBK AI anytime for step-by-step live AI guidance.":langAnswer;
     else if(key.includes("founder")) prefix=language==="English"?"Founder path: connect the Founder wallet → complete Founder verification → add users or businesses to the network → track eligible activity and applicable Founder benefits.":langAnswer;
     else if(key.includes("customer") || key.includes("earn") || key.includes("reward")) prefix=language==="English"?"Customer path: choose country/city → find a participating merchant → scan the merchant QR or open the business → enter the purchase amount → pay → wait for verified payment/order confirmation → receive the eligible GBK reward.":langAnswer;
     else prefix=langAnswer;
@@ -2513,7 +2513,7 @@ export default function Home() {
       </section>
 
       <section className="merchant">
-        <div><span className="eyebrow">DIRECT MERCHANT ACTIVE PROGRAM</span><h2>Activate real merchants city by city.</h2><p>Directly invite legitimate businesses, send the owner a Claim & Activate link, connect the merchant wallet, add a live GBK balance, create the loyalty offer and make the business ACTIVE for real customer transactions.</p></div>
+        <div><span className="eyebrow">DIRECT MERCHANT ACTIVE PROGRAM</span><h2>Activate Your Store — Get Advertised by GBK AI</h2><p>Register your business, connect the merchant wallet, add the required live GBK balance, accept the terms and activate. Once your store is ACTIVE, GBK AI can advertise your business and help customers discover your products and services.</p></div>
         <button onClick={()=>connectWallet("merchant")} disabled={apiBusy}>{apiBusy ? "Connecting…" : "Connect / Register Merchant →"}</button>
       </section>
       <section className="cityActivation" style={{marginTop:18}}>
@@ -2544,6 +2544,23 @@ export default function Home() {
               <small>{activeCount>=50 ? "🟢 City Activated" : activeCount>0 ? "🟡 Building active merchant network" : "🔴 Needs real merchants"}</small>
             </article>;
           })}
+        </div>
+      </section>
+      <section className="offerGrid" style={{marginTop:18}}>
+        <div className="offerPreview" style={{display:"grid",gap:8}}>
+          <b>🏪 Merchant Activation</b>
+          <span><strong>1.</strong> Register or claim your business</span>
+          <span><strong>2.</strong> Connect your merchant wallet</span>
+          <span><strong>3.</strong> Add the required live GBK balance</span>
+          <span><strong>4.</strong> Add payment details and accept the terms</span>
+          <span><strong>5.</strong> Activate your store</span>
+          <span>🟢 <strong>ACTIVE</strong> → GBK AI can advertise your business and customers can discover your store.</span>
+        </div>
+        <div className="offerPreview" style={{display:"grid",gap:8}}>
+          <b>🤖 Need Live Help?</b>
+          <span>Have a question about registration, wallet connection, GBK funding, activation, orders, payments or delivery?</span>
+          <span>🎤 Speak to GBK AI or type your question. GBK AI will guide you step by step in your selected language.</span>
+          <button className="primary" type="button" onClick={()=>setAskAiOpen(true)}>🤖 Ask GBK AI — Live Help</button>
         </div>
       </section>
       <section className="offerGrid" style={{marginTop:18}}>
