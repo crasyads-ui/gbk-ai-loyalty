@@ -21,6 +21,19 @@ const languages = ["English","हिन्दी","తెలుగు","தம�
 const countries = ["Global","India","United Arab Emirates","United States","United Kingdom","Singapore","Australia","Canada","Saudi Arabia","Malaysia","Germany","France","Italy","Spain","Portugal","Netherlands","Belgium","Switzerland","Austria","Sweden","Norway","Denmark","Finland","Ireland","New Zealand","Japan","South Korea","China","Hong Kong","Thailand","Indonesia","Philippines","Vietnam","Bangladesh","Sri Lanka","Nepal","Pakistan","South Africa","Nigeria","Kenya","Egypt","Turkey","Brazil","Mexico","Argentina","Colombia","Chile","Peru"];
 const currencyMap: Record<string,string> = {India:"INR", "United Arab Emirates":"AED", "United States":"USD", "United Kingdom":"GBP", Singapore:"SGD", Australia:"AUD", Canada:"CAD", "Saudi Arabia":"SAR", Malaysia:"MYR", Germany:"EUR", France:"EUR", Italy:"EUR", Spain:"EUR", Portugal:"EUR", Netherlands:"EUR", Belgium:"EUR", Switzerland:"CHF", Austria:"EUR", Sweden:"SEK", Norway:"NOK", Denmark:"DKK", Finland:"EUR", Ireland:"EUR", "New Zealand":"NZD", Japan:"JPY", "South Korea":"KRW", China:"CNY", "Hong Kong":"HKD", Thailand:"THB", Indonesia:"IDR", Philippines:"PHP", Vietnam:"VND", Bangladesh:"BDT", "Sri Lanka":"LKR", Nepal:"NPR", Pakistan:"PKR", "South Africa":"ZAR", Nigeria:"NGN", Kenya:"KES", Egypt:"EGP", Turkey:"TRY", Brazil:"BRL", Mexico:"MXN", Argentina:"ARS", Colombia:"COP", Chile:"CLP", Peru:"PEN"};
 const currencyForCountry = (value:string) => currencyMap[value] || "USD";
+const areaMap: Record<string,Record<string,string[]>> = {
+  India: {
+    Hyderabad:["All Areas","Ameerpet","Banjara Hills","Begumpet","Hitech City","Gachibowli","Jubilee Hills","Kukatpally","Madhapur","Secunderabad","Somajiguda","Kondapur","Charminar","Mehdipatnam","Miyapur","LB Nagar","Dilsukhnagar","Abids"],
+    Mumbai:["All Areas","Andheri","Bandra","Borivali","Dadar","Powai","Thane","Vashi"],
+    Bengaluru:["All Areas","Whitefield","Koramangala","Indiranagar","HSR Layout","Jayanagar","Electronic City"],
+    Chennai:["All Areas","T Nagar","Anna Nagar","Adyar","Velachery","Guindy"],
+    Delhi:["All Areas","Connaught Place","Saket","Dwarka","Rohini","Karol Bagh"]
+  },
+  Thailand:{Bangkok:["All Areas","Sukhumvit","Silom","Sathorn","Ari","Chatuchak"],Pattaya:["All Areas","Central Pattaya","Jomtien","Naklua","Pratumnak"]},
+  "United Arab Emirates":{Dubai:["All Areas","Deira","Bur Dubai","Downtown Dubai","Jumeirah","Business Bay","Al Barsha"],"Abu Dhabi":["All Areas","Al Zahiyah","Al Reem Island","Khalifa City","Mussafah"]},
+  Malaysia:{"Kuala Lumpur":["All Areas","Bukit Bintang","KLCC","Bangsar","Cheras","Mont Kiara"]},
+  Philippines:{Manila:["All Areas","Makati","BGC","Ermita","Malate","Quezon City"]}
+};
 
 const roles = [
   {icon:"👤",title:"Customer",text:"Find businesses, pay normally and earn eligible GBK Loyalty rewards.",items:["Earn GBK","Hold • Use • Transfer"]},
@@ -123,6 +136,9 @@ export default function Home() {
   const [directoryResults,setDirectoryResults] = useState<any[]>([]);
   const [directoryCounts,setDirectoryCounts] = useState({active:0,unclaimed:0,total:0});
   const [directoryLoading,setDirectoryLoading] = useState(false);
+  const [directoryCity,setDirectoryCity] = useState("All Cities");
+  const [directoryArea,setDirectoryArea] = useState("All Areas");
+  const [directoryCategory,setDirectoryCategory] = useState("All Products & Services");
   const [showBackToTop,setShowBackToTop] = useState(false);
   const [selectedMerchant,setSelectedMerchant] = useState<any|null>(null);
   const [orderAmount,setOrderAmount] = useState("");
@@ -203,7 +219,7 @@ export default function Home() {
   const holderRewardMin = 0.7;
   const holderRewardMax = 6.3;
 
-  const selectCountry = (value:string) => { setCountry(value); const next = value === "Global" ? "USD" : currencyForCountry(value); setCurrency(next); setPaymentCurrency(next); if (value === "United States") { setPaymentGateway("STRIPE"); setPaymentMethod("CARD_WALLETS"); setPaymentDetails(""); } else if (value === "India") { setPaymentGateway("DIRECT"); setPaymentMethod("UPI"); setPaymentDetails(""); } else { setPaymentGateway("DIRECT"); setPaymentMethod("LOCAL_CURRENCY"); setPaymentDetails(""); } try { localStorage.setItem("gbk_loyalty_country", value); localStorage.setItem("gbk_loyalty_currency", next); } catch {} };
+  const selectCountry = (value:string) => { setCountry(value); setDirectoryCity("All Cities"); setDirectoryArea("All Areas"); const next = value === "Global" ? "USD" : currencyForCountry(value); setCurrency(next); setPaymentCurrency(next); if (value === "United States") { setPaymentGateway("STRIPE"); setPaymentMethod("CARD_WALLETS"); setPaymentDetails(""); } else if (value === "India") { setPaymentGateway("DIRECT"); setPaymentMethod("UPI"); setPaymentDetails(""); } else { setPaymentGateway("DIRECT"); setPaymentMethod("LOCAL_CURRENCY"); setPaymentDetails(""); } try { localStorage.setItem("gbk_loyalty_country", value); localStorage.setItem("gbk_loyalty_currency", next); } catch {} };
 
   useEffect(() => {
     const onScroll = () => setShowBackToTop(window.scrollY > 550);
@@ -2120,7 +2136,7 @@ export default function Home() {
       </header>
 
       <div className="globalBar">
-        <label className="localeControl">🌐 <select value={country} onChange={e=>selectCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select></label><label className="localeControl">💱 <select value={currency} onChange={e=>{setCurrency(e.target.value);setPaymentCurrency(e.target.value);try{localStorage.setItem("gbk_loyalty_currency",e.target.value)}catch{}}} aria-label="Currency"><option value="USD">USD $</option><option value="INR">INR ₹</option><option value="AED">AED د.إ</option><option value="GBP">GBP £</option><option value="EUR">EUR €</option><option value="SGD">SGD S$</option><option value="AUD">AUD A$</option><option value="CAD">CAD C$</option><option value="SAR">SAR ﷼</option><option value="MYR">MYR RM</option><option value="CHF">CHF</option><option value="JPY">JPY ¥</option><option value="KRW">KRW ₩</option><option value="CNY">CNY ¥</option><option value="HKD">HKD $</option><option value="THB">THB ฿</option><option value="IDR">IDR Rp</option><option value="PHP">PHP ₱</option><option value="VND">VND ₫</option><option value="BDT">BDT ৳</option><option value="LKR">LKR Rs</option><option value="NPR">NPR Rs</option><option value="PKR">PKR Rs</option><option value="ZAR">ZAR R</option><option value="NGN">NGN ₦</option><option value="EGP">EGP £</option><option value="TRY">TRY ₺</option><option value="BRL">BRL R$</option><option value="MXN">MXN $</option><option value="ARS">ARS $</option><option value="COP">COP $</option><option value="CLP">CLP $</option><option value="PEN">PEN S/</option><option value="SEK">SEK kr</option><option value="NOK">NOK kr</option><option value="DKK">DKK kr</option><option value="NZD">NZD $</option></select></label><label className="localeControl">🗣️ <select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select></label>
+        <label className="localeControl">🌐 <select value={country} onChange={e=>selectCountry(e.target.value)} aria-label="Country">{countries.map(x=><option key={x}>{x}</option>)}</select></label><label className="localeControl">🏙️ <select value={directoryCity} onChange={e=>{setDirectoryCity(e.target.value);setDirectoryArea("All Areas")}} aria-label="City"><option>All Cities</option>{(priorityCities[country]||[]).map(x=><option key={x}>{x}</option>)}</select></label><label className="localeControl">📍 <select value={directoryArea} onChange={e=>setDirectoryArea(e.target.value)} aria-label="Area"><option>All Areas</option>{((areaMap[country]||{})[directoryCity]||[]).filter(x=>x!=="All Areas").map(x=><option key={x}>{x}</option>)}</select></label><label className="localeControl">🏷️ <select value={directoryCategory} onChange={e=>setDirectoryCategory(e.target.value)} aria-label="Category">{businessCategories.map(x=><option key={x}>{x}</option>)}</select></label><label className="localeControl">💱 <select value={currency} onChange={e=>{setCurrency(e.target.value);setPaymentCurrency(e.target.value);try{localStorage.setItem("gbk_loyalty_currency",e.target.value)}catch{}}} aria-label="Currency"><option value="USD">USD $</option><option value="INR">INR ₹</option><option value="AED">AED د.إ</option><option value="GBP">GBP £</option><option value="EUR">EUR €</option><option value="SGD">SGD S$</option><option value="AUD">AUD A$</option><option value="CAD">CAD C$</option><option value="SAR">SAR ﷼</option><option value="MYR">MYR RM</option><option value="CHF">CHF</option><option value="JPY">JPY ¥</option><option value="KRW">KRW ₩</option><option value="CNY">CNY ¥</option><option value="HKD">HKD $</option><option value="THB">THB ฿</option><option value="IDR">IDR Rp</option><option value="PHP">PHP ₱</option><option value="VND">VND ₫</option><option value="BDT">BDT ৳</option><option value="LKR">LKR Rs</option><option value="NPR">NPR Rs</option><option value="PKR">PKR Rs</option><option value="ZAR">ZAR R</option><option value="NGN">NGN ₦</option><option value="EGP">EGP £</option><option value="TRY">TRY ₺</option><option value="BRL">BRL R$</option><option value="MXN">MXN $</option><option value="ARS">ARS $</option><option value="COP">COP $</option><option value="CLP">CLP $</option><option value="PEN">PEN S/</option><option value="SEK">SEK kr</option><option value="NOK">NOK kr</option><option value="DKK">DKK kr</option><option value="NZD">NZD $</option></select></label><label className="localeControl">🗣️ <select value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Language">{languages.map(x=><option key={x}>{x}</option>)}</select></label>
         {!installed && <button className="installBtn" onClick={install}>{installPrompt ? "📲 Install App" : "📲 PWA App"}</button>}
       </div>
 
@@ -2190,9 +2206,9 @@ export default function Home() {
           <button className="secondary" type="button" onClick={loadBusinessDirectory} disabled={directoryLoading}>{directoryLoading ? "Refreshing…" : "↻ Refresh Directory"}</button>
         </div>
         {directoryLoading && <div className="status"><span>Loading Business Directory…</span></div>}
-        {!directoryLoading && directoryResults.length===0 && <div className="offerPreview"><b>No unclaimed businesses found</b><span>Approved unclaimed business listings will appear here.</span></div>}
+        {!directoryLoading && directoryResults.filter((m:any)=>m.unclaimed && (directoryCity==="All Cities" || String(m.city||"").trim().toLowerCase()===directoryCity.toLowerCase()) && (directoryArea==="All Areas" || String(m.area||"").trim().toLowerCase()===directoryArea.toLowerCase() || String(m.address||"").toLowerCase().includes(directoryArea.toLowerCase())) && (directoryCategory==="All Products & Services" || String(m.category||"").trim().toLowerCase()===directoryCategory.toLowerCase())).length===0 && <div className="offerPreview"><b>No unclaimed businesses found</b><span>Try another city, area or category.</span></div>}
         <div className="roleGrid">
-          {directoryResults.filter((m:any)=>m.unclaimed).map((m:any)=>
+          {directoryResults.filter((m:any)=>m.unclaimed && (directoryCity==="All Cities" || String(m.city||"").trim().toLowerCase()===directoryCity.toLowerCase()) && (directoryArea==="All Areas" || String(m.area||"").trim().toLowerCase()===directoryArea.toLowerCase() || String(m.address||"").toLowerCase().includes(directoryArea.toLowerCase())) && (directoryCategory==="All Products & Services" || String(m.category||"").trim().toLowerCase()===directoryCategory.toLowerCase())).map((m:any)=>
             <div className="roleCard" key={"directory-"+m.id}>
               <div className="roleIcon">🏪</div>
               <h3>{m.business_name}</h3>
