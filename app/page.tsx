@@ -212,6 +212,19 @@ export default function Home() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Keep the selected language across navigation/reload. Changing language is
+  // a React state update only; it must never force a page refresh.
+  useEffect(() => {
+    try {
+      const savedLanguage = localStorage.getItem("gbk_loyalty_language");
+      if (savedLanguage && languages.includes(savedLanguage)) setLanguage(savedLanguage);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem("gbk_loyalty_language", language); } catch {}
+  }, [language]);
+
   useEffect(() => {
     const rawRef = new URLSearchParams(window.location.search).get("ref");
     if (!rawRef) return;
