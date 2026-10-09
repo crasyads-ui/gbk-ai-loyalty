@@ -1709,6 +1709,53 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [upiPayment?.upi_id,upiPayment?.amount_major,upiPayment?.order_reference,upiPayment?.currency,upiPayment?.merchant_name]);
 
+  const downloadPaymentQr = () => {
+    if (!upiQrDataUrl) { setAuthNotice("Payment QR is not ready yet. Please wait a moment."); return; }
+    const a = document.createElement("a");
+    a.href = upiQrDataUrl;
+    a.download = `gbk-loyalty-payment-${String(upiPayment?.order_reference || "order").replace(/[^A-Za-z0-9_-]/g,"")}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setAuthNotice("Payment QR saved. Open your UPI app and choose Scan QR / Scan from gallery if supported.");
+  };
+  const sharePaymentQr = async () => {
+    if (!upiQrDataUrl) { setAuthNotice("Payment QR is not ready yet. Please wait a moment."); return; }
+    try {
+      const response = await fetch(upiQrDataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], "gbk-loyalty-payment-qr.png", {type:"image/png"});
+      if (navigator.share && navigator.canShare?.({files:[file]})) {
+        await navigator.share({
+          title: "GBK Loyalty payment QR",
+          text: `Pay ₹${upiPayment?.amount_major || ""} for GBK Order ${upiPayment?.order_reference || ""}. Verify the merchant and amount in your UPI app before paying.`,
+          files: [file]
+        });
+        setAuthNotice("Payment QR share sheet opened. Choose a destination that lets you access the QR from your UPI app.");
+      } else if (navigator.share) {
+        await navigator.share({
+          title: "GBK Loyalty payment details",
+          text: `GBK Loyalty payment QR for ₹${upiPayment?.amount_major || ""}. Order: ${upiPayment?.order_reference || ""}. Merchant UPI: ${upiPayment?.upi_id || ""}. If the QR image cannot be shared, use Save QR or Copy UPI ID.`
+        });
+        setAuthNotice("Share sheet opened. Use Save QR if you need the actual QR image.");
+      } else {
+        downloadPaymentQr();
+        setAuthNotice("This device does not support sharing the QR image here, so the QR was downloaded instead.");
+      }
+    } catch (e:any) {
+      if (e?.name !== "AbortError") setAuthNotice("Could not share the QR image. Use Save QR or Copy UPI ID instead.");
+    }
+  };
+  const copyMerchantUpiId = async () => {
+    const upiId = String(upiPayment?.upi_id || "").trim();
+    if (!upiId) { setAuthNotice("Merchant UPI ID is not configured for this order."); return; }
+    try {
+      await navigator.clipboard.writeText(upiId);
+      setAuthNotice("Merchant UPI ID copied. Open your UPI app, choose Pay to UPI ID, and enter the exact order amount.");
+    } catch {
+      setAuthNotice("Merchant UPI ID: " + upiId + ". Press and hold to copy it, then paste it into your UPI app.");
+    }
+  };
   const launchUpiApp = (appLink:string, appName:string) => {
     setAuthNotice("Opening "+appName+"… If it stays on this page, use the QR below or choose another UPI app.");
     // Explicitly navigate to the Android intent/deep link. Some mobile browsers
@@ -2437,6 +2484,12 @@ export default function Home() {
               <b>▣ Scan this QR with any UPI app</b>
               <img src={upiQrDataUrl} alt="GBK Loyalty UPI payment QR" style={{width:240,height:240,borderRadius:12,border:"1px solid #ddd",background:"#fff",padding:8}} />
               <small>Amount ₹{upiPayment.amount_major} · Order {upiPayment.order_reference}</small>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(135px,1fr))",gap:8,width:"100%"}}>
+                <button className="secondary" type="button" onClick={downloadPaymentQr}>⬇️ Save QR</button>
+                <button className="secondary" type="button" onClick={sharePaymentQr}>↗️ Share QR</button>
+                <button className="secondary" type="button" onClick={copyMerchantUpiId} disabled={!upiPayment.upi_id}>📋 Copy UPI ID</button>
+              </div>
+              <small>Same phone? Save/share the QR and use your UPI app’s Scan from gallery option if available. Or copy the UPI ID and enter the amount shown above. Verify the payee and amount before paying.</small>
             </div>}
             <small>Use the app buttons or scan the universal QR. Opening a payment app is not payment verification; GBK reward is released only after verified payment confirmation.</small>
           </div>}
