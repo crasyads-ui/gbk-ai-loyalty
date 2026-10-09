@@ -1710,7 +1710,12 @@ export default function Home() {
   }, [upiPayment?.upi_id,upiPayment?.amount_major,upiPayment?.order_reference,upiPayment?.currency,upiPayment?.merchant_name]);
 
   const launchUpiApp = (appLink:string, appName:string) => {
-    setAuthNotice("Opening "+appName+"… If the app does not open, use the UPI QR below.");
+    setAuthNotice("Opening "+appName+"… If it stays on this page, use the QR below or choose another UPI app.");
+    // Explicitly navigate to the Android intent/deep link. Some mobile browsers
+    // do not launch custom schemes from an anchor's default navigation reliably.
+    try { window.location.href = appLink; } catch {
+      setAuthNotice(appName+" could not be opened. Scan the UPI QR with a payment app.");
+    }
   };
   const checkAutomaticPaymentStatus = async (silent=false) => {
     const orderId=String(upiPayment?.gbk_order_id||"").trim();
@@ -2423,11 +2428,11 @@ export default function Home() {
           {upiPayment?.upi_links && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>📲 Pay ₹{upiPayment.amount_major} by UPI</b>
             <small>{upiPayment.upi_id ? `Merchant UPI: ${upiPayment.upi_id}` : "Merchant UPI payment details are not configured."}</small>
-            {upiPayment.upi_links.phonepe && <a className="primary" href={upiPayment.upi_links.phonepe} onClick={()=>launchUpiApp(upiPayment.upi_links.phonepe,"PhonePe")}>📱 Pay directly with PhonePe</a>}
-            {upiPayment.upi_links.googlepay && <a className="secondary" href={upiPayment.upi_links.googlepay} onClick={()=>launchUpiApp(upiPayment.upi_links.googlepay,"UPI")}>🟢 Open Google Pay / UPI</a>}
-            {upiPayment.upi_links.paytm && <a className="secondary" href={upiPayment.upi_links.paytm} onClick={()=>launchUpiApp(upiPayment.upi_links.paytm,"UPI")}>🔵 Open Paytm / UPI</a>}
-            {upiPayment.upi_links.bhim && <a className="secondary" href={upiPayment.upi_links.bhim}>🏦 Open BHIM / UPI</a>}
-            {upiPayment.upi_links.generic && <a className="secondary" href={upiPayment.upi_links.generic}>📱 Open UPI / Other app</a>}
+            {upiPayment.upi_links.phonepe && <a className="primary" href={upiPayment.upi_links.phonepe} onClick={e=>{e.preventDefault();launchUpiApp(upiPayment.upi_links.phonepe,"PhonePe")}}> 📱 Pay directly with PhonePe</a>}
+            {upiPayment.upi_links.googlepay && <a className="secondary" href={upiPayment.upi_links.googlepay} onClick={e=>{e.preventDefault();launchUpiApp(upiPayment.upi_links.googlepay,"Google Pay / UPI")}}> 🟢 Open Google Pay / UPI</a>}
+            {upiPayment.upi_links.paytm && <a className="secondary" href={upiPayment.upi_links.paytm} onClick={e=>{e.preventDefault();launchUpiApp(upiPayment.upi_links.paytm,"Paytm / UPI")}}> 🔵 Open Paytm / UPI</a>}
+            {upiPayment.upi_links.bhim && <a className="secondary" href={upiPayment.upi_links.bhim} onClick={e=>{e.preventDefault();launchUpiApp(upiPayment.upi_links.bhim,"BHIM / UPI")}}> 🏦 Open BHIM / UPI</a>}
+            {upiPayment.upi_links.generic && <a className="secondary" href={upiPayment.upi_links.generic} onClick={e=>{e.preventDefault();launchUpiApp(upiPayment.upi_links.generic,"UPI app")}}> 📱 Open UPI / Other app</a>}
             {upiQrDataUrl && <div className="offerPreview" style={{display:"grid",justifyItems:"center",gap:8,marginTop:10}}>
               <b>▣ Scan this QR with any UPI app</b>
               <img src={upiQrDataUrl} alt="GBK Loyalty UPI payment QR" style={{width:240,height:240,borderRadius:12,border:"1px solid #ddd",background:"#fff",padding:8}} />
