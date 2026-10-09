@@ -587,3 +587,20 @@ input,select,.modal input,.modalSelect{font-size:16px}
 .globalBar>.installBtn{display:flex;align-items:center;justify-content:center;white-space:normal;line-height:1.25}
 @media(max-width:900px){.globalBar{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.globalBar>.localeControl,.globalBar>.installBtn{min-height:48px}}
 @media(max-width:520px){.globalBar{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0 14px}.globalBar>.localeControl{padding:7px 9px;font-size:12px}.globalBar>.localeControl select{font-size:12px}.globalBar>.installBtn{font-size:12px;padding:9px 7px}.shell{width:100%;max-width:100%;padding-left:12px;padding-right:12px}}
+
+/* GBK Loyalty home category showcase */
+.homeCategoryGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:16px}
+.homeCategoryCard{position:relative;display:flex;flex-direction:column;text-align:left;padding:0;overflow:hidden;border:1px solid #e5e7f0;border-radius:18px;background:#fff;color:#14162d;box-shadow:0 5px 18px rgba(35,42,90,.07);cursor:pointer;transition:transform .18s ease,box-shadow .18s ease;min-width:0}
+.homeCategoryCard:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(35,42,90,.13)}
+.homeCategoryCard>img{width:100%;height:126px;object-fit:cover;display:block}
+.homeCategoryIcon{position:absolute;top:98px;left:14px;width:48px;height:48px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);border:3px solid white;font-size:22px;box-shadow:0 3px 10px #14162d20}
+.homeCategoryBody{display:grid;gap:7px;padding:28px 16px 16px}
+.homeCategoryBody strong{font-size:16px;line-height:1.25}
+.homeCategoryBody small{font-size:13px;line-height:1.45;color:#5d6277;min-height:38px}
+.homeCategoryBody>b{display:flex;justify-content:space-between;align-items:center;color:#5b35db;font-size:13px;margin-top:2px}
+.homeBenefitStrip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+.homeBenefitStrip>div{display:grid;grid-template-columns:40px 1fr;column-gap:10px;align-items:center;padding:14px;border:1px solid #e3eaff;border-radius:15px;background:linear-gradient(120deg,#f7f9ff,#f2f5ff)}
+.homeBenefitStrip>div>span{grid-row:span 2;width:38px;height:38px;display:grid;place-items:center;background:#e8eaff;border-radius:50%;font-size:19px}
+.homeBenefitStrip b{font-size:13px}.homeBenefitStrip small{font-size:11px;color:#656b80;line-height:1.35}
+@media(max-width:1000px){.homeCategoryGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.homeBenefitStrip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.homeCategoryGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.homeCategoryCard{border-radius:13px}.homeCategoryCard>img{height:90px}.homeCategoryIcon{top:68px;left:9px;width:40px;height:40px;font-size:18px}.homeCategoryBody{padding:24px 10px 12px;gap:6px}.homeCategoryBody strong{font-size:13px}.homeCategoryBody small{font-size:11px;min-height:54px}.homeBenefitStrip{grid-template-columns:1fr 1fr;gap:8px}.homeBenefitStrip>div{padding:10px;grid-template-columns:30px 1fr;column-gap:7px}.homeBenefitStrip>div>span{width:28px;height:28px;font-size:15px}.homeBenefitStrip b{font-size:11px}.homeBenefitStrip small{font-size:10px}}
