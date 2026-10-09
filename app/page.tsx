@@ -2172,7 +2172,9 @@ export default function Home() {
     const businessCity = String(m.city || "").trim().toLowerCase();
     return directoryStateCities.some(city => city.toLowerCase() === businessCity);
   };
-  const directoryCityOptions = country === "India" ? (directoryState !== "All States" ? (indiaCitiesByState[directoryState] || []) : Array.from(new Set(Object.values(indiaCitiesByState).flat()))) : (priorityCities[country] || []);\n  const directoryAreaOptions = ((areaMap[country] || {})[directoryCity] || []).filter(x => x !== "All Areas");\n  const filteredDirectoryResults = directoryResults.filter((m:any) =>
+  const directoryCityOptions = country === "India" ? (directoryState !== "All States" ? (indiaCitiesByState[directoryState] || []) : Array.from(new Set(Object.values(indiaCitiesByState).flat()))) : (priorityCities[country] || []);
+  const directoryAreaOptions = ((areaMap[country] || {})[directoryCity] || []).filter(x => x !== "All Areas");
+  const filteredDirectoryResults = directoryResults.filter((m:any) =>
     m.unclaimed &&
     matchesDirectoryState(m) &&
     (directoryCity === "All Cities" || String(m.city || "").trim().toLowerCase() === directoryCity.toLowerCase()) &&
