@@ -1721,6 +1721,10 @@ export default function Home() {
       const a = document.createElement("a");
       a.href = objectUrl;
       a.download = filename;
+      // Some Android in-app browsers ignore the download attribute and navigate
+      // to the image. Open that fallback in a separate tab so checkout stays open.
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
       a.style.display = "none";
       document.body.appendChild(a);
       a.click();
@@ -1728,11 +1732,8 @@ export default function Home() {
       window.setTimeout(() => { if (objectUrl) URL.revokeObjectURL(objectUrl); }, 60000);
       setAuthNotice("QR download requested. Check your Downloads/Gallery. If this browser opens the image instead, use the image menu or long-press to save it.");
     } catch {
-      // Some embedded browsers block downloads; open the actual QR image as a usable fallback.
-      const opened = window.open(upiQrDataUrl, "_blank", "noopener,noreferrer");
-      setAuthNotice(opened
-        ? "QR image opened. Use the image menu or long-press to download/save it."
-        : "This browser blocked the download. Use Share QR or Copy UPI ID, or open this page in Chrome.");
+      // Keep the customer on the payment screen; never replace the checkout page.
+      setAuthNotice("The QR could not be downloaded in this browser. Your order page is still open—use Share QR, long-press the QR image, or Copy UPI ID.");
     }
   };
   const sharePaymentQr = async () => {
