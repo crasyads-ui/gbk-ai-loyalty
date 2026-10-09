@@ -1709,15 +1709,31 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [upiPayment?.upi_id,upiPayment?.amount_major,upiPayment?.order_reference,upiPayment?.currency,upiPayment?.merchant_name]);
 
-  const downloadPaymentQr = () => {
+  const downloadPaymentQr = async () => {
     if (!upiQrDataUrl) { setAuthNotice("Payment QR is not ready yet. Please wait a moment."); return; }
-    const a = document.createElement("a");
-    a.href = upiQrDataUrl;
-    a.download = `gbk-loyalty-payment-${String(upiPayment?.order_reference || "order").replace(/[^A-Za-z0-9_-]/g,"")}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setAuthNotice("Payment QR saved. Open your UPI app and choose Scan QR / Scan from gallery if supported.");
+    const filename = `gbk-loyalty-payment-${String(upiPayment?.order_reference || "order").replace(/[^A-Za-z0-9_-]/g,"")}.png`;
+    let objectUrl = "";
+    try {
+      // Blob URLs are more reliable than data URLs for Android download managers.
+      const response = await fetch(upiQrDataUrl);
+      const blob = await response.blob();
+      objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => { if (objectUrl) URL.revokeObjectURL(objectUrl); }, 60000);
+      setAuthNotice("QR download requested. Check your Downloads/Gallery. If this browser opens the image instead, use the image menu or long-press to save it.");
+    } catch {
+      // Some embedded browsers block downloads; open the actual QR image as a usable fallback.
+      const opened = window.open(upiQrDataUrl, "_blank", "noopener,noreferrer");
+      setAuthNotice(opened
+        ? "QR image opened. Use the image menu or long-press to download/save it."
+        : "This browser blocked the download. Use Share QR or Copy UPI ID, or open this page in Chrome.");
+    }
   };
   const sharePaymentQr = async () => {
     if (!upiQrDataUrl) { setAuthNotice("Payment QR is not ready yet. Please wait a moment."); return; }
