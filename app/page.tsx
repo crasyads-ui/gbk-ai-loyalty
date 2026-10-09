@@ -2254,6 +2254,32 @@ export default function Home() {
         </div>
       </section>
 
+      <section id="homeCategories" className="roleSection homeCategoriesSection" style={{marginTop:22}}>
+        <div className="sectionHead"><div><span className="eyebrow">🌍 ONE LOYALTY PLATFORM</span><h2>Everyday Needs. Global Rewards.</h2><p>Shop, book, pay and earn eligible GBK rewards with participating businesses.</p></div></div>
+        <div className="homeCategoryGrid">
+          {[
+            {title:"Groceries & Daily Needs",desc:"Groceries, vegetables, fruits, chicken, fish and more.",icon:"🛒",image:"https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=900&q=80",filter:"Groceries & Supermarkets"},
+            {title:"Restaurants & Food",desc:"Menus, dining, takeaway and food orders.",icon:"🍽️",image:"https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80",filter:"Restaurants & Cafés"},
+            {title:"Shopping & Retail",desc:"Fashion, footwear, electronics and local shops.",icon:"🛍️",image:"https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&q=80",filter:"Fashion & Apparel"},
+            {title:"Direct Owner Properties",desc:"Buy, sell, rent, commercial properties and land.",icon:"🏠",image:"https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=900&q=80",href:"/property"},
+            {title:"Hotels & Travel",desc:"Hotels, resorts, tours and travel services.",icon:"✈️",image:"https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=900&q=80",filter:"Hotels & Resorts"},
+            {title:"Local Services",desc:"Repairs, salons, plumbing, cleaning and more.",icon:"🔧",image:"https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=900&q=80",filter:"Home Services"},
+            {title:"Agriculture & Farming",desc:"Seeds, fertilizer, equipment and farm services.",icon:"🌱",image:"https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=900&q=80",filter:"Agriculture & Farm Services"},
+            {title:"Education & Healthcare",desc:"Courses, spoken English, clinics and eligible services.",icon:"🎓",image:"https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=900&q=80",filter:"Education & Courses"}
+          ].map(item => <button type="button" className="homeCategoryCard" key={item.title} onClick={() => { if (item.href) { window.location.href=item.href; return; } setDirectoryCategory(item.filter); setQuery(""); void loadBusinessDirectory(); document.getElementById("businessDirectory")?.scrollIntoView({behavior:"smooth",block:"start"}); }}>
+            <img src={item.image} alt="" loading="lazy"/>
+            <span className="homeCategoryIcon">{item.icon}</span>
+            <span className="homeCategoryBody"><strong>{item.title}</strong><small>{item.desc}</small><b>Explore <span aria-hidden="true">→</span></b></span>
+          </button>)}
+        </div>
+        <div className="homeBenefitStrip">
+          <div><span>🎁</span><b>Earn GBK Rewards</b><small>On eligible verified purchases</small></div>
+          <div><span>🤝</span><b>Support Local Businesses</b><small>Help grow your community</small></div>
+          <div><span>🌐</span><b>Available Worldwide</b><small>Choose your country and city</small></div>
+          <div><span>🛡️</span><b>Secure & Transparent</b><small>Wallet-based rewards system</small></div>
+        </div>
+      </section>
+
       <section id="businessDirectory" className="roleSection">
         <div className="sectionHead">
           <div>
