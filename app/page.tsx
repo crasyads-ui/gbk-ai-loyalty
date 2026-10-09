@@ -2266,7 +2266,7 @@ export default function Home() {
             {title:"Local Services",desc:"Repairs, salons, plumbing, cleaning and more.",icon:"🔧",image:"https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=900&q=80",filter:"Home Services"},
             {title:"Agriculture & Farming",desc:"Seeds, fertilizer, equipment and farm services.",icon:"🌱",image:"https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=900&q=80",filter:"Agriculture & Farm Services"},
             {title:"Education & Healthcare",desc:"Courses, spoken English, clinics and eligible services.",icon:"🎓",image:"https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=900&q=80",filter:"Education & Courses"}
-          ].map(item => <button type="button" className="homeCategoryCard" key={item.title} onClick={() => { if (item.href) { window.location.href=item.href; return; } setDirectoryCategory(item.filter); setQuery(""); void loadBusinessDirectory(); document.getElementById("businessDirectory")?.scrollIntoView({behavior:"smooth",block:"start"}); }}>
+          ].map(item => <button type="button" className="homeCategoryCard" key={item.title} onClick={() => { if (item.href) { window.location.href=item.href; return; } setDirectoryCategory(item.filter || "All Products & Services"); setQuery(""); void loadBusinessDirectory(); document.getElementById("businessDirectory")?.scrollIntoView({behavior:"smooth",block:"start"}); }}>
             <img src={item.image} alt="" loading="lazy"/>
             <span className="homeCategoryIcon">{item.icon}</span>
             <span className="homeCategoryBody"><strong>{item.title}</strong><small>{item.desc}</small><b>Explore <span aria-hidden="true">→</span></b></span>
