@@ -1809,6 +1809,11 @@ export default function Home() {
       const active = session || getStoredSession() || await signInAnonymously();
       if (!session) setSession(active);
       const result = await loyaltyApi(active,"direct_payment_verify",{order_id:orderId,payment_transaction_id:txId});
+      if(result?.status==="PENDING_VERIFICATION"){
+        setPaymentUtr("");
+        setAuthNotice(result.message||"UTR received. Payment is pending independent verification. GBK rewards will be released only after payment is confirmed.");
+        return;
+      }
       const settlement=result?.settlement;
       const customerRaw=String(settlement?.calculation?.customer_raw||"0");
       const rewardGbk=customerRaw!=="0" ? (Number(customerRaw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : "";
@@ -2510,7 +2515,7 @@ export default function Home() {
               <summary style={{cursor:"pointer",fontWeight:700}}>Having trouble? Enter UTR manually</summary>
               <input className="modalInput" inputMode="text" value={paymentUtr} onChange={e=>setPaymentUtr(e.target.value)} placeholder="UPI Transaction ID / UTR"/>
               <button className="primary" type="button" onClick={verifyCustomerDirectPayment} disabled={apiBusy || !paymentUtr.trim()}>
-                {apiBusy ? "Verifying payment…" : "Verify Payment & Receive GBK Reward →"}
+                {apiBusy ? "Submitting UTR…" : "Submit UTR for Payment Review →"}
               </button>
             </details>
           </div>}
@@ -3026,6 +3031,11 @@ export default function Home() {
                       setApiBusy(true);
                       try{
                         const result=await loyaltyApi(session,"direct_payment_verify",{order_id:o.id,payment_transaction_id:txId.trim()});
+                        if(result?.status==="PENDING_VERIFICATION"){
+                          setAuthNotice(result.message||"UTR received. Payment is pending independent verification; no GBK reward has been released.");
+                          await openMerchantWallet();
+                          return;
+                        }
                         const settlement=result?.settlement;
                         setAuthNotice(
                           settlement?.status==="SETTLED"
@@ -3038,7 +3048,7 @@ export default function Home() {
                         );
                         await openMerchantWallet();
                       }catch(e:any){setAuthNotice(e.message||"Payment verification failed");}finally{setApiBusy(false);}
-                    }}>Verify UPI transaction & release reward</button>}
+                    }}>Submit UTR for payment review</button>}
                     {["PENDING","ACCEPTED"].includes(o.merchant_response_status || "PENDING") && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={async()=>{
                       if(!session)return;
                       setApiBusy(true);
