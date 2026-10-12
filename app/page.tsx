@@ -2744,7 +2744,27 @@ export default function Home() {
           <button className="close" onClick={()=>setRole(null)}>×</button>
           <div className="roleIcon">{role==="MerchantWallet" ? "👛" : role==="SuggestBusiness" || role==="ClaimBusiness" ? "🏪" : (roles.find(r=>r.title===role)?.icon || (role==="FounderUser" ? "👥" : role==="FounderBusiness" ? "🏪" : "🌍"))}</div>
           <h2>{role==="MerchantWallet" ? "Merchant Wallet" : role==="WalletChooser" ? "Choose Your Wallet" : role==="SuggestBusiness" ? "Suggest a Business" : role==="ClaimBusiness" ? "Claim This Business" : role==="Creator" ? "GBKAI Merchant Referral" : `${role} registration`}</h2>
-          {role==="SuggestBusiness" ? <>
+          {role==="Orders" ? <>
+            <p>Orders are looked up using your current GBK Loyalty session. Mobile number and email are optional.</p>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
+              <button className="secondary" type="button" onClick={()=>void loadCustomerOrders()} disabled={ordersBusy}>{ordersBusy ? "Refreshing…" : "↻ Refresh My Orders"}</button>
+            </div>
+            {ordersBusy ? <div className="status"><span>Loading your orders…</span></div> : customerOrders.length===0 ? <div className="status"><span>📭 No orders found for this session.</span><small>If you created an order with another wallet/session, reconnect that customer wallet and refresh. This screen does not require phone or email registration.</small></div> : <div style={{display:"grid",gap:10}}>
+              {customerOrders.map((order:any,index:number)=>{
+                const orderId=order?.order_id||order?.order_reference||order?.reference||order?.id||order?.order_code||("Order "+(index+1));
+                const amount=order?.amount??order?.total_amount??order?.order_amount??order?.total??order?.amount_inr;
+                const status=order?.payment_status||order?.status||order?.order_status||order?.verification_status||"Status unavailable";
+                const created=order?.created_at||order?.createdAt||order?.created_on||order?.date;
+                return <div className="offerPreview" key={String(order?.id||order?.order_id||index)} style={{display:"grid",gap:6}}>
+                  <b>🧾 {String(orderId)}</b>
+                  {amount!==undefined && amount!==null && <span>Amount: ₹{String(amount)}</span>}
+                  <span>Payment / order status: {String(status)}</span>
+                  {created && <small>{String(created)}</small>}
+                  {(order?.merchant_name||order?.business_name) && <span>Merchant: {String(order?.merchant_name||order?.business_name)}</span>}
+                </div>;
+              })}
+            </div>}
+          </> : role==="SuggestBusiness" ? <>
             <p>Merchant onboarding now has only two routes: a verified Founder referral or direct merchant registration. Customers do not refer merchants. Founders can add legitimate business leads, and the business owner completes activation before it becomes ACTIVE.</p>
             <div className="status"><span>🟡 Unclaimed first</span><small>The suggestion is reviewed before publication. The business owner must claim and activate the merchant profile before customers can place reward-eligible orders.</small></div>
             <input placeholder="Business name *" value={suggestBusinessName} onChange={e=>setSuggestBusinessName(e.target.value)}/>
