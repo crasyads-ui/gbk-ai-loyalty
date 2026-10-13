@@ -3044,31 +3044,33 @@ export default function Home() {
                       {apiBusy ? "Releasing…" : "Retry reward release"}
                     </button>}
                     {o.reward_settlement_tx_hash && <a href={"https://bscscan.com/tx/"+o.reward_settlement_tx_hash} target="_blank" rel="noreferrer" style={{display:"block",marginTop:6}}>View GBK settlement transaction ↗</a>}
-                    {o.merchant?.payment_provider==="DIRECT" && o.payment_status!=="VERIFIED" && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={async()=>{
+                    {o.merchant?.payment_provider==="DIRECT" && o.payment_status!=="VERIFIED" && <button className="primary" style={{marginTop:6}} disabled={apiBusy} onClick={async()=>{
                       if(!session)return;
-                      const txId=window.prompt("Enter the verified UPI transaction ID / UTR for this GBK Order.");
+                      const existingUtr=String(o.payment_id||o.payment_reference||"").trim();
+                      const txId=existingUtr || window.prompt("First confirm ₹"+(Number(o.amount_minor||0)/100).toFixed(2)+" was received in your bank/UPI app. Then enter the customer's UTR.");
                       if(!txId?.trim()) return;
+                      if(!window.confirm("Confirm this payment is visible as successful in your bank/UPI account? Only confirm after checking the actual transaction.")) return;
                       setApiBusy(true);
                       try{
-                        const result=await loyaltyApi(session,"direct_payment_verify",{order_id:o.id,payment_transaction_id:txId.trim()});
-                        if(result?.status==="PENDING_VERIFICATION"){
-                          setAuthNotice(result.message||"UTR received. Payment is pending independent verification; no GBK reward has been released.");
-                          await openMerchantWallet();
-                          return;
+                        if(!existingUtr){
+                          await loyaltyApi(session,"direct_payment_verify",{order_id:o.id,payment_transaction_id:txId.trim()});
                         }
+                        const result=await loyaltyApi(session,"merchant_confirm_direct_payment",{order_id:o.id,payment_transaction_id:txId.trim()});
                         const settlement=result?.settlement;
                         setAuthNotice(
                           settlement?.status==="SETTLED"
-                            ? "Payment verified. GBK reward released successfully."
-                            : settlement?.status==="AWAITING_MERCHANT_APPROVAL"
-                              ? "Payment verified. Merchant wallet approval is required once to release the GBK reward."
-                              : settlement?.status==="BELOW_MINIMUM_REWARD"
-                                ? "Payment verified. This order is below the minimum on-chain reward amount."
-                                : "Payment verified. GBK reward settlement is processing."
+                            ? "Payment verified and GBK reward released successfully."
+                            : settlement?.status==="REWARD_PENDING"
+                              ? "Payment verified. Reward is pending merchant GBK funding."
+                              : settlement?.status==="NEEDS_MERCHANT_APPROVAL"
+                                ? "Payment verified. Merchant wallet approval is needed once to release GBK."
+                                : result?.status==="VERIFIED_REWARD_PENDING"
+                                  ? "Payment verified, but reward settlement needs attention. Please use Retry reward release."
+                                  : "Payment verified. Reward settlement is processing."
                         );
                         await openMerchantWallet();
-                      }catch(e:any){setAuthNotice(e.message||"Payment verification failed");}finally{setApiBusy(false);}
-                    }}>Submit UTR for payment review</button>}
+                      }catch(e:any){setAuthNotice(e.message||"Payment confirmation failed");}finally{setApiBusy(false);}
+                    }}>{apiBusy ? "Verifying…" : "Confirm payment received & release GBK"}</button>}
                     {["PENDING","ACCEPTED"].includes(o.merchant_response_status || "PENDING") && <button className="secondary" style={{marginTop:6}} disabled={apiBusy} onClick={async()=>{
                       if(!session)return;
                       setApiBusy(true);
