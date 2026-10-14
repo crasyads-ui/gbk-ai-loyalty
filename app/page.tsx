@@ -90,16 +90,23 @@ const priorityCities: Record<string,string[]> = {
 };
 
 const buildAndroidUpiIntent = (params: URLSearchParams) => {
-  // Use the Android UPI intent scheme so the OS can resolve an installed UPI app.
-  // The in-app browser fallback keeps the payment page available if app launching is blocked.
-  const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com";
-  return "intent://pay?" + params.toString() + "#Intent;scheme=upi;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end";
+  // Use the standard UPI deep link first. It works with Android app handlers
+  // and does not depend on Chrome resolving an intent:// URL.
+  return "upi://pay?" + params.toString();
 };
 const buildPhonePeIntent = (params: URLSearchParams) => {
-  const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com";
-  // Keep the UPI scheme and target the PhonePe package; using scheme=phonepe
-  // can fail because this is a UPI payment URI, not a phonepe:// URI.
-  return "intent://pay?" + params.toString() + "#Intent;scheme=upi;package=com.phonepe.app;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end";
+  // PhonePe's app-specific URI is more reliable from normal mobile Chrome
+  // than a package-targeted intent:// link after an injected wallet connects.
+  return "phonepe://pay?" + params.toString();
+};
+const buildGooglePayIntent = (params: URLSearchParams) => {
+  return "tez://upi/pay?" + params.toString();
+};
+const buildPaytmIntent = (params: URLSearchParams) => {
+  return "paytmmp://pay?" + params.toString();
+};
+const buildBhimIntent = (params: URLSearchParams) => {
+  return "bhim://pay?" + params.toString();
 };
 
 export default function Home() {
@@ -1585,9 +1592,9 @@ export default function Home() {
       const links = {
         generic:buildAndroidUpiIntent(params),
         phonepe:buildPhonePeIntent(params),
-        googlepay:buildAndroidUpiIntent(params),
-        paytm:buildAndroidUpiIntent(params),
-        bhim:buildAndroidUpiIntent(params)
+        googlepay:buildGooglePayIntent(params),
+        paytm:buildPaytmIntent(params),
+        bhim:buildBhimIntent(params)
       };
       setUpiPayment({provider:"DIRECT",method:merchant.payment_method||"LOCAL_CURRENCY",currency:String(merchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:merchant.business_name||"GBK Merchant",gbk_order_id:upiPayment?.gbk_order_id||null,order_reference:currentOrderReference,amount_major:amountMajor,upi_id:upiId,upi_links:links});
       setAuthNotice("Payment options are ready. Choose your UPI app below.");
