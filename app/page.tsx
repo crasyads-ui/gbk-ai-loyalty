@@ -89,10 +89,17 @@ const priorityCities: Record<string,string[]> = {
   Philippines:["Manila","Quezon City","Davao City","Cebu City","Zamboanga City","Antipolo","Pasig","Taguig","Cagayan de Oro","Parañaque"]
 };
 
-const buildAndroidUpiIntent = (params: URLSearchParams) => { const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com"; return "intent://pay?" + params.toString() + "#Intent;scheme=upi;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end"; };
+const buildAndroidUpiIntent = (params: URLSearchParams) => {
+  // Use the Android UPI intent scheme so the OS can resolve an installed UPI app.
+  // The in-app browser fallback keeps the payment page available if app launching is blocked.
+  const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com";
+  return "intent://pay?" + params.toString() + "#Intent;scheme=upi;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end";
+};
 const buildPhonePeIntent = (params: URLSearchParams) => {
   const fallback = typeof window !== "undefined" ? window.location.href : "https://loyalty.gbkai.com";
-  return "intent://pay?" + params.toString() + "#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end";
+  // Keep the UPI scheme and target the PhonePe package; using scheme=phonepe
+  // can fail because this is a UPI payment URI, not a phonepe:// URI.
+  return "intent://pay?" + params.toString() + "#Intent;scheme=upi;package=com.phonepe.app;S.browser_fallback_url=" + encodeURIComponent(fallback) + ";end";
 };
 
 export default function Home() {
