@@ -89,25 +89,21 @@ const priorityCities: Record<string,string[]> = {
   Philippines:["Manila","Quezon City","Davao City","Cebu City","Zamboanga City","Antipolo","Pasig","Taguig","Cagayan de Oro","Parañaque"]
 };
 
-const buildAndroidUpiIntent = (params: URLSearchParams) => {
-  // Use the standard UPI deep link first. It works with Android app handlers
-  // and does not depend on Chrome resolving an intent:// URL.
-  return "upi://pay?" + params.toString();
+const buildAndroidUpiIntent = (params: URLSearchParams, packageName?: string) => {
+  // Package-targeted intents are intended for explicit taps in Android Chrome.
+  // Keep the generic UPI link as a chooser/fallback for other UPI handlers.
+  const query = params.toString();
+  if (!packageName) return "upi://pay?" + query;
+  return "intent://pay?" + query + "#Intent;scheme=upi;package=" + packageName + ";end";
 };
-const buildPhonePeIntent = (params: URLSearchParams) => {
-  // PhonePe's app-specific URI is more reliable from normal mobile Chrome
-  // than a package-targeted intent:// link after an injected wallet connects.
-  return "phonepe://pay?" + params.toString();
-};
-const buildGooglePayIntent = (params: URLSearchParams) => {
-  return "tez://upi/pay?" + params.toString();
-};
-const buildPaytmIntent = (params: URLSearchParams) => {
-  return "paytmmp://pay?" + params.toString();
-};
-const buildBhimIntent = (params: URLSearchParams) => {
-  return "bhim://pay?" + params.toString();
-};
+const buildPhonePeIntent = (params: URLSearchParams) =>
+  buildAndroidUpiIntent(params, "com.phonepe.app");
+const buildGooglePayIntent = (params: URLSearchParams) =>
+  buildAndroidUpiIntent(params, "com.google.android.apps.nbu.paisa.user");
+const buildPaytmIntent = (params: URLSearchParams) =>
+  buildAndroidUpiIntent(params, "net.one97.paytm");
+const buildBhimIntent = (params: URLSearchParams) =>
+  buildAndroidUpiIntent(params, "in.org.npci.upiapp");
 
 export default function Home() {
   const [query,setQuery] = useState("");
@@ -1639,10 +1635,10 @@ export default function Home() {
           const upiUrl = upiId ? "upi://pay?" + params.toString() : "";
           const links = upiId ? {
             generic:buildAndroidUpiIntent(params),
-            phonepe:buildAndroidUpiIntent(params),
-            googlepay:buildAndroidUpiIntent(params),
-            paytm:buildAndroidUpiIntent(params),
-            bhim:buildAndroidUpiIntent(params)
+            phonepe:buildPhonePeIntent(params),
+            googlepay:buildGooglePayIntent(params),
+            paytm:buildPaytmIntent(params),
+            bhim:buildBhimIntent(params)
           } : null;
           setCurrentOrderReference(ref);
           setUpiPayment({
@@ -1665,10 +1661,10 @@ export default function Home() {
         const params = upiId ? new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:ref}) : null;
         const links = upiId && params ? {
           generic:buildAndroidUpiIntent(params),
-          phonepe:buildAndroidUpiIntent(params),
-          googlepay:buildAndroidUpiIntent(params),
-          paytm:buildAndroidUpiIntent(params),
-          bhim:buildAndroidUpiIntent(params)
+          phonepe:buildPhonePeIntent(params),
+          googlepay:buildGooglePayIntent(params),
+          paytm:buildPaytmIntent(params),
+          bhim:buildBhimIntent(params)
         } : null;
         setCurrentOrderReference(ref);
         setUpiPayment({...paid.payment,gbk_order_id:created?.order?.id,order_reference:ref,amount_major:amountMajor,upi_id:upiId||null,upi_links:links});
