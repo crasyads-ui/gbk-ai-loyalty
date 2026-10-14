@@ -1612,9 +1612,18 @@ export default function Home() {
       try {
         paid = await loyaltyApi(activeSession,"payment_create",{order_id:created.order.id});
       } catch (e:any) {
-        // Direct/Cash merchants do not use an online gateway. Keep the order active
-        // so the merchant can verify the payment manually.
-        if (m?.payment_provider === "DIRECT" || m?.payment_method === "CASH") {
+        // Direct/Cash merchants do not use an online gateway. If an optional
+        // gateway is not configured, allow merchant-direct UPI as a fallback when
+        // the merchant has supplied a usable UPI ID. Never mark the payment as paid
+        // here: the order remains pending until payment is independently verified.
+        let fallbackPaymentDetails:any = m?.payment_details ?? "";
+        if (typeof fallbackPaymentDetails === "string") {
+          try { fallbackPaymentDetails = JSON.parse(fallbackPaymentDetails); } catch {}
+        }
+        const fallbackDetails = fallbackPaymentDetails?.upi_id ?? fallbackPaymentDetails?.details ?? fallbackPaymentDetails?.vpa ?? fallbackPaymentDetails?.upi ?? fallbackPaymentDetails ?? "";
+        const fallbackUpiId = typeof fallbackDetails === "string" ? fallbackDetails.trim() : "";
+        const gatewayNotConfigured = /not configured|configuration missing|credentials missing|key.*missing/i.test(String(e?.message || ""));
+        if (m?.payment_provider === "DIRECT" || m?.payment_method === "CASH" || (gatewayNotConfigured && fallbackUpiId)) {
           const ref = created?.order?.order_reference||created?.order_reference||"";
           let paymentDetails:any = m?.payment_details ?? "";
           if (typeof paymentDetails === "string") { try { paymentDetails = JSON.parse(paymentDetails); } catch {} }
