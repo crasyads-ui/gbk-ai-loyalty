@@ -1799,7 +1799,7 @@ export default function Home() {
       const status=settlement?.status||"REWARD_SETTLEMENT_PENDING";
       const customerRaw=String(settlement?.calculation?.customer_raw||"0");
       const rewardGbk=customerRaw!=="0" ? (Number(customerRaw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : "";
-      setPaymentSuccess({status,orderReference:result?.order_reference||currentOrderReference,txHash:settlement?.tx_hash||"",rewardGbk}); setPaymentUtr("");
+      setPaymentSuccess({status,orderId,orderReference:result?.order_reference||currentOrderReference,txHash:settlement?.tx_hash||"",rewardGbk}); setPaymentUtr("");
       setAuthNotice(status==="SETTLED" ? "Payment verified automatically. GBK reward released successfully." : "Payment verified automatically. GBK reward settlement is processing."); return true;
     } catch(e:any) { if(!silent) setAuthNotice(e?.message||"Automatic payment confirmation is still pending."); return false; }
   };
@@ -1811,6 +1811,29 @@ export default function Home() {
     document.addEventListener("visibilitychange",onVisible); const timer=window.setTimeout(poll,1500);
     return()=>{stopped=true;window.clearTimeout(timer);document.removeEventListener("visibilitychange",onVisible);};
   },[upiPayment?.gbk_order_id,paymentSuccess]);
+
+  const claimPendingGbkReward = async () => {
+    const orderId = String(paymentSuccess?.orderId || upiPayment?.gbk_order_id || "").trim();
+    if (!orderId) { setAuthNotice("Order ID is missing. Reopen the order and check its payment status."); return; }
+    setApiBusy(true); setAuthNotice("");
+    try {
+      const active = session || getStoredSession() || await signInAnonymously();
+      if (!session) setSession(active);
+      const connectedWallet = await connectEvmWallet();
+      if (!/^0x[0-9a-fA-F]{40}$/.test(connectedWallet)) throw new Error("Connect a valid BNB Smart Chain wallet.");
+      await loyaltyApi(active, "profile_upsert", {role:"customer", country, wallet_address:connectedWallet});
+      setWalletAddress(connectedWallet);
+      const settlement = await loyaltyApi(active, "reward_settle", {order_id:orderId});
+      const customerRaw = String(settlement?.calculation?.customer_raw || "0");
+      const rewardGbk = customerRaw !== "0" ? (Number(customerRaw) / 1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : (paymentSuccess?.rewardGbk || "");
+      setPaymentSuccess((prev:any) => ({...prev, orderId, status:settlement?.status || "REWARD_SETTLEMENT_PENDING", txHash:settlement?.tx_hash || prev?.txHash || "", rewardGbk}));
+      setAuthNotice(settlement?.status === "SETTLED" ? "GBK reward claimed successfully. Check the transaction details below." : "Wallet connected. Your reward remains pending until the remaining settlement requirements are met.");
+    } catch(e:any) {
+      setAuthNotice(e?.message || "Could not claim the pending GBK reward. Please try again.");
+    } finally {
+      setApiBusy(false);
+    }
+  };
 
   const verifyCustomerDirectPayment = async () => {
     const txId = paymentUtr.trim();
@@ -1842,10 +1865,11 @@ export default function Home() {
                 ? "Payment verified. This order is below the minimum on-chain reward amount."
                 : "Payment verified. GBK reward settlement is processing."
       );
-      if (settlement?.status==="SETTLED" || settlement?.status==="REWARD_PENDING" || settlement?.status==="AWAITING_MERCHANT_APPROVAL") {
+      if (["SETTLED","REWARD_PENDING","REWARD_SETTLEMENT_PENDING","AWAITING_CUSTOMER_WALLET","AWAITING_MERCHANT_WALLET","AWAITING_MERCHANT_FUNDING","AWAITING_MERCHANT_APPROVAL","READY_TO_SETTLE","BLOCKCHAIN_SETTLEMENT_PENDING"].includes(String(settlement?.status||""))) {
         setPaymentUtr("");
         setPaymentSuccess({
           status:settlement?.status,
+          orderId,
           orderReference:result?.order?.order_reference||currentOrderReference,
           txHash:settlement?.tx_hash||"",
           rewardGbk
@@ -2518,7 +2542,8 @@ export default function Home() {
             {paymentSuccess.rewardGbk && <div style={{fontSize:28,fontWeight:800}}>+{paymentSuccess.rewardGbk} GBK</div>}
             <div>{paymentSuccess.status==="SETTLED" ? "Payment verified and the GBK reward has been released successfully." : "Payment verified. Your eligible GBK reward is reserved and will be released automatically after the merchant adds sufficient GBK funding."}</div>
             <small>GBK Order: {paymentSuccess.orderReference}</small>
-            {paymentSuccess.status!=="SETTLED" && <small>Merchant action: Add GBK balance to complete the reward settlement.</small>}
+            {paymentSuccess.status!=="SETTLED" && <small>Reward status: {String(paymentSuccess.status||"PENDING").replace(/_/g," ")}. The reward will be credited only after payment verification and required settlement checks.</small>}
+            {paymentSuccess.status!=="SETTLED" && paymentSuccess.orderId && <button className="primary" type="button" onClick={claimPendingGbkReward} disabled={apiBusy}>{apiBusy ? "Connecting wallet…" : "Connect Wallet & Claim GBK →"}</button>}
             {paymentSuccess.txHash && <small>Reward transaction: {paymentSuccess.txHash.slice(0,10)}…{paymentSuccess.txHash.slice(-8)}</small>}
             <button className="primary" type="button" onClick={()=>{setPaymentSuccess(null);setUpiPayment(null);setCurrentOrderReference("");setOrderAmount("");}}>Done ✓</button>
           </div> : upiPayment?.upi_links && upiPayment?.gbk_order_id && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
