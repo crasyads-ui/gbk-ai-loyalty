@@ -1640,7 +1640,7 @@ export default function Home() {
           const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
           const upiId = typeof details === "string" ? details.trim() : "";
           const amountMajor = Number(amount).toFixed(2);
-          const params = new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tr:ref,tid:ref,tn:"GBK Loyalty "+ref});
+          const params = new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:"GBK Loyalty "+ref});
           const upiUrl = upiId ? "upi://pay?" + params.toString() : "";
           const links = upiId ? {
             generic:buildAndroidUpiIntent(params),
@@ -1675,7 +1675,7 @@ export default function Home() {
         const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
         const upiId = typeof details === "string" ? details.trim() : "";
         const amountMajor = Number(amount).toFixed(2);
-        const params = upiId ? new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:ref}) : null;
+        const params = upiId ? new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:"GBK Loyalty "+ref}) : null;
         const links = upiId && params ? {
           generic:buildAndroidUpiIntent(params),
           phonepe:buildPhonePeIntent(params),
