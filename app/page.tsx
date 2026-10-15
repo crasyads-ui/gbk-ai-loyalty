@@ -963,6 +963,9 @@ export default function Home() {
       let active = session || getStoredSession();
       if (!active) active = await signInAnonymously();
       setSession(active);
+      // Ensure anonymous customers have a basic Loyalty profile before QR lookup.
+      // Wallet connection is optional for browsing and UPI checkout.
+      await loyaltyApi(active,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null});
       const result = await loyaltyApi(active,"get_merchant",{merchant_id:merchantId});
       if (!result?.merchant) throw new Error("Merchant not found or not active.");
       setSelectedMerchant(result.merchant);
