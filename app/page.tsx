@@ -955,6 +955,22 @@ export default function Home() {
   };
 
   const openScannedBusiness = async (text:string) => {
+    // When an order already exists, this scanner is for the merchant's actual UPI QR.
+    // Scanning a QR only reads payment details; it never verifies or marks payment paid.
+    if (upiPayment?.gbk_order_id && currentOrderReference) {
+      try {
+        const parsedUpi = new URL(text);
+        const pa = (parsedUpi.protocol.toLowerCase() === "upi:" ? parsedUpi.searchParams.get("pa") : parsedUpi.searchParams.get("pa")) || "";
+        if (!pa || !/upi:|pay/i.test(text)) throw new Error("This QR does not look like a UPI payment QR. Scan the merchant's UPI QR.");
+        const expected = String(upiPayment.upi_id || "").trim().toLowerCase();
+        if (expected && pa.trim().toLowerCase() !== expected) throw new Error("The scanned UPI ID does not match this merchant's configured UPI ID. Please confirm with the merchant.");
+        setAuthNotice("UPI QR scanned for order " + currentOrderReference + ". Confirm the payee and amount in your UPI app. Payment remains unverified until trusted confirmation is received.");
+        setScannerOpen(false);
+      } catch (e:any) {
+        setAuthNotice(e?.message || "Could not read this UPI QR.");
+      }
+      return;
+    }
     try {
       const parsed = new URL(text);
       const merchantId = parsed.searchParams.get("merchant");
@@ -2569,6 +2585,7 @@ export default function Home() {
             <button className="primary" type="button" onClick={()=>{setPaymentSuccess(null);setUpiPayment(null);setCurrentOrderReference("");setOrderAmount("");}}>Done ✓</button>
           </div> : upiPayment?.upi_links && upiPayment?.gbk_order_id && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>🔄 Payment verification</b>
+            <button className="primary" type="button" onClick={()=>{setScannerOpen(true);setAuthNotice("Scan the merchant's actual UPI payment QR. This does not mark the order paid.");}}>📷 Scan Merchant UPI QR</button>
             <span>After PhonePe/UPI payment, return to GBK Loyalty. We check the GBK Order for trusted payment confirmation. Gateway payments can be confirmed automatically; merchant-direct UPI payments use UTR verification when automatic confirmation is not available.</span>
             <button className="secondary" type="button" onClick={()=>checkAutomaticPaymentStatus(false)} disabled={apiBusy}>↻ Check payment status</button>
             <details>
