@@ -2496,17 +2496,17 @@ export default function Home() {
       </section></div>}
 
 
-      {scannerOpen && <div className="modalBackdrop" onClick={()=>setScannerOpen(false)}>
+      {scannerOpen && <div className="modalBackdrop" style={{zIndex:9999}} onClick={()=>setScannerOpen(false)}>
         <div className="modal" onClick={e=>e.stopPropagation()}>
           <button className="close" onClick={()=>setScannerOpen(false)}>×</button>
           <div className="roleIcon">📷</div>
-          <h2>Scan Merchant QR</h2>
-          <p>Point your camera at the GBK Loyalty QR displayed by the merchant.</p>
+          <h2>{upiPayment?.gbk_order_id && currentOrderReference ? "Scan Merchant UPI Payment QR" : "Scan GBK Merchant QR"}</h2>
+          <p>{upiPayment?.gbk_order_id && currentOrderReference ? "Point your camera at the merchant’s actual UPI QR. Scanning does not confirm payment." : "Point your camera at the GBK Loyalty QR displayed by the merchant."}</p>
           <div style={{background:"#111",borderRadius:18,overflow:"hidden",position:"relative",minHeight:280}}>
             <video ref={scannerVideoRef} autoPlay muted playsInline style={{width:"100%",display:"block",aspectRatio:"1/1",objectFit:"cover"}} />
             <div style={{position:"absolute",inset:"18%",border:"3px solid #fff",borderRadius:18,pointerEvents:"none"}} />
           </div>
-          <div className="status" style={{marginTop:12}}><span>{scannerBusy ? "📷 Scanning…" : "🟢 Camera ready — point at the merchant QR"}</span></div>
+          <div className="status" style={{marginTop:12}}><span>{scannerBusy ? "📷 Starting camera / scanning…" : authNotice || "🟢 Camera ready — point at the merchant QR"}</span></div>
           <label className="secondary" style={{display:"block",textAlign:"center",cursor:"pointer",marginTop:10}}>
             🖼️ Upload QR Image
             <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const file=e.target.files?.[0]; if(file) scanQrImage(file); e.currentTarget.value="";}} disabled={scannerBusy}/>
