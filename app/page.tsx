@@ -1602,6 +1602,12 @@ export default function Home() {
   };
 
   const createOrderFor = async (m:any) => {
+    // Reserve a tab on the customer's direct tap; Android Chrome may block a
+    // deep-link opened only after the order-creation network request finishes.
+    const upiLaunchWindow: Window | null =
+      (m?.payment_provider === "DIRECT" || m?.payment_method === "CASH")
+        ? window.open("about:blank", "_blank")
+        : null;
     const amount=String(orderAmount||"").trim();
     if(!amount || !Number.isFinite(Number(amount)) || Number(amount)<=0){ setAuthNotice("Enter the purchase/order amount first."); return; }
     if (currentOrderReference) { setAuthNotice(`ORDER ALREADY CREATED • ${currentOrderReference}. Please use this order instead of creating another one.`); return; }
@@ -1646,7 +1652,15 @@ export default function Home() {
             merchant_name:m?.business_name||"GBK Merchant",gbk_order_id:created?.order?.id,
             order_reference:ref,amount_major:amountMajor,upi_id:upiId||null,upi_links:links
           });
-          setAuthNotice(`ORDER CREATED • ${ref}. Continue with the payment buttons below.`);
+          if (upiLaunchWindow && upiId && links?.generic) {
+            upiLaunchWindow.location.href = links.generic;
+            setAuthNotice(`ORDER CREATED • ${ref}. Complete payment in your UPI app, then return to GBK Loyalty.`);
+          } else {
+            upiLaunchWindow?.close();
+            setAuthNotice(upiId
+              ? `ORDER CREATED • ${ref}. Tap Open UPI App if your browser did not open it automatically.`
+              : `ORDER CREATED • ${ref}. Merchant UPI details are not configured.`);
+          }
           return;
         }
         throw e;
@@ -1668,7 +1682,15 @@ export default function Home() {
         } : null;
         setCurrentOrderReference(ref);
         setUpiPayment({...paid.payment,gbk_order_id:created?.order?.id,order_reference:ref,amount_major:amountMajor,upi_id:upiId||null,upi_links:links});
-        setAuthNotice(upiId ? `ORDER CREATED • ${ref}. Choose your UPI app below, then verify the payment with the UTR.` : `ORDER CREATED • ${ref}. Merchant UPI payment details are not configured.`);
+        if (upiLaunchWindow && upiId && links?.generic) {
+          upiLaunchWindow.location.href = links.generic;
+          setAuthNotice(`ORDER CREATED • ${ref}. Complete payment in your UPI app, then return to GBK Loyalty.`);
+        } else {
+          upiLaunchWindow?.close();
+          setAuthNotice(upiId
+            ? `ORDER CREATED • ${ref}. Tap Open UPI App if your browser did not open it automatically.`
+            : `ORDER CREATED • ${ref}. Merchant UPI payment details are not configured.`);
+        }
         return;
       }
       if (paid?.payment?.provider === "RAZORPAY") {
@@ -1698,7 +1720,7 @@ export default function Home() {
           const s=document.createElement("script"); s.src="https://checkout.razorpay.com/v1/checkout.js"; s.onload=open; s.onerror=()=>reject(new Error("Payment checkout could not load")); document.body.appendChild(s);
         });
       }
-    } catch(e:any){setAuthNotice(e.message||"Payment setup failed");} finally {setApiBusy(false);}
+    } catch(e:any){upiLaunchWindow?.close();setAuthNotice(e.message||"Payment setup failed");} finally {setApiBusy(false);}
   };
 
   useEffect(() => {
