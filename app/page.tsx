@@ -1613,7 +1613,12 @@ export default function Home() {
   };
   const continueCurrentPayment = async () => {
     if (!currentOrderReference || !selectedMerchant) return;
+    // Reserve the destination synchronously from the customer's tap. Android
+    // browsers often block app handoff when it happens only after async fetches.
+    let upiLaunchWindow: Window | null = null;
+    try { upiLaunchWindow = window.open("about:blank", "_blank"); } catch {}
     setApiBusy(true);
+    let launched = false;
     try {
       let merchant:any = selectedMerchant;
       try {
@@ -1631,9 +1636,18 @@ export default function Home() {
       }
       const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
       const upiId = typeof details === "string" ? details.trim() : "";
-      if (!upiId) { setAuthNotice("Merchant UPI payment details are not configured."); return; }
-      const amountMajor = Number(orderAmount || 0).toFixed(2);
-      const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor,cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tr:currentOrderReference,tid:currentOrderReference,tn:"GBK Loyalty "+currentOrderReference});
+      if (!upiId) {
+        upiLaunchWindow?.close();
+        setAuthNotice("Merchant UPI payment details are not configured.");
+        return;
+      }
+      const amountMajor = Number(orderAmount || upiPayment?.amount_major || 0);
+      if (!Number.isFinite(amountMajor) || amountMajor <= 0) {
+        upiLaunchWindow?.close();
+        setAuthNotice("Enter a valid order amount before continuing to payment.");
+        return;
+      }
+      const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor.toFixed(2),cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tn:"GBK Loyalty "+currentOrderReference});
       const links = {
         generic:buildAndroidUpiIntent(params),
         phonepe:buildPhonePeIntent(params),
@@ -1641,12 +1655,27 @@ export default function Home() {
         paytm:buildPaytmIntent(params),
         bhim:buildBhimIntent(params)
       };
-      setUpiPayment({provider:"DIRECT",method:merchant.payment_method||"LOCAL_CURRENCY",currency:String(merchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:merchant.business_name||"GBK Merchant",gbk_order_id:upiPayment?.gbk_order_id||null,order_reference:currentOrderReference,amount_major:amountMajor,upi_id:upiId,upi_links:links});
-      setAuthNotice("Payment options are ready. Choose your UPI app below.");
+      setUpiPayment({provider:"DIRECT",method:merchant.payment_method||"LOCAL_CURRENCY",currency:String(merchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:merchant.business_name||"GBK Merchant",gbk_order_id:upiPayment?.gbk_order_id||null,order_reference:currentOrderReference,amount_major:amountMajor.toFixed(2),upi_id:upiId,upi_links:links});
+      setAuthNotice("Opening your UPI app for order "+currentOrderReference+". Verify the merchant and amount before paying. GBK rewards remain pending until payment is verified.");
+      // Use Android's intent URL with a browser fallback to avoid a raw upi://
+      // navigation error in supported browsers. Never mark payment as settled here.
+      const fallbackUrl = window.location.href;
+      const intentUrl = "intent://pay?" + params.toString() +
+        "#Intent;scheme=upi;S.browser_fallback_url=" + encodeURIComponent(fallbackUrl) + ";end";
+      if (upiLaunchWindow && !upiLaunchWindow.closed) {
+        upiLaunchWindow.location.href = intentUrl;
+        launched = true;
+      } else {
+        // Some in-app browsers block new tabs. Same-window intent is the fallback.
+        window.location.href = intentUrl;
+        launched = true;
+      }
     } catch(e:any) {
-      setAuthNotice(e?.message||"Payment options could not be loaded.");
+      upiLaunchWindow?.close();
+      setAuthNotice(e?.message||"Payment options could not be loaded. Use the QR or Copy UPI ID fallback.");
     } finally {
       setApiBusy(false);
+      if (!launched) { try { upiLaunchWindow?.close(); } catch {} }
     }
   };
 
