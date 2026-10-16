@@ -3431,6 +3431,7 @@ export default function Home() {
       </div>}
 
       {showBackToTop && <button className="backToTop" type="button" aria-label="Back to top" onClick={()=>window.scrollTo({top:0,behavior:"smooth"})}>↑ Top</button>}
+      <div style={{textAlign:"center",padding:"16px 12px",fontSize:13}}><a href="/legal" style={{color:"inherit",textDecoration:"underline"}}>Country-by-Country Legal Terms</a></div>
       <nav className={`bottomNav${searchFocused ? " searchFocused" : ""}`}><a className="active">⌂<span>Home</span></a><a onClick={()=>setRole("Customer")}>⌕<span>Explore</span></a><a onClick={loadCustomerOrders}>🧾<span>Orders</span></a><a onClick={()=>activeWalletRole==="merchant" ? openMerchantWallet() : activeWalletRole==="customer" ? setRole("Customer") : activeWalletRole==="founder" ? setRole("Founder") : connectWallet("merchant")}>👛<span>Wallet</span></a><a onClick={()=>setAskAiOpen(true)}>🤖<span>Ask AI</span></a></nav>
     </main>
   );
