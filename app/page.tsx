@@ -1723,15 +1723,32 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [upiPayment?.upi_id,upiPayment?.amount_major,upiPayment?.order_reference,upiPayment?.currency,upiPayment?.merchant_name]);
 
-  const downloadPaymentQr = () => {
+  const downloadPaymentQr = async () => {
     if (!upiQrDataUrl) { setAuthNotice("Payment QR is not ready yet. Please wait a moment."); return; }
-    const a = document.createElement("a");
-    a.href = upiQrDataUrl;
-    a.download = `gbk-loyalty-payment-${String(upiPayment?.order_reference || "order").replace(/[^A-Za-z0-9_-]/g,"")}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setAuthNotice("Payment QR saved. Open your UPI app and choose Scan QR / Scan from gallery if supported.");
+    const filename = `gbk-loyalty-payment-${String(upiPayment?.order_reference || "order").replace(/[^A-Za-z0-9_-]/g,"")}.png`;
+    let objectUrl = "";
+    try {
+      // Blob URLs are more reliable than data URLs for Android download managers.
+      const response = await fetch(upiQrDataUrl);
+      const blob = await response.blob();
+      objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      // Some Android in-app browsers ignore the download attribute and navigate
+      // to the image. Open that fallback in a separate tab so checkout stays open.
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => { if (objectUrl) URL.revokeObjectURL(objectUrl); }, 60000);
+      setAuthNotice("QR download requested. Check your Downloads/Gallery. If this browser opens the image instead, use the image menu or long-press to save it.");
+    } catch {
+      // Keep the customer on the payment screen; never replace the checkout page.
+      setAuthNotice("The QR could not be downloaded in this browser. Your order page is still open—use Share QR, long-press the QR image, or Copy UPI ID.");
+    }
   };
   const sharePaymentQr = async () => {
     if (!upiQrDataUrl) { setAuthNotice("Payment QR is not ready yet. Please wait a moment."); return; }
