@@ -987,15 +987,9 @@ export default function Home() {
           paytm: buildPaytmIntent(params),
           bhim: buildBhimIntent(params)
         };
-        setUpiPayment({...upiPayment, upi_id:pa, upi_links:links});
+        setUpiPayment({...upiPayment, upi_id:pa, merchant_name:payeeName, upi_links:links});
         setScannerOpen(false);
-        setAuthNotice("Merchant QR scanned for order " + currentOrderReference + ". Opening your UPI app. Verify the merchant and amount before paying; GBK rewards remain pending until payment is verified.");
-        // Android Chrome can hand an intent:// URL to an installed UPI handler.
-        // If no handler exists, return to this checkout instead of showing ERR_UNKNOWN_URL_SCHEME.
-        const intentUrl = "intent://pay?" + params.toString() +
-          "#Intent;scheme=upi;S.browser_fallback_url=" +
-          encodeURIComponent(window.location.href) + ";end";
-        window.location.href = intentUrl;
+        setAuthNotice("Scanned payee: " + payeeName + " (" + pa + "). Confirm the payee and amount below, then tap Continue to Payment to open your UPI app. Payment is not yet verified.");
       } catch (e:any) {
         setAuthNotice(e?.message || "Could not read this UPI QR.");
       }
@@ -1635,13 +1629,14 @@ export default function Home() {
         try { paymentDetails = JSON.parse(paymentDetails); } catch {}
       }
       const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
-      const upiId = typeof details === "string" ? details.trim() : "";
+      // A freshly scanned merchant QR takes precedence over saved merchant metadata.
+      const upiId = String(upiPayment?.upi_id || (typeof details === "string" ? details.trim() : "")).trim();
       if (!upiId) {
         upiLaunchWindow?.close();
         setAuthNotice("Merchant UPI payment details are not configured.");
         return;
       }
-      const amountMajor = Number(orderAmount || upiPayment?.amount_major || 0);
+      const amountMajor = Number(upiPayment?.amount_major || orderAmount || 0);
       if (!Number.isFinite(amountMajor) || amountMajor <= 0) {
         upiLaunchWindow?.close();
         setAuthNotice("Enter a valid order amount before continuing to payment.");
@@ -2644,6 +2639,11 @@ export default function Home() {
             <button className="primary" type="button" onClick={()=>{setPaymentSuccess(null);setUpiPayment(null);setCurrentOrderReference("");setOrderAmount("");}}>Done ✓</button>
           </div> : upiPayment?.upi_links && upiPayment?.gbk_order_id && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>🔄 Payment verification</b>
+            {upiPayment?.upi_id && <div style={{border:"1px solid #ddd2f5",borderRadius:10,padding:10,background:"#faf7ff"}}>
+              <b>Scanned payee</b><div>{upiPayment.merchant_name || "Merchant UPI account"}</div>
+              <small>UPI ID: {upiPayment.upi_id}</small>
+              <div>Amount: {upiPayment.currency || "INR"} {Number(upiPayment.amount_major || 0).toFixed(2)}</div>
+            </div>}
             <button className="primary" type="button" onClick={()=>{setScannerOpen(true);setAuthNotice("Scan the merchant's actual UPI payment QR. This does not mark the order paid.");}}>📷 Scan Merchant UPI QR</button>
             <span>After PhonePe/UPI payment, return to GBK Loyalty. We check the GBK Order for trusted payment confirmation. Gateway payments can be confirmed automatically; merchant-direct UPI payments use UTR verification when automatic confirmation is not available.</span>
             <button className="secondary" type="button" onClick={()=>checkAutomaticPaymentStatus(false)} disabled={apiBusy}>↻ Check payment status</button>
