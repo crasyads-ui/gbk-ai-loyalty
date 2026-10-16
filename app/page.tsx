@@ -89,25 +89,21 @@ const priorityCities: Record<string,string[]> = {
   Philippines:["Manila","Quezon City","Davao City","Cebu City","Zamboanga City","Antipolo","Pasig","Taguig","Cagayan de Oro","Parañaque"]
 };
 
-const buildAndroidUpiIntent = (params: URLSearchParams) => {
-  // Use the standard UPI deep link first. It works with Android app handlers
-  // and does not depend on Chrome resolving an intent:// URL.
-  return "upi://pay?" + params.toString();
+const buildAndroidUpiIntent = (params: URLSearchParams, packageName?: string) => {
+  // Package-targeted intents are intended for explicit taps in Android Chrome.
+  // Keep the generic UPI link as a chooser/fallback for other UPI handlers.
+  const query = params.toString();
+  if (!packageName) return "upi://pay?" + query;
+  return "intent://pay?" + query + "#Intent;scheme=upi;package=" + packageName + ";end";
 };
-const buildPhonePeIntent = (params: URLSearchParams) => {
-  // PhonePe's app-specific URI is more reliable from normal mobile Chrome
-  // than a package-targeted intent:// link after an injected wallet connects.
-  return "phonepe://pay?" + params.toString();
-};
-const buildGooglePayIntent = (params: URLSearchParams) => {
-  return "tez://upi/pay?" + params.toString();
-};
-const buildPaytmIntent = (params: URLSearchParams) => {
-  return "paytmmp://pay?" + params.toString();
-};
-const buildBhimIntent = (params: URLSearchParams) => {
-  return "bhim://pay?" + params.toString();
-};
+const buildPhonePeIntent = (params: URLSearchParams) =>
+  buildAndroidUpiIntent(params, "com.phonepe.app");
+const buildGooglePayIntent = (params: URLSearchParams) =>
+  buildAndroidUpiIntent(params, "com.google.android.apps.nbu.paisa.user");
+const buildPaytmIntent = (params: URLSearchParams) =>
+  buildAndroidUpiIntent(params, "net.one97.paytm");
+const buildBhimIntent = (params: URLSearchParams) =>
+  buildAndroidUpiIntent(params, "in.org.npci.upiapp");
 
 export default function Home() {
   const [query,setQuery] = useState("");
@@ -959,6 +955,46 @@ export default function Home() {
   };
 
   const openScannedBusiness = async (text:string) => {
+    // If a GBK order already exists, turn the scanned merchant UPI QR into a
+    // payment intent for this order. Scanning alone never marks an order paid.
+    if (upiPayment?.gbk_order_id && currentOrderReference) {
+      try {
+        const parsedUpi = new URL(text);
+        const pa = (parsedUpi.searchParams.get("pa") || "").trim();
+        if (!pa || !/^(upi:|https?:)/i.test(text) || !/pay/i.test(text)) {
+          throw new Error("This QR does not look like a UPI payment QR. Scan the merchant's UPI QR.");
+        }
+        const expected = String(upiPayment.upi_id || "").trim().toLowerCase();
+        if (expected && pa.toLowerCase() !== expected) {
+          throw new Error("The scanned UPI ID does not match this merchant's configured UPI ID. Please confirm with the merchant.");
+        }
+        const amountMajor = Number(upiPayment.amount_major);
+        if (!Number.isFinite(amountMajor) || amountMajor <= 0) {
+          throw new Error("This GBK order has no valid amount. Reopen the order and try again.");
+        }
+        const payeeName = parsedUpi.searchParams.get("pn") || upiPayment.merchant_name || "GBK Merchant";
+        const params = new URLSearchParams({
+          pa,
+          pn: payeeName,
+          am: amountMajor.toFixed(2),
+          cu: String(upiPayment.currency || "INR"),
+          tn: "GBK Loyalty " + currentOrderReference
+        });
+        const links = {
+          generic: "upi://pay?" + params.toString(),
+          phonepe: buildPhonePeIntent(params),
+          googlepay: buildGooglePayIntent(params),
+          paytm: buildPaytmIntent(params),
+          bhim: buildBhimIntent(params)
+        };
+        setUpiPayment({...upiPayment, upi_id:pa, merchant_name:payeeName, upi_links:links});
+        setScannerOpen(false);
+        setAuthNotice("Scanned payee: " + payeeName + " (" + pa + "). Confirm the payee and amount below, then tap Continue to Payment to open your UPI app. Payment is not yet verified.");
+      } catch (e:any) {
+        setAuthNotice(e?.message || "Could not read this UPI QR.");
+      }
+      return;
+    }
     try {
       const parsed = new URL(text);
       const merchantId = parsed.searchParams.get("merchant");
@@ -967,6 +1003,9 @@ export default function Home() {
       let active = session || getStoredSession();
       if (!active) active = await signInAnonymously();
       setSession(active);
+      // Ensure anonymous customers have a basic Loyalty profile before QR lookup.
+      // Wallet connection is optional for browsing and UPI checkout.
+      await loyaltyApi(active,"profile_upsert",{role:"customer",country,wallet_address:walletAddress||null});
       const result = await loyaltyApi(active,"get_merchant",{merchant_id:merchantId});
       if (!result?.merchant) throw new Error("Merchant not found or not active.");
       setSelectedMerchant(result.merchant);
@@ -1568,7 +1607,12 @@ export default function Home() {
   };
   const continueCurrentPayment = async () => {
     if (!currentOrderReference || !selectedMerchant) return;
+    // Reserve the destination synchronously from the customer's tap. Android
+    // browsers often block app handoff when it happens only after async fetches.
+    let upiLaunchWindow: Window | null = null;
+    try { upiLaunchWindow = window.open("about:blank", "_blank"); } catch {}
     setApiBusy(true);
+    let launched = false;
     try {
       let merchant:any = selectedMerchant;
       try {
@@ -1585,10 +1629,20 @@ export default function Home() {
         try { paymentDetails = JSON.parse(paymentDetails); } catch {}
       }
       const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
-      const upiId = typeof details === "string" ? details.trim() : "";
-      if (!upiId) { setAuthNotice("Merchant UPI payment details are not configured."); return; }
-      const amountMajor = Number(orderAmount || 0).toFixed(2);
-      const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor,cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tr:currentOrderReference,tid:currentOrderReference,tn:"GBK Loyalty "+currentOrderReference});
+      // A freshly scanned merchant QR takes precedence over saved merchant metadata.
+      const upiId = String(upiPayment?.upi_id || (typeof details === "string" ? details.trim() : "")).trim();
+      if (!upiId) {
+        upiLaunchWindow?.close();
+        setAuthNotice("Merchant UPI payment details are not configured.");
+        return;
+      }
+      const amountMajor = Number(upiPayment?.amount_major || orderAmount || 0);
+      if (!Number.isFinite(amountMajor) || amountMajor <= 0) {
+        upiLaunchWindow?.close();
+        setAuthNotice("Enter a valid order amount before continuing to payment.");
+        return;
+      }
+      const params = new URLSearchParams({pa:upiId,pn:merchant.business_name||"GBK Merchant",am:amountMajor.toFixed(2),cu:String(merchant.payment_currency||currency||"INR").toUpperCase(),tn:"GBK Loyalty "+currentOrderReference});
       const links = {
         generic:buildAndroidUpiIntent(params),
         phonepe:buildPhonePeIntent(params),
@@ -1596,16 +1650,37 @@ export default function Home() {
         paytm:buildPaytmIntent(params),
         bhim:buildBhimIntent(params)
       };
-      setUpiPayment({provider:"DIRECT",method:merchant.payment_method||"LOCAL_CURRENCY",currency:String(merchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:merchant.business_name||"GBK Merchant",gbk_order_id:upiPayment?.gbk_order_id||null,order_reference:currentOrderReference,amount_major:amountMajor,upi_id:upiId,upi_links:links});
-      setAuthNotice("Payment options are ready. Choose your UPI app below.");
+      setUpiPayment({provider:"DIRECT",method:merchant.payment_method||"LOCAL_CURRENCY",currency:String(merchant.payment_currency||currency||"INR").toUpperCase(),merchant_name:merchant.business_name||"GBK Merchant",gbk_order_id:upiPayment?.gbk_order_id||null,order_reference:currentOrderReference,amount_major:amountMajor.toFixed(2),upi_id:upiId,upi_links:links});
+      setAuthNotice("Opening your UPI app for order "+currentOrderReference+". Verify the merchant and amount before paying. GBK rewards remain pending until payment is verified.");
+      // Use Android's intent URL with a browser fallback to avoid a raw upi://
+      // navigation error in supported browsers. Never mark payment as settled here.
+      const fallbackUrl = window.location.href;
+      const intentUrl = "intent://pay?" + params.toString() +
+        "#Intent;scheme=upi;S.browser_fallback_url=" + encodeURIComponent(fallbackUrl) + ";end";
+      if (upiLaunchWindow && !upiLaunchWindow.closed) {
+        upiLaunchWindow.location.href = intentUrl;
+        launched = true;
+      } else {
+        // Some in-app browsers block new tabs. Same-window intent is the fallback.
+        window.location.href = intentUrl;
+        launched = true;
+      }
     } catch(e:any) {
-      setAuthNotice(e?.message||"Payment options could not be loaded.");
+      upiLaunchWindow?.close();
+      setAuthNotice(e?.message||"Payment options could not be loaded. Use the QR or Copy UPI ID fallback.");
     } finally {
       setApiBusy(false);
+      if (!launched) { try { upiLaunchWindow?.close(); } catch {} }
     }
   };
 
   const createOrderFor = async (m:any) => {
+    // Reserve a tab on the customer's direct tap; Android Chrome may block a
+    // deep-link opened only after the order-creation network request finishes.
+    const upiLaunchWindow: Window | null =
+      (m?.payment_provider === "DIRECT" || m?.payment_method === "CASH")
+        ? window.open("about:blank", "_blank")
+        : null;
     const amount=String(orderAmount||"").trim();
     if(!amount || !Number.isFinite(Number(amount)) || Number(amount)<=0){ setAuthNotice("Enter the purchase/order amount first."); return; }
     if (currentOrderReference) { setAuthNotice(`ORDER ALREADY CREATED • ${currentOrderReference}. Please use this order instead of creating another one.`); return; }
@@ -1635,14 +1710,14 @@ export default function Home() {
           const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
           const upiId = typeof details === "string" ? details.trim() : "";
           const amountMajor = Number(amount).toFixed(2);
-          const params = new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tr:ref,tid:ref,tn:"GBK Loyalty "+ref});
+          const params = new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:"GBK Loyalty "+ref});
           const upiUrl = upiId ? "upi://pay?" + params.toString() : "";
           const links = upiId ? {
             generic:buildAndroidUpiIntent(params),
-            phonepe:buildAndroidUpiIntent(params),
-            googlepay:buildAndroidUpiIntent(params),
-            paytm:buildAndroidUpiIntent(params),
-            bhim:buildAndroidUpiIntent(params)
+            phonepe:buildPhonePeIntent(params),
+            googlepay:buildGooglePayIntent(params),
+            paytm:buildPaytmIntent(params),
+            bhim:buildBhimIntent(params)
           } : null;
           setCurrentOrderReference(ref);
           setUpiPayment({
@@ -1650,7 +1725,15 @@ export default function Home() {
             merchant_name:m?.business_name||"GBK Merchant",gbk_order_id:created?.order?.id,
             order_reference:ref,amount_major:amountMajor,upi_id:upiId||null,upi_links:links
           });
-          setAuthNotice(`ORDER CREATED • ${ref}. Continue with the payment buttons below.`);
+          if (upiLaunchWindow && upiId && links?.generic) {
+            upiLaunchWindow.location.href = links.generic;
+            setAuthNotice(`ORDER CREATED • ${ref}. Complete payment in your UPI app, then return to GBK Loyalty.`);
+          } else {
+            upiLaunchWindow?.close();
+            setAuthNotice(upiId
+              ? `ORDER CREATED • ${ref}. Tap Open UPI App if your browser did not open it automatically.`
+              : `ORDER CREATED • ${ref}. Merchant UPI details are not configured.`);
+          }
           return;
         }
         throw e;
@@ -1662,17 +1745,25 @@ export default function Home() {
         const details = paymentDetails?.upi_id ?? paymentDetails?.details ?? paymentDetails?.vpa ?? paymentDetails?.upi ?? paymentDetails ?? "";
         const upiId = typeof details === "string" ? details.trim() : "";
         const amountMajor = Number(amount).toFixed(2);
-        const params = upiId ? new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:ref}) : null;
+        const params = upiId ? new URLSearchParams({pa:upiId,pn:m?.business_name||"GBK Merchant",am:amountMajor,cu:orderCurrency,tn:"GBK Loyalty "+ref}) : null;
         const links = upiId && params ? {
           generic:buildAndroidUpiIntent(params),
-          phonepe:buildAndroidUpiIntent(params),
-          googlepay:buildAndroidUpiIntent(params),
-          paytm:buildAndroidUpiIntent(params),
-          bhim:buildAndroidUpiIntent(params)
+          phonepe:buildPhonePeIntent(params),
+          googlepay:buildGooglePayIntent(params),
+          paytm:buildPaytmIntent(params),
+          bhim:buildBhimIntent(params)
         } : null;
         setCurrentOrderReference(ref);
         setUpiPayment({...paid.payment,gbk_order_id:created?.order?.id,order_reference:ref,amount_major:amountMajor,upi_id:upiId||null,upi_links:links});
-        setAuthNotice(upiId ? `ORDER CREATED • ${ref}. Choose your UPI app below, then verify the payment with the UTR.` : `ORDER CREATED • ${ref}. Merchant UPI payment details are not configured.`);
+        if (upiLaunchWindow && upiId && links?.generic) {
+          upiLaunchWindow.location.href = links.generic;
+          setAuthNotice(`ORDER CREATED • ${ref}. Complete payment in your UPI app, then return to GBK Loyalty.`);
+        } else {
+          upiLaunchWindow?.close();
+          setAuthNotice(upiId
+            ? `ORDER CREATED • ${ref}. Tap Open UPI App if your browser did not open it automatically.`
+            : `ORDER CREATED • ${ref}. Merchant UPI payment details are not configured.`);
+        }
         return;
       }
       if (paid?.payment?.provider === "RAZORPAY") {
@@ -1702,7 +1793,7 @@ export default function Home() {
           const s=document.createElement("script"); s.src="https://checkout.razorpay.com/v1/checkout.js"; s.onload=open; s.onerror=()=>reject(new Error("Payment checkout could not load")); document.body.appendChild(s);
         });
       }
-    } catch(e:any){setAuthNotice(e.message||"Payment setup failed");} finally {setApiBusy(false);}
+    } catch(e:any){upiLaunchWindow?.close();setAuthNotice(e.message||"Payment setup failed");} finally {setApiBusy(false);}
   };
 
   useEffect(() => {
@@ -1799,7 +1890,7 @@ export default function Home() {
       const status=settlement?.status||"REWARD_SETTLEMENT_PENDING";
       const customerRaw=String(settlement?.calculation?.customer_raw||"0");
       const rewardGbk=customerRaw!=="0" ? (Number(customerRaw)/1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : "";
-      setPaymentSuccess({status,orderReference:result?.order_reference||currentOrderReference,txHash:settlement?.tx_hash||"",rewardGbk}); setPaymentUtr("");
+      setPaymentSuccess({status,orderId,orderReference:result?.order_reference||currentOrderReference,txHash:settlement?.tx_hash||"",rewardGbk}); setPaymentUtr("");
       setAuthNotice(status==="SETTLED" ? "Payment verified automatically. GBK reward released successfully." : "Payment verified automatically. GBK reward settlement is processing."); return true;
     } catch(e:any) { if(!silent) setAuthNotice(e?.message||"Automatic payment confirmation is still pending."); return false; }
   };
@@ -1811,6 +1902,29 @@ export default function Home() {
     document.addEventListener("visibilitychange",onVisible); const timer=window.setTimeout(poll,1500);
     return()=>{stopped=true;window.clearTimeout(timer);document.removeEventListener("visibilitychange",onVisible);};
   },[upiPayment?.gbk_order_id,paymentSuccess]);
+
+  const claimPendingGbkReward = async () => {
+    const orderId = String(paymentSuccess?.orderId || upiPayment?.gbk_order_id || "").trim();
+    if (!orderId) { setAuthNotice("Order ID is missing. Reopen the order and check its payment status."); return; }
+    setApiBusy(true); setAuthNotice("");
+    try {
+      const active = session || getStoredSession() || await signInAnonymously();
+      if (!session) setSession(active);
+      const connectedWallet = await connectEvmWallet();
+      if (!/^0x[0-9a-fA-F]{40}$/.test(connectedWallet)) throw new Error("Connect a valid BNB Smart Chain wallet.");
+      await loyaltyApi(active, "profile_upsert", {role:"customer", country, wallet_address:connectedWallet});
+      setWalletAddress(connectedWallet);
+      const settlement = await loyaltyApi(active, "reward_settle", {order_id:orderId});
+      const customerRaw = String(settlement?.calculation?.customer_raw || "0");
+      const rewardGbk = customerRaw !== "0" ? (Number(customerRaw) / 1e8).toLocaleString(undefined,{maximumFractionDigits:8}) : (paymentSuccess?.rewardGbk || "");
+      setPaymentSuccess((prev:any) => ({...prev, orderId, status:settlement?.status || "REWARD_SETTLEMENT_PENDING", txHash:settlement?.tx_hash || prev?.txHash || "", rewardGbk}));
+      setAuthNotice(settlement?.status === "SETTLED" ? "GBK reward claimed successfully. Check the transaction details below." : "Wallet connected. Your reward remains pending until the remaining settlement requirements are met.");
+    } catch(e:any) {
+      setAuthNotice(e?.message || "Could not claim the pending GBK reward. Please try again.");
+    } finally {
+      setApiBusy(false);
+    }
+  };
 
   const verifyCustomerDirectPayment = async () => {
     const txId = paymentUtr.trim();
@@ -1842,10 +1956,11 @@ export default function Home() {
                 ? "Payment verified. This order is below the minimum on-chain reward amount."
                 : "Payment verified. GBK reward settlement is processing."
       );
-      if (settlement?.status==="SETTLED" || settlement?.status==="REWARD_PENDING" || settlement?.status==="AWAITING_MERCHANT_APPROVAL") {
+      if (["SETTLED","REWARD_PENDING","REWARD_SETTLEMENT_PENDING","AWAITING_CUSTOMER_WALLET","AWAITING_MERCHANT_WALLET","AWAITING_MERCHANT_FUNDING","AWAITING_MERCHANT_APPROVAL","READY_TO_SETTLE","BLOCKCHAIN_SETTLEMENT_PENDING"].includes(String(settlement?.status||""))) {
         setPaymentUtr("");
         setPaymentSuccess({
           status:settlement?.status,
+          orderId,
           orderReference:result?.order?.order_reference||currentOrderReference,
           txHash:settlement?.tx_hash||"",
           rewardGbk
@@ -2435,17 +2550,17 @@ export default function Home() {
       </section></div>}
 
 
-      {scannerOpen && <div className="modalBackdrop" onClick={()=>setScannerOpen(false)}>
+      {scannerOpen && <div className="modalBackdrop" style={{zIndex:9999}} onClick={()=>setScannerOpen(false)}>
         <div className="modal" onClick={e=>e.stopPropagation()}>
           <button className="close" onClick={()=>setScannerOpen(false)}>×</button>
           <div className="roleIcon">📷</div>
-          <h2>Scan Merchant QR</h2>
-          <p>Point your camera at the GBK Loyalty QR displayed by the merchant.</p>
+          <h2>{upiPayment?.gbk_order_id && currentOrderReference ? "Scan Merchant UPI Payment QR" : "Scan GBK Merchant QR"}</h2>
+          <p>{upiPayment?.gbk_order_id && currentOrderReference ? "Point your camera at the merchant’s actual UPI QR. Scanning does not confirm payment." : "Point your camera at the GBK Loyalty QR displayed by the merchant."}</p>
           <div style={{background:"#111",borderRadius:18,overflow:"hidden",position:"relative",minHeight:280}}>
             <video ref={scannerVideoRef} autoPlay muted playsInline style={{width:"100%",display:"block",aspectRatio:"1/1",objectFit:"cover"}} />
             <div style={{position:"absolute",inset:"18%",border:"3px solid #fff",borderRadius:18,pointerEvents:"none"}} />
           </div>
-          <div className="status" style={{marginTop:12}}><span>{scannerBusy ? "📷 Scanning…" : "🟢 Camera ready — point at the merchant QR"}</span></div>
+          <div className="status" style={{marginTop:12}}><span>{scannerBusy ? "📷 Starting camera / scanning…" : authNotice || "🟢 Camera ready — point at the merchant QR"}</span></div>
           <label className="secondary" style={{display:"block",textAlign:"center",cursor:"pointer",marginTop:10}}>
             🖼️ Upload QR Image
             <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const file=e.target.files?.[0]; if(file) scanQrImage(file); e.currentTarget.value="";}} disabled={scannerBusy}/>
@@ -2518,11 +2633,18 @@ export default function Home() {
             {paymentSuccess.rewardGbk && <div style={{fontSize:28,fontWeight:800}}>+{paymentSuccess.rewardGbk} GBK</div>}
             <div>{paymentSuccess.status==="SETTLED" ? "Payment verified and the GBK reward has been released successfully." : "Payment verified. Your eligible GBK reward is reserved and will be released automatically after the merchant adds sufficient GBK funding."}</div>
             <small>GBK Order: {paymentSuccess.orderReference}</small>
-            {paymentSuccess.status!=="SETTLED" && <small>Merchant action: Add GBK balance to complete the reward settlement.</small>}
+            {paymentSuccess.status!=="SETTLED" && <small>Reward status: {String(paymentSuccess.status||"PENDING").replace(/_/g," ")}. The reward will be credited only after payment verification and required settlement checks.</small>}
+            {paymentSuccess.status!=="SETTLED" && paymentSuccess.orderId && <button className="primary" type="button" onClick={claimPendingGbkReward} disabled={apiBusy}>{apiBusy ? "Connecting wallet…" : "Connect Wallet & Claim GBK →"}</button>}
             {paymentSuccess.txHash && <small>Reward transaction: {paymentSuccess.txHash.slice(0,10)}…{paymentSuccess.txHash.slice(-8)}</small>}
             <button className="primary" type="button" onClick={()=>{setPaymentSuccess(null);setUpiPayment(null);setCurrentOrderReference("");setOrderAmount("");}}>Done ✓</button>
           </div> : upiPayment?.upi_links && upiPayment?.gbk_order_id && <div className="offerPreview" style={{display:"grid",gap:8,margin:"12px 0"}}>
             <b>🔄 Payment verification</b>
+            {upiPayment?.upi_id && <div style={{border:"1px solid #ddd2f5",borderRadius:10,padding:10,background:"#faf7ff"}}>
+              <b>Scanned payee</b><div>{upiPayment.merchant_name || "Merchant UPI account"}</div>
+              <small>UPI ID: {upiPayment.upi_id}</small>
+              <div>Amount: {upiPayment.currency || "INR"} {Number(upiPayment.amount_major || 0).toFixed(2)}</div>
+            </div>}
+            <button className="primary" type="button" onClick={()=>{setScannerOpen(true);setAuthNotice("Scan the merchant's actual UPI payment QR. This does not mark the order paid.");}}>📷 Scan Merchant UPI QR</button>
             <span>After PhonePe/UPI payment, return to GBK Loyalty. We check the GBK Order for trusted payment confirmation. Gateway payments can be confirmed automatically; merchant-direct UPI payments use UTR verification when automatic confirmation is not available.</span>
             <button className="secondary" type="button" onClick={()=>checkAutomaticPaymentStatus(false)} disabled={apiBusy}>↻ Check payment status</button>
             <details>
