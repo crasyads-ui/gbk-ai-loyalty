@@ -955,17 +955,47 @@ export default function Home() {
   };
 
   const openScannedBusiness = async (text:string) => {
-    // When an order already exists, this scanner is for the merchant's actual UPI QR.
-    // Scanning a QR only reads payment details; it never verifies or marks payment paid.
+    // If a GBK order already exists, turn the scanned merchant UPI QR into a
+    // payment intent for this order. Scanning alone never marks an order paid.
     if (upiPayment?.gbk_order_id && currentOrderReference) {
       try {
         const parsedUpi = new URL(text);
-        const pa = (parsedUpi.protocol.toLowerCase() === "upi:" ? parsedUpi.searchParams.get("pa") : parsedUpi.searchParams.get("pa")) || "";
-        if (!pa || !/upi:|pay/i.test(text)) throw new Error("This QR does not look like a UPI payment QR. Scan the merchant's UPI QR.");
+        const pa = (parsedUpi.searchParams.get("pa") || "").trim();
+        if (!pa || !/^(upi:|https?:)/i.test(text) || !/pay/i.test(text)) {
+          throw new Error("This QR does not look like a UPI payment QR. Scan the merchant's UPI QR.");
+        }
         const expected = String(upiPayment.upi_id || "").trim().toLowerCase();
-        if (expected && pa.trim().toLowerCase() !== expected) throw new Error("The scanned UPI ID does not match this merchant's configured UPI ID. Please confirm with the merchant.");
-        setAuthNotice("UPI QR scanned for order " + currentOrderReference + ". Confirm the payee and amount in your UPI app. Payment remains unverified until trusted confirmation is received.");
+        if (expected && pa.toLowerCase() !== expected) {
+          throw new Error("The scanned UPI ID does not match this merchant's configured UPI ID. Please confirm with the merchant.");
+        }
+        const amountMajor = Number(upiPayment.amount_major);
+        if (!Number.isFinite(amountMajor) || amountMajor <= 0) {
+          throw new Error("This GBK order has no valid amount. Reopen the order and try again.");
+        }
+        const payeeName = parsedUpi.searchParams.get("pn") || upiPayment.merchant_name || "GBK Merchant";
+        const params = new URLSearchParams({
+          pa,
+          pn: payeeName,
+          am: amountMajor.toFixed(2),
+          cu: String(upiPayment.currency || "INR"),
+          tn: "GBK Loyalty " + currentOrderReference
+        });
+        const links = {
+          generic: "upi://pay?" + params.toString(),
+          phonepe: buildPhonePeIntent(params),
+          googlepay: buildGooglePayIntent(params),
+          paytm: buildPaytmIntent(params),
+          bhim: buildBhimIntent(params)
+        };
+        setUpiPayment({...upiPayment, upi_id:pa, upi_links:links});
         setScannerOpen(false);
+        setAuthNotice("Merchant QR scanned for order " + currentOrderReference + ". Opening your UPI app. Verify the merchant and amount before paying; GBK rewards remain pending until payment is verified.");
+        // Android Chrome can hand an intent:// URL to an installed UPI handler.
+        // If no handler exists, return to this checkout instead of showing ERR_UNKNOWN_URL_SCHEME.
+        const intentUrl = "intent://pay?" + params.toString() +
+          "#Intent;scheme=upi;S.browser_fallback_url=" +
+          encodeURIComponent(window.location.href) + ";end";
+        window.location.href = intentUrl;
       } catch (e:any) {
         setAuthNotice(e?.message || "Could not read this UPI QR.");
       }
